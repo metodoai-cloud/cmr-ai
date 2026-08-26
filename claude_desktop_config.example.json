@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "crm-ai": {
+      "command": "npx",
+      "args": ["tsx", "src/mcp/server.ts"],
+      "cwd": "c:\\Users\\casa\\Documents\\_TRABAJO\\_D300\\GESTION AG\\CMR"
+    }
+  }
+}

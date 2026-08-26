@@ -1472,11 +1472,11 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '120px', whiteSpace: 'nowrap' }}>N° Factura</th>
-                      <th style={{ padding: '12px 14px', minWidth: '200px', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '150px', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
-                      <th style={{ padding: '12px 14px', width: '190px', whiteSpace: 'nowrap' }}>Fecha de Pago</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '160px', whiteSpace: 'nowrap' }}>Monto & Estado</th>
+                      <th style={{ padding: '12px 14px', width: '12%', whiteSpace: 'nowrap' }}>N° Factura</th>
+                      <th style={{ padding: '12px 14px', width: '28%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
+                      <th style={{ padding: '12px 14px', width: '20%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
+                      <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Fecha de Pago</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '18%', whiteSpace: 'nowrap' }}>Monto & Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1558,8 +1558,8 @@ export default function App() {
 
                           {/* Col 3: Fecha Emisión */}
                           <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.825rem' }}>
-                              <Calendar size={13} color="var(--primary-light)" />
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                              <Calendar size={14} color="var(--primary-light)" />
                               <span>{inv.issue_date || 'N/A'}</span>
                             </div>
                           </td>
@@ -1567,20 +1567,46 @@ export default function App() {
                           {/* Col 4: Fecha de Pago */}
                           <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             {inv.status === 'paid' ? (
-                              <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 500, fontSize: '0.825rem' }}>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  color: '#10b981',
+                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                                  padding: '3px 9px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 500,
+                                }}
+                              >
                                 <Check size={13} />
                                 <span>{paymentDate || inv.issue_date}</span>
-                              </span>
+                              </div>
                             ) : inv.status === 'partial' ? (
-                              <span style={{ color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 500, fontSize: '0.825rem' }}>
+                              <div
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  color: '#f59e0b',
+                                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                  border: '1px solid rgba(245, 158, 11, 0.25)',
+                                  padding: '3px 9px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 500,
+                                }}
+                              >
                                 <Clock size={13} />
-                                <span>{paymentDate ? `Abono: ${paymentDate}` : 'Parcial registrado'}</span>
-                              </span>
+                                <span>Abono: {paymentDate || 'Parcial'}</span>
+                              </div>
                             ) : (
-                              <span style={{ color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                 <Clock size={13} />
-                                <span>{inv.due_date ? `Vence ${inv.due_date}` : 'Pendiente'}</span>
-                              </span>
+                                <span>{inv.due_date ? `Vence: ${inv.due_date}` : 'Pendiente'}</span>
+                              </div>
                             )}
                           </td>
 

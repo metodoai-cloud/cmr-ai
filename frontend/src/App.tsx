@@ -1472,11 +1472,11 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '100px' }}>N° Factura</th>
-                      <th style={{ padding: '12px 14px' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '150px' }}>Fecha Emisión</th>
-                      <th style={{ padding: '12px 14px', width: '170px' }}>Fecha de Pago</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '170px' }}>Monto & Estado</th>
+                      <th style={{ padding: '12px 14px', width: '120px', whiteSpace: 'nowrap' }}>N° Factura</th>
+                      <th style={{ padding: '12px 14px', minWidth: '200px', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
+                      <th style={{ padding: '12px 14px', width: '150px', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
+                      <th style={{ padding: '12px 14px', width: '190px', whiteSpace: 'nowrap' }}>Fecha de Pago</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '160px', whiteSpace: 'nowrap' }}>Monto & Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1523,7 +1523,7 @@ export default function App() {
                           }}
                         >
                           {/* Col 1: N° Factura */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div
                               style={{
                                 display: 'inline-flex',
@@ -1545,7 +1545,7 @@ export default function App() {
                           </td>
 
                           {/* Col 2: Cliente / Empresa */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
                               {clientName}
                             </div>
@@ -1557,7 +1557,7 @@ export default function App() {
                           </td>
 
                           {/* Col 3: Fecha Emisión */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.825rem' }}>
                               <Calendar size={13} color="var(--primary-light)" />
                               <span>{inv.issue_date || 'N/A'}</span>
@@ -1565,7 +1565,7 @@ export default function App() {
                           </td>
 
                           {/* Col 4: Fecha de Pago */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             {inv.status === 'paid' ? (
                               <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 500, fontSize: '0.825rem' }}>
                                 <Check size={13} />
@@ -1585,7 +1585,7 @@ export default function App() {
                           </td>
 
                           {/* Col 5: Monto & Estado */}
-                          <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
                               {formatMoney(inv.total)}
                             </div>

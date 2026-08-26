@@ -1472,10 +1472,11 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '110px' }}>N° Factura</th>
+                      <th style={{ padding: '12px 14px', width: '100px' }}>N° Factura</th>
                       <th style={{ padding: '12px 14px' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '230px' }}>Fecha Emisión / Fecha de Pago</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '180px' }}>Monto & Estado</th>
+                      <th style={{ padding: '12px 14px', width: '150px' }}>Fecha Emisión</th>
+                      <th style={{ padding: '12px 14px', width: '170px' }}>Fecha de Pago</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '170px' }}>Monto & Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1511,7 +1512,7 @@ export default function App() {
 
                       // Payment date logic
                       const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
-                      const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '09/07/2026' : null);
+                      const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
 
                       return (
                         <tr
@@ -1555,35 +1556,35 @@ export default function App() {
                             )}
                           </td>
 
-                          {/* Col 3: Fecha Emisión / Fecha de Pago */}
+                          {/* Col 3: Fecha Emisión */}
                           <td style={{ padding: '14px', verticalAlign: 'middle' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.825rem' }}>
-                                <Calendar size={13} color="var(--primary-light)" />
-                                <span>Emisión: {inv.issue_date || 'N/A'}</span>
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}>
-                                {inv.status === 'paid' ? (
-                                  <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                                    <Check size={12} />
-                                    <span>Pago: {paymentDate || inv.issue_date}</span>
-                                  </span>
-                                ) : inv.status === 'partial' ? (
-                                  <span style={{ color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 500 }}>
-                                    <Clock size={12} />
-                                    <span>Abono: {paymentDate || 'Parcial registrado'}</span>
-                                  </span>
-                                ) : (
-                                  <span style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Clock size={12} />
-                                    <span>Pago: {inv.due_date ? `Vence ${inv.due_date}` : 'Pendiente'}</span>
-                                  </span>
-                                )}
-                              </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.825rem' }}>
+                              <Calendar size={13} color="var(--primary-light)" />
+                              <span>{inv.issue_date || 'N/A'}</span>
                             </div>
                           </td>
 
-                          {/* Col 4: Monto & Estado */}
+                          {/* Col 4: Fecha de Pago */}
+                          <td style={{ padding: '14px', verticalAlign: 'middle' }}>
+                            {inv.status === 'paid' ? (
+                              <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 500, fontSize: '0.825rem' }}>
+                                <Check size={13} />
+                                <span>{paymentDate || inv.issue_date}</span>
+                              </span>
+                            ) : inv.status === 'partial' ? (
+                              <span style={{ color: '#f59e0b', display: 'inline-flex', alignItems: 'center', gap: '5px', fontWeight: 500, fontSize: '0.825rem' }}>
+                                <Clock size={13} />
+                                <span>{paymentDate ? `Abono: ${paymentDate}` : 'Parcial registrado'}</span>
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem' }}>
+                                <Clock size={13} />
+                                <span>{inv.due_date ? `Vence ${inv.due_date}` : 'Pendiente'}</span>
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Col 5: Monto & Estado */}
                           <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle' }}>
                             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
                               {formatMoney(inv.total)}

@@ -31,18 +31,28 @@ jobs:
 
       - name: Desplegar en VPS via SSH
         env:
-          VPS_HOST: ${{ vars.VPS_HOST != '' && vars.VPS_HOST || secrets.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER != '' && vars.VPS_USER || secrets.VPS_USER || 'root' }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY != '' && secrets.VPS_SSH_KEY || vars.VPS_SSH_KEY }}
+          VPS_HOST: ${{ vars.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: VPS_HOST está vacío en secrets y en vars."
-            echo "👉 Agrega VPS_HOST en la pestaña 'Variables' (Settings -> Secrets and variables -> Actions -> pestaña Variables)."
-            exit 1
+            VPS_HOST="${{ secrets.VPS_HOST }}"
+          fi
+          if [ -z "$VPS_USER" ]; then
+            VPS_USER="${{ secrets.VPS_USER }}"
+            VPS_USER="${VPS_USER:-root}"
+          fi
+          if [ -z "$VPS_SSH_KEY" ]; then
+            VPS_SSH_KEY="${{ vars.VPS_SSH_KEY }}"
           fi
           
-          if [ -z "$VPS_USER" ]; then
-            VPS_USER="root"
+          if [ -z "$VPS_HOST" ]; then
+            echo "❌ ERROR: VPS_HOST está vacío."
+            exit 1
+          fi
+          if [ -z "$VPS_SSH_KEY" ]; then
+            echo "❌ ERROR: VPS_SSH_KEY está vacío en Secrets."
+            exit 1
           fi
           
           mkdir -p ~/.ssh

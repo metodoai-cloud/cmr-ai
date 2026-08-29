@@ -10,24 +10,27 @@ jobs:
   deploy:
     name: Deploy to Production VPS
     runs-on: ubuntu-latest
-    environment: production
 
     steps:
+      - name: Diagnóstico de Secretos
+        env:
+          HAS_HOST: ${{ secrets.VPS_HOST != '' }}
+          HAS_USER: ${{ secrets.VPS_USER != '' }}
+          HAS_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
+        run: |
+          echo "🔍 Comprobación de secretos disponibles:"
+          echo "• VPS_HOST presente: $HAS_HOST"
+          echo "• VPS_USER presente: $HAS_USER"
+          echo "• VPS_SSH_KEY presente: $HAS_KEY"
+
       - name: Desplegar en VPS via SSH
         env:
-          SEC_HOST: ${{ secrets.VPS_HOST }}
-          VAR_HOST: ${{ vars.VPS_HOST }}
-          SEC_USER: ${{ secrets.VPS_USER }}
-          VAR_USER: ${{ vars.VPS_USER }}
-          SEC_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VAR_KEY: ${{ vars.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          VPS_HOST="${SEC_HOST:-$VAR_HOST}"
-          VPS_USER="${SEC_USER:-$VAR_USER}"
-          VPS_SSH_KEY="${SEC_KEY:-$VAR_KEY}"
-          
           if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: VPS_HOST está vacío tanto en Secrets como en Variables."
+            echo "❌ ERROR: El secret VPS_HOST está vacío."
             exit 1
           fi
           

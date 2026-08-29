@@ -12,41 +12,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Conectar por SSH y Desplegar
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          script: |
-            echo "🚀 Iniciando despliegue en el VPS..."
+      - name: Desplegar en VPS via SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          if [ -z "$VPS_HOST" ]; then
+            echo "❌ ERROR: El secret VPS_HOST está vacío. Verifica que el secret VPS_HOST tenga la IP del VPS en Settings -> Secrets."
+            exit 1
+          fi
+          
+          if [ -z "$VPS_USER" ]; then
+            VPS_USER="root"
+          fi
+          
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          
+          echo "🚀 Conectando a $VPS_USER@$VPS_HOST..."
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 "$VPS_USER@$VPS_HOST" "bash -s" << 'EOF'
+            set -e
+            echo "📂 Buscando carpeta del CRM en el VPS..."
             
-            # 1. Navegar a la carpeta del proyecto
-            TARGET_DIR="${{ secrets.VPS_PROJECT_DIR }}"
-            if [ -z "$TARGET_DIR" ] || [ ! -d "$TARGET_DIR" ]; then
-              for d in /var/www/cmr /var/www/CMR /root/CMR /root/cmr /home/*/CMR /home/*/cmr /root/GESTION\ AG/CMR; do
-                if [ -d "$d" ]; then TARGET_DIR="$d"; break; fi
-              done
+            TARGET_DIR=""
+            for d in /var/www/cmr /var/www/CMR /root/CMR /root/cmr /home/*/CMR /home/*/cmr /root/GESTION\ AG/CMR /var/www/*; do
+              if [ -d "$d" ] && [ -d "$d/.git" ]; then
+                TARGET_DIR="$d"
+                break
+              fi
+            done
+            
+            if [ -n "$TARGET_DIR" ]; then
+              cd "$TARGET_DIR"
             fi
-            cd "${TARGET_DIR:-/var/www/cmr}"
-            echo "📂 Directorio de trabajo: $(pwd)"
             
-            # 2. Descargar los últimos cambios de GitHub
+            echo "📂 Trabajando en: $(pwd)"
             git pull origin main
             
-            # 3. Instalar dependencias y compilar frontend
-            cd frontend
-            npm install
-            npm run build
-            cd ..
-            
-            # 4. Instalar dependencias de backend si cambiaron
-            npm install
-            
-            # 5. Reiniciar servicios de backend y frontend
-            if command -v pm2 &> /dev/null; then
-              pm2 restart all || pm2 start npm --name "crm" -- run dev
+            if [ -d "frontend" ]; then
+              echo "🔨 Compilando frontend..."
+              cd frontend
+              npm install --prefer-offline 2>/dev/null || npm install
+              npm run build
+              cd ..
             fi
             
-            echo "✅ ¡Despliegue completado exitosamente!"
+            echo "🔄 Reiniciando procesos..."
+            if command -v pm2 &> /dev/null; then
+              pm2 restart all || true
+            fi
+            
+            echo "✨ ¡Despliegue completado exitosamente en el VPS!"
+          EOF

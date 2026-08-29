@@ -10,16 +10,24 @@ jobs:
   deploy:
     name: Deploy to Production VPS
     runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Desplegar en VPS via SSH
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SEC_HOST: ${{ secrets.VPS_HOST }}
+          VAR_HOST: ${{ vars.VPS_HOST }}
+          SEC_USER: ${{ secrets.VPS_USER }}
+          VAR_USER: ${{ vars.VPS_USER }}
+          SEC_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VAR_KEY: ${{ vars.VPS_SSH_KEY }}
         run: |
+          VPS_HOST="${SEC_HOST:-$VAR_HOST}"
+          VPS_USER="${SEC_USER:-$VAR_USER}"
+          VPS_SSH_KEY="${SEC_KEY:-$VAR_KEY}"
+          
           if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: El secret VPS_HOST está vacío. Verifica que el secret VPS_HOST tenga la IP del VPS en Settings -> Secrets."
+            echo "❌ ERROR: VPS_HOST está vacío tanto en Secrets como en Variables."
             exit 1
           fi
           

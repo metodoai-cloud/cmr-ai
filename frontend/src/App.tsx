@@ -326,6 +326,20 @@ export default function App() {
     }
   };
 
+  // Delete Opportunity
+  const handleDeleteOpportunity = async (oppId: string, oppName?: string) => {
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente la oportunidad "${oppName || oppId}"? Esta acción borrará el trato del pipeline y no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await crmApi.deleteOpportunity(oppId);
+      setSelectedOpp(null);
+      await loadData();
+    } catch (e: any) {
+      alert(`Error al eliminar oportunidad: ${e?.message || 'Error desconocido'}`);
+    }
+  };
+
   // Add Activity to Opportunity
   const handleAddActivity = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2269,6 +2283,16 @@ export default function App() {
                   >
                     <PlusCircle size={14} />
                     {showAddActivityForm ? 'Cancelar' : '+ Registrar Reunión / Nota'}
+                  </button>
+
+                  <button
+                    onClick={() => handleDeleteOpportunity(selectedOpp.id, selectedOpp.name)}
+                    className="btn btn-ghost btn-sm"
+                    style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '6px 10px' }}
+                    title="Eliminar Oportunidad"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar
                   </button>
                 </div>
               </div>

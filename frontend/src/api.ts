@@ -29,6 +29,7 @@ export const crmApi = {
   moveOpportunity: (id: string, stage: string) => fetchApi(`/opportunities/${id}/move`, { method: 'POST', body: JSON.stringify({ stage }) }),
   closeOpportunity: (id: string, outcome: 'won' | 'lost', lost_reason?: string) => 
     fetchApi(`/opportunities/${id}/close`, { method: 'POST', body: JSON.stringify({ outcome, lost_reason }) }),
+  deleteOpportunity: (id: string) => fetchApi(`/opportunities/${id}`, { method: 'DELETE' }),
 
   // Contacts & Companies
   getContacts: () => fetchApi('/contacts'),

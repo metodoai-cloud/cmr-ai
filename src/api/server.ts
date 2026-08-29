@@ -137,6 +137,11 @@ app.post('/api/opportunities/:id/close', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/opportunities/:id', async (req, res) => {
+  try { res.json(await OpportunityService.delete(req.params.id, 'web')); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // === Activities ===
 app.get('/api/activities', async (req, res) => {
   try { res.json(await ActivityService.getAll(req.query)); }

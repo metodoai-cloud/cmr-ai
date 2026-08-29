@@ -12,25 +12,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Diagnóstico de Secretos
+      - name: Diagnóstico de Secretos y Variables
         env:
-          HAS_HOST: ${{ secrets.VPS_HOST != '' }}
-          HAS_USER: ${{ secrets.VPS_USER != '' }}
-          HAS_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
+          HAS_SEC_HOST: ${{ secrets.VPS_HOST != '' }}
+          HAS_VAR_HOST: ${{ vars.VPS_HOST != '' }}
+          HAS_SEC_USER: ${{ secrets.VPS_USER != '' }}
+          HAS_VAR_USER: ${{ vars.VPS_USER != '' }}
+          HAS_SEC_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
+          HAS_VAR_KEY: ${{ vars.VPS_SSH_KEY != '' }}
         run: |
-          echo "🔍 Comprobación de secretos disponibles:"
-          echo "• VPS_HOST presente: $HAS_HOST"
-          echo "• VPS_USER presente: $HAS_USER"
-          echo "• VPS_SSH_KEY presente: $HAS_KEY"
+          echo "🔍 Comprobación de configuración:"
+          echo "• secrets.VPS_HOST: $HAS_SEC_HOST"
+          echo "• vars.VPS_HOST: $HAS_VAR_HOST"
+          echo "• secrets.VPS_USER: $HAS_SEC_USER"
+          echo "• vars.VPS_USER: $HAS_VAR_USER"
+          echo "• secrets.VPS_SSH_KEY: $HAS_SEC_KEY"
+          echo "• vars.VPS_SSH_KEY: $HAS_VAR_KEY"
 
       - name: Desplegar en VPS via SSH
         env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ vars.VPS_HOST != '' && vars.VPS_HOST || secrets.VPS_HOST }}
+          VPS_USER: ${{ vars.VPS_USER != '' && vars.VPS_USER || secrets.VPS_USER || 'root' }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY != '' && secrets.VPS_SSH_KEY || vars.VPS_SSH_KEY }}
         run: |
           if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: El secret VPS_HOST está vacío."
+            echo "❌ ERROR: VPS_HOST está vacío en secrets y en vars."
+            echo "👉 Agrega VPS_HOST en la pestaña 'Variables' (Settings -> Secrets and variables -> Actions -> pestaña Variables)."
             exit 1
           fi
           

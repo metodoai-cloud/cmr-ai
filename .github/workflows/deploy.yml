@@ -72,61 +72,77 @@ jobs:
           if [ -n "$VPS_SSH_KEY" ]; then
             echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
             chmod 600 ~/.ssh/deploy_key
-            SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+            SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15"
           else
             sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-            SSH_CMD="sshpass -p $VPS_PASSWORD ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+            SSH_CMD="sshpass -p $VPS_PASSWORD ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15"
           fi
           
-          $SSH_CMD "$VPS_USER@$VPS_HOST" "bash -s" << 'EOF'
-            set -e
-            echo "📂 Buscando carpeta del CRM en el VPS..."
-            
-            TARGET_DIR=""
-            for d in /var/www/cmr /var/www/CMR /root/CMR /root/cmr /home/*/CMR /home/*/cmr /root/GESTION\ AG/CMR /var/www/*; do
-              if [ -d "$d" ] && [ -d "$d/.git" ]; then
-                TARGET_DIR="$d"
-                break
+          SUCCESS=0
+          for attempt in 1 2 3; do
+            echo "🚀 [Intento $attempt/3] Conectando a $VPS_USER@$VPS_HOST..."
+            if $SSH_CMD "$VPS_USER@$VPS_HOST" "bash -s" << 'EOF'
+              set -e
+              echo "📂 Buscando carpeta del CRM en el VPS..."
+              
+              TARGET_DIR=""
+              for d in /var/www/cmr /var/www/CMR /root/CMR /root/cmr /home/*/CMR /home/*/cmr /root/GESTION\ AG/CMR /var/www/*; do
+                if [ -d "$d" ] && [ -d "$d/.git" ]; then
+                  TARGET_DIR="$d"
+                  break
+                fi
+              done
+              
+              if [ -n "$TARGET_DIR" ]; then
+                cd "$TARGET_DIR"
               fi
-            done
-            
-            if [ -n "$TARGET_DIR" ]; then
-              cd "$TARGET_DIR"
-            fi
-            
-            echo "📂 Trabajando en: $(pwd)"
-            git pull origin main
-            
-            # Instalar dependencias raíz
-            npm install --prefer-offline 2>/dev/null || npm install
-            
-            # Compilar frontend
-            if [ -d "frontend" ]; then
-              echo "🔨 Compilando frontend..."
-              cd frontend
+              
+              echo "📂 Trabajando en: $(pwd)"
+              git pull origin main
+              
+              # Instalar dependencias raíz
               npm install --prefer-offline 2>/dev/null || npm install
-              npm run build
-              cd ..
               
-              # Sincronizar directorios estáticos
-              mkdir -p dist
-              cp -rf frontend/dist/* dist/ 2>/dev/null || true
-              
-              if [ -d "/var/www/html" ]; then
-                cp -rf frontend/dist/* /var/www/html/ 2>/dev/null || true
+              # Compilar frontend
+              if [ -d "frontend" ]; then
+                echo "🔨 Compilando frontend..."
+                cd frontend
+                npm install --prefer-offline 2>/dev/null || npm install
+                npm run build
+                cd ..
+                
+                # Sincronizar directorios estáticos
+                mkdir -p dist
+                cp -rf frontend/dist/* dist/ 2>/dev/null || true
+                
+                if [ -d "/var/www/html" ]; then
+                  cp -rf frontend/dist/* /var/www/html/ 2>/dev/null || true
+                fi
               fi
+              
+              echo "🔄 Reiniciando procesos..."
+              if command -v pm2 &> /dev/null; then
+                pm2 restart all --update-env || pm2 restart all || true
+              fi
+              if systemctl is-active --quiet crm 2>/dev/null; then
+                systemctl restart crm || true
+              fi
+              if systemctl is-active --quiet nginx 2>/dev/null; then
+                systemctl reload nginx || true
+              fi
+              
+              echo "✨ ¡Despliegue completado exitosamente en el VPS!"
+EOF
+            then
+              SUCCESS=1
+              break
+            else
+              echo "⚠️ Intento $attempt falló. Esperando 10 segundos antes de reintentar..."
+              sleep 10
             fi
-            
-            echo "🔄 Reiniciando procesos..."
-            if command -v pm2 &> /dev/null; then
-              pm2 restart all --update-env || pm2 restart all || true
-            fi
-            if systemctl is-active --quiet crm 2>/dev/null; then
-              systemctl restart crm || true
-            fi
-            if systemctl is-active --quiet nginx 2>/dev/null; then
-              systemctl reload nginx || true
-            fi
-            
-            echo "✨ ¡Despliegue completado exitosamente en el VPS!"
-          EOF
+          done
+          
+          if [ $SUCCESS -ne 1 ]; then
+            echo "❌ No se pudo completar la conexión SSH tras 3 intentos."
+            exit 1
+          fi

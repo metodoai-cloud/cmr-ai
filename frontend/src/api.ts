@@ -49,7 +49,9 @@ export const crmApi = {
 
   // Finance
   getInvoices: () => fetchApi('/invoices'),
+  getInvoiceById: (id: string) => fetchApi(`/invoices/${id}`),
   createInvoice: (data: any) => fetchApi('/invoices', { method: 'POST', body: JSON.stringify(data) }),
+  updateInvoice: (id: string, data: any) => fetchApi(`/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getPayments: () => fetchApi('/payments'),
   registerPayment: (data: any) => fetchApi('/payments', { method: 'POST', body: JSON.stringify(data) }),
   getExpenses: () => fetchApi('/expenses'),

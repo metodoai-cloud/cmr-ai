@@ -41,6 +41,17 @@ function normalizeContactStatus(status?: string): string | undefined {
   return map[status.toLowerCase()] || status;
 }
 
+// Format dates as DD-MM-YYYY
+function formatDateCL(dateStr?: string | null): string {
+  if (!dateStr) return 'N/A';
+  const clean = String(dateStr).split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return dateStr;
+}
+
 export function registerTools(srv: McpServer) {
 
   // --- buscar_contacto ---
@@ -439,40 +450,77 @@ export function registerTools(srv: McpServer) {
   // --- crear_factura ---
   srv.tool(
     'crear_factura',
-    'Crear o emitir una factura manual para un cliente en el CRM.',
+    'Crear o emitir una factura manual para un cliente en el CRM. Si se omite el folio (invoice_number), queda vacío.',
     {
       client_id: z.string().describe('ID del cliente al que se le factura'),
+      invoice_number: z.string().optional().describe('Número o folio de la factura (opcional, ej: 1042 o FAC-1042). Si no se indica, queda vacío.'),
       subtotal: z.number().describe('Monto subtotal de la factura'),
       total: z.number().optional().describe('Monto total de la factura'),
       tax_amount: z.number().optional().describe('Monto de impuesto (ej: IVA)'),
-      status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']).optional().describe('Estado inicial de la factura (default: draft)'),
-      due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD)'),
+      status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Estado inicial de la factura (default: draft)'),
+      issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),
+      due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD o DD-MM-YYYY)'),
       project_id: z.string().optional().describe('ID del proyecto relacionado si aplica'),
       subscription_id: z.string().optional().describe('ID de la suscripción relacionada si aplica'),
       notes: z.string().optional().describe('Notas o concepto de la factura'),
     },
     async (data) => {
       try {
-        const count = await InvoiceService.getAll();
-        const num = `INV-${new Date().getFullYear()}-${String((count.length || 0) + 1).padStart(3, '0')}`;
         const invoice = await InvoiceService.create({
-          invoice_number: num,
+          invoice_number: data.invoice_number || null,
           client_id: data.client_id,
           project_id: data.project_id || null,
           subscription_id: data.subscription_id || null,
-          issue_date: new Date().toISOString().split('T')[0],
+          issue_date: data.issue_date || new Date().toISOString().split('T')[0],
           due_date: data.due_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           subtotal: data.subtotal,
           tax_amount: data.tax_amount || 0,
           total: data.total ?? data.subtotal,
           currency: 'CLP',
           status: data.status || 'draft',
-        });
+          notes: data.notes || null,
+        }, 'mcp');
+
+        const folioText = invoice.invoice_number ? `N° ${invoice.invoice_number}` : 'Sin Folio';
         return {
-          content: [{ type: 'text' as const, text: `✅ Factura ${invoice.invoice_number} creada (ID: ${invoice.id}) por total de $${invoice.total} en estado "${invoice.status}".` }],
+          content: [{
+            type: 'text' as const,
+            text: `✅ Factura ${folioText} creada (ID: ${invoice.id})\n- Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)}\n- Vencimiento: ${formatDateCL(invoice.due_date)}\n- Estado: "${invoice.status}"`,
+          }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al crear factura: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- actualizar_factura ---
+  srv.tool(
+    'actualizar_factura',
+    'Actualizar datos de una factura existente, incluyendo folio (invoice_number), estado, fechas o montos.',
+    {
+      id: z.string().describe('ID de la factura a actualizar'),
+      invoice_number: z.string().optional().describe('Número o folio de la factura'),
+      status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Estado de la factura'),
+      issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),
+      due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD o DD-MM-YYYY)'),
+      subtotal: z.number().optional().describe('Monto subtotal'),
+      tax_amount: z.number().optional().describe('Monto de impuestos'),
+      total: z.number().optional().describe('Monto total'),
+      notes: z.string().optional().describe('Notas o concepto de la factura'),
+    },
+    async ({ id, ...data }) => {
+      try {
+        const invoice = await InvoiceService.update(id, data, 'mcp');
+        const folioText = invoice.invoice_number ? `N° ${invoice.invoice_number}` : 'Sin Folio';
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `✅ Factura ${folioText} actualizada correctamente (ID: ${invoice.id})\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')} / Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)} | Vence: ${formatDateCL(invoice.due_date)}\n- Estado: ${invoice.status}`,
+          }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar factura: ${err.message}` }] };
       }
     }
   );
@@ -504,14 +552,19 @@ export function registerTools(srv: McpServer) {
     'listar_facturas',
     'Ver facturas generadas, con filtro por estado.',
     {
-      status: z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']).optional().describe('Filtrar por estado de factura'),
+      status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Filtrar por estado de factura'),
     },
     async (filters) => {
       try {
         const invoices = await InvoiceService.getAll(filters);
-        const list = invoices.map((i: any) =>
-          `• ${i.invoice_number || i.id} | $${i.total} | ${i.status} | Vence: ${i.due_date || 'N/A'}`
-        ).join('\n');
+        const list = invoices.map((i: any) => {
+          const folio = i.invoice_number ? `N° ${i.invoice_number}` : `ID: ${i.id.slice(0, 8)} (Sin Folio)`;
+          const paid = (i.paid_amount || 0).toLocaleString('es-CL');
+          const total = (Number(i.total) || 0).toLocaleString('es-CL');
+          const emision = formatDateCL(i.issue_date);
+          const vence = formatDateCL(i.due_date);
+          return `• ${folio} | Pagado: $${paid} / Total: $${total} | Emisión: ${emision} | Vence: ${vence} | Estado: ${i.status.toUpperCase()}`;
+        }).join('\n');
         return {
           content: [{ type: 'text' as const, text: invoices.length > 0 ? `📋 Facturas (${invoices.length}):\n\n${list}` : 'No se encontraron facturas.' }],
         };

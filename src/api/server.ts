@@ -182,8 +182,23 @@ app.get('/api/invoices/overdue', async (_req, res) => {
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+app.get('/api/invoices/:id', async (req, res) => {
+  try { res.json(await InvoiceService.getById(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/invoices', async (req, res) => {
   try { res.json(await InvoiceService.create(req.body)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/invoices/:id', async (req, res) => {
+  try { res.json(await InvoiceService.update(req.params.id, req.body)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/invoices/:id', async (req, res) => {
+  try { res.json(await InvoiceService.update(req.params.id, req.body)); }
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

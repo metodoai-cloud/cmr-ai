@@ -393,9 +393,8 @@ export const OpportunityService = {
     // 5. Create draft invoice
     const invoiceTotal = Number(opp.setup_value) + Number(opp.recurring_value);
     if (invoiceTotal > 0) {
-      const invoiceCount = await invoiceRepo.count();
       result.invoice = await invoiceRepo.create({
-        invoice_number: `INV-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(3, '0')}`,
+        invoice_number: null,
         client_id: result.client.id,
         project_id: result.project?.id,
         subscription_id: result.subscription?.id,
@@ -508,21 +507,60 @@ export const ClientService = {
 // ============================================================================
 // INVOICE SERVICE
 // ============================================================================
+function enrichInvoice(inv: any) {
+  if (!inv) return inv;
+  const payments = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
+  const paid_amount = payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+  const total = Number(inv.total) || 0;
+  return {
+    ...inv,
+    paid_amount,
+    pending_amount: Math.max(0, total - paid_amount),
+  };
+}
+
 export const InvoiceService = {
   async getAll(filters: any = {}) {
-    return invoiceRepo.findAll(filters);
+    const list = await invoiceRepo.findAll(filters);
+    return (list || []).map(enrichInvoice);
   },
 
   async getOverdue() {
-    return invoiceRepo.findOverdue();
+    const list = await invoiceRepo.findOverdue();
+    return (list || []).map(enrichInvoice);
   },
 
   async getByClient(clientId: string) {
-    return invoiceRepo.findByClient(clientId);
+    const list = await invoiceRepo.findByClient(clientId);
+    return (list || []).map(enrichInvoice);
+  },
+
+  async getById(id: string) {
+    const invoice = await invoiceRepo.findById(id);
+    return enrichInvoice(invoice);
   },
 
   async create(data: any, source: 'web' | 'mcp' = 'web') {
-    const invoice = await invoiceRepo.create(data);
+    let status = data.status || 'draft';
+    if (status === 'sent') status = 'issued';
+    if (status === 'void') status = 'cancelled';
+
+    const payload: any = {
+      client_id: data.client_id,
+      project_id: data.project_id || null,
+      subscription_id: data.subscription_id || null,
+      invoice_number: data.invoice_number ? String(data.invoice_number).trim() : null,
+      issue_date: data.issue_date || new Date().toISOString().split('T')[0],
+      due_date: data.due_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      subtotal: Number(data.subtotal) || 0,
+      tax_amount: Number(data.tax_amount) || 0,
+      total: data.total !== undefined ? Number(data.total) : (Number(data.subtotal) || 0) + (Number(data.tax_amount) || 0),
+      currency: data.currency || 'CLP',
+      status,
+    };
+    if (data.document_url) payload.document_url = data.document_url;
+
+    const invoice = await invoiceRepo.create(payload);
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -531,7 +569,44 @@ export const InvoiceService = {
       action: 'created',
       afterData: invoice,
     });
-    return invoice;
+    return enrichInvoice(invoice);
+  },
+
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+    const existing = await invoiceRepo.findById(id);
+    if (!existing) {
+      throw new Error(`Factura no encontrada con ID: ${id}`);
+    }
+
+    const payload: any = {};
+    if (data.invoice_number !== undefined) {
+      payload.invoice_number = data.invoice_number ? String(data.invoice_number).trim() : null;
+    }
+    if (data.status !== undefined) {
+      let st = data.status;
+      if (st === 'sent') st = 'issued';
+      if (st === 'void') st = 'cancelled';
+      payload.status = st;
+    }
+    if (data.issue_date !== undefined) payload.issue_date = data.issue_date;
+    if (data.due_date !== undefined) payload.due_date = data.due_date;
+    if (data.subtotal !== undefined) payload.subtotal = Number(data.subtotal);
+    if (data.tax_amount !== undefined) payload.tax_amount = Number(data.tax_amount);
+    if (data.total !== undefined) payload.total = Number(data.total);
+    if (data.currency !== undefined) payload.currency = data.currency;
+    if (data.document_url !== undefined) payload.document_url = data.document_url;
+
+    const updated = await invoiceRepo.update(id, payload);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'invoice',
+      entityId: id,
+      action: 'updated',
+      beforeData: existing,
+      afterData: updated,
+    });
+    return enrichInvoice(updated);
   },
 
   async issue(id: string, source: 'web' | 'mcp' = 'web') {
@@ -542,7 +617,7 @@ export const InvoiceService = {
       entity_id: id,
       payload: invoice,
     });
-    return invoice;
+    return enrichInvoice(invoice);
   },
 };
 

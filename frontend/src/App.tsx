@@ -60,6 +60,17 @@ export const formatNum = (val: number | string | undefined | null): string => {
   return Math.round(num).toLocaleString('es-CL');
 };
 
+export const formatDate = (val: string | Date | undefined | null): string => {
+  if (!val) return 'N/A';
+  const str = typeof val === 'object' && val instanceof Date ? val.toISOString() : String(val);
+  const clean = str.split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+  return str;
+};
+
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'pipeline' | 'contacts' | 'companies' | 'marketing' | 'finance' | 'operations' | 'ai' | 'settings'>('dashboard');
@@ -1472,11 +1483,12 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '12%', whiteSpace: 'nowrap' }}>N° Factura</th>
-                      <th style={{ padding: '12px 14px', width: '28%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '20%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
-                      <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Fecha de Pago</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '18%', whiteSpace: 'nowrap' }}>Monto & Estado</th>
+                      <th style={{ padding: '12px 14px', width: '11%', whiteSpace: 'nowrap' }}>N° Factura</th>
+                      <th style={{ padding: '12px 14px', width: '25%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
+                      <th style={{ padding: '12px 14px', width: '15%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
+                      <th style={{ padding: '12px 14px', width: '18%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '15%', whiteSpace: 'nowrap' }}>Monto Pagado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '16%', whiteSpace: 'nowrap' }}>Total & Estado</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1505,14 +1517,19 @@ export default function App() {
                         ? `${(contactObj || fallbackCont)?.first_name || ''} ${(contactObj || fallbackCont)?.last_name || ''}`.trim()
                         : null;
 
-                      // Invoice number (extract 2-3 digits)
-                      const rawNum = inv.invoice_number || '';
-                      const digitMatch = rawNum.match(/\d+$/);
-                      const displayNum = digitMatch ? `#${parseInt(digitMatch[0], 10) < 10 ? '0' + parseInt(digitMatch[0], 10) : parseInt(digitMatch[0], 10)}` : (rawNum ? `#${rawNum}` : '#--');
+                      // Custom or assigned invoice number
+                      const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
+                      const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
 
-                      // Payment date logic
+                      // Payment date and paid amount logic
                       const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
                       const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
+                      const paymentsList = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
+                      const paidAmount = inv.paid_amount !== undefined
+                        ? Number(inv.paid_amount)
+                        : (inv.status === 'paid'
+                            ? Number(inv.total)
+                            : paymentsList.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0));
 
                       return (
                         <tr
@@ -1531,9 +1548,9 @@ export default function App() {
                                 gap: '4px',
                                 padding: '4px 10px',
                                 borderRadius: '8px',
-                                backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                border: '1px solid rgba(99, 102, 241, 0.25)',
-                                color: 'var(--primary-light)',
+                                backgroundColor: rawNum ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.1)',
+                                border: rawNum ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
+                                color: rawNum ? 'var(--primary-light)' : 'var(--text-muted)',
                                 fontWeight: 700,
                                 fontFamily: "'JetBrains Mono', monospace",
                                 fontSize: '0.85rem',
@@ -1560,11 +1577,11 @@ export default function App() {
                           <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
                               <Calendar size={14} color="var(--primary-light)" />
-                              <span>{inv.issue_date || 'N/A'}</span>
+                              <span>{formatDate(inv.issue_date)}</span>
                             </div>
                           </td>
 
-                          {/* Col 4: Fecha de Pago */}
+                          {/* Col 4: Fecha de Pago / Vence */}
                           <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             {inv.status === 'paid' ? (
                               <div
@@ -1582,7 +1599,7 @@ export default function App() {
                                 }}
                               >
                                 <Check size={13} />
-                                <span>{paymentDate || inv.issue_date}</span>
+                                <span>Pagado: {formatDate(paymentDate || inv.issue_date)}</span>
                               </div>
                             ) : inv.status === 'partial' ? (
                               <div
@@ -1600,17 +1617,29 @@ export default function App() {
                                 }}
                               >
                                 <Clock size={13} />
-                                <span>Abono: {paymentDate || 'Parcial'}</span>
+                                <span>Abono: {formatDate(paymentDate || inv.issue_date)}</span>
                               </div>
                             ) : (
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                                 <Clock size={13} />
-                                <span>{inv.due_date ? `Vence: ${inv.due_date}` : 'Pendiente'}</span>
+                                <span>{inv.due_date ? `Vence: ${formatDate(inv.due_date)}` : 'Pendiente'}</span>
                               </div>
                             )}
                           </td>
 
-                          {/* Col 5: Monto & Estado */}
+                          {/* Col 5: Monto Pagado */}
+                          <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontWeight: 600, color: paidAmount > 0 ? '#10b981' : 'var(--text-muted)', fontSize: '0.95rem' }}>
+                              {formatMoney(paidAmount)}
+                            </div>
+                            {paidAmount > 0 && paidAmount < Number(inv.total) && (
+                              <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '2px' }}>
+                                Resta: {formatMoney(Number(inv.total) - paidAmount)}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Col 6: Total & Estado */}
                           <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                             <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
                               {formatMoney(inv.total)}
@@ -1621,7 +1650,9 @@ export default function App() {
                                   ? 'badge-success'
                                   : inv.status === 'partial'
                                   ? 'badge-warning'
-                                  : 'badge-info'
+                                  : inv.status === 'issued'
+                                  ? 'badge-info'
+                                  : 'badge-secondary'
                               }`}
                             >
                               {inv.status === 'paid'
@@ -1630,7 +1661,13 @@ export default function App() {
                                 ? 'PARCIAL'
                                 : inv.status === 'issued'
                                 ? 'EMITIDA'
-                                : inv.status || 'BORRADOR'}
+                                : inv.status === 'sent'
+                                ? 'ENVIADA'
+                                : inv.status === 'overdue'
+                                ? 'VENCIDA'
+                                : inv.status === 'cancelled'
+                                ? 'ANULADA'
+                                : 'BORRADOR'}
                             </span>
                           </td>
                         </tr>
@@ -1661,7 +1698,7 @@ export default function App() {
                     <div>
                       <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.description}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {exp.date}
+                        Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
@@ -1708,7 +1745,7 @@ export default function App() {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                        Precio: {formatMoney(p.sold_price)} | Inicio: {p.start_date} | Entrega: {p.due_date || 'Pendiente'}
+                        Precio: {formatMoney(p.sold_price)} | Inicio: {formatDate(p.start_date)} | Entrega: {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
                       </div>
                     </div>
                   ))}

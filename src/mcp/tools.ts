@@ -489,13 +489,13 @@ export function registerTools(srv: McpServer) {
   // --- crear_factura ---
   srv.tool(
     'crear_factura',
-    'Crear o emitir una factura manual para un cliente en el CRM. Si se omite el folio (invoice_number), queda vacío.',
+    'Crear o emitir una factura para un cliente en el CRM. El monto total ya incluye IVA del 19% por defecto y el sistema desglosa el Neto automáticamente.',
     {
       client_id: z.string().describe('ID del cliente al que se le factura'),
       invoice_number: z.string().optional().describe('Número o folio de la factura (opcional, ej: 1042 o FAC-1042). Si no se indica, queda vacío.'),
-      subtotal: z.number().describe('Monto subtotal de la factura'),
-      total: z.number().optional().describe('Monto total de la factura'),
-      tax_amount: z.number().optional().describe('Monto de impuesto (ej: IVA)'),
+      total: z.number().optional().describe('Monto total de la factura (con IVA incluido)'),
+      subtotal: z.number().optional().describe('Monto neto (si no se especifica total)'),
+      tax_amount: z.number().optional().describe('Monto de impuesto (opcional, por defecto 19% de IVA)'),
       status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Estado inicial de la factura (default: draft)'),
       issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),
       due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD o DD-MM-YYYY)'),
@@ -513,8 +513,8 @@ export function registerTools(srv: McpServer) {
           issue_date: data.issue_date || new Date().toISOString().split('T')[0],
           due_date: data.due_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
           subtotal: data.subtotal,
-          tax_amount: data.tax_amount || 0,
-          total: data.total ?? data.subtotal,
+          tax_amount: data.tax_amount,
+          total: data.total,
           currency: 'CLP',
           status: data.status || 'draft',
           notes: data.notes || null,
@@ -524,7 +524,7 @@ export function registerTools(srv: McpServer) {
         return {
           content: [{
             type: 'text' as const,
-            text: `✅ Factura ${folioText} creada (ID: ${invoice.id})\n- Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)}\n- Vencimiento: ${formatDateCL(invoice.due_date)}\n- Estado: "${invoice.status}"`,
+            text: `✅ Factura ${folioText} creada exitosamente (ID: ${invoice.id})\n- Total (con IVA): $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Neto: $${(Number(invoice.subtotal) || 0).toLocaleString('es-CL')} | IVA (19%): $${(Number(invoice.tax_amount) || 0).toLocaleString('es-CL')}\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)} | Vencimiento: ${formatDateCL(invoice.due_date)}\n- Estado: "${invoice.status}"`,
           }],
         };
       } catch (err: any) {

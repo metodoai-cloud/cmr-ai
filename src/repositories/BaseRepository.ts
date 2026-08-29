@@ -92,7 +92,7 @@ export class BaseRepository<T extends Record<string, any>> {
   async create(record: Partial<T>): Promise<T> {
     const { data, error } = await this.db
       .from(this.tableName)
-      .insert(record)
+      .insert(record as any)
       .select()
       .single();
 

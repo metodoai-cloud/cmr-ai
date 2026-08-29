@@ -29,7 +29,7 @@ export const supabase: SupabaseClient = createClient(
       persistSession: false,
     },
     realtime: {
-      transport: ws,
+      transport: ws as any,
     },
   }
 );
@@ -40,7 +40,7 @@ export const supabaseAnon: SupabaseClient = createClient(
   supabaseAnonKey || supabaseServiceKey,
   {
     realtime: {
-      transport: ws,
+      transport: ws as any,
     },
   }
 );

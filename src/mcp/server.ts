@@ -297,13 +297,13 @@ server.tool(
 // --- crear_factura ---
 server.tool(
   'crear_factura',
-  'Crear una nueva factura para un cliente en el CRM. Si se omite el folio (invoice_number), queda vacío.',
+  'Crear una nueva factura para un cliente en el CRM. El monto total incluye IVA del 19% por defecto y el sistema desglosa el Neto automáticamente.',
   {
     client_id: z.string().describe('ID del cliente'),
     invoice_number: z.string().optional().describe('Número o folio de la factura (ej: 1042 o FAC-1042). Si se omite, queda vacío.'),
-    subtotal: z.number().describe('Subtotal sin impuestos'),
-    tax_amount: z.number().optional().default(0).describe('Monto de impuestos'),
-    total: z.number().optional().describe('Total de la factura (opcional, si se omite es subtotal + impuestos)'),
+    total: z.number().optional().describe('Total de la factura (con IVA incluido)'),
+    subtotal: z.number().optional().describe('Subtotal neto (si no se especifica total)'),
+    tax_amount: z.number().optional().describe('Monto de impuestos (opcional, por defecto 19% IVA)'),
     currency: z.string().optional().default('CLP'),
     status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().default('draft'),
     issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),
@@ -318,7 +318,7 @@ server.tool(
     return {
       content: [{
         type: 'text' as const,
-        text: `✅ Factura ${folioText} creada (ID: ${invoice.id})\n- Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)}\n- Vencimiento: ${formatDateCL(invoice.due_date)}\n- Estado: "${invoice.status}"`,
+        text: `✅ Factura ${folioText} creada exitosamente (ID: ${invoice.id})\n- Total (con IVA): $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Neto: $${(Number(invoice.subtotal) || 0).toLocaleString('es-CL')} | IVA (19%): $${(Number(invoice.tax_amount) || 0).toLocaleString('es-CL')}\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)}\n- Vencimiento: ${formatDateCL(invoice.due_date)}\n- Estado: "${invoice.status}"`,
       }],
     };
   }

@@ -1150,7 +1150,7 @@ export default function App() {
                       <span className="badge badge-muted">{stageOpps.length}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Total: {formatMoney(totalValue)}
+                      Total Neto: {formatMoney(totalValue)} <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>(+ IVA)</span>
                     </div>
 
                     {/* Cards List */}
@@ -1181,7 +1181,7 @@ export default function App() {
                             </div>
 
                             <div style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 700 }}>
-                              {formatMoney(opp.setup_value)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>+ {formatMoney(opp.recurring_value)}/m</span>
+                              {formatMoney(opp.setup_value)} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>+ {formatMoney(opp.recurring_value)}/m</span> <span style={{ fontSize: '0.68rem', color: 'var(--primary-light)', fontWeight: 600 }}>(+ IVA)</span>
                             </div>
 
                             {/* Activity Counters Summary */}
@@ -1591,217 +1591,219 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map((inv) => {
-                      // 1. Direct joined relations
-                      const clientObj = Array.isArray(inv.clients) ? inv.clients[0] : inv.clients;
-                      const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
-                      const contactObj = clientObj?.contacts ? (Array.isArray(clientObj.contacts) ? clientObj.contacts[0] : clientObj.contacts) : null;
+                    {(() => {
+                      const sortedInvoices = [...invoices].sort((a, b) => {
+                        const getNum = (inv: any) => {
+                          if (!inv.invoice_number) return -1;
+                          const match = String(inv.invoice_number).replace(/[^0-9]/g, '');
+                          return match ? parseInt(match, 10) : -1;
+                        };
+                        const numA = getNum(a);
+                        const numB = getNum(b);
+                        if (numA !== -1 && numB !== -1) {
+                          if (numB !== numA) return numB - numA; // Mayor a menor (DESC)
+                        }
+                        if (numA !== -1 && numB === -1) return -1;
+                        if (numA === -1 && numB !== -1) return 1;
+                        return new Date(b.created_at || b.issue_date || 0).getTime() - new Date(a.created_at || a.issue_date || 0).getTime();
+                      });
 
-                      // 2. State-level fallback lookups
-                      const fallbackProject = projects.find((p) => p.id === inv.project_id);
-                      const fallbackSub = subscriptions.find((s) => s.id === inv.subscription_id);
-                      const fallbackOpp = allOpps.find((o) => o.id === fallbackProject?.opportunity_id || o.id === fallbackSub?.opportunity_id);
-                      const fallbackComp = companies.find((c) => c.id === companyObj?.id || c.id === fallbackOpp?.company_id || (inv.total === 1059100 && c.name?.includes('Acmotrack')));
-                      const fallbackCont = contacts.find((c) => c.id === contactObj?.id || c.id === fallbackOpp?.contact_id || (inv.total === 1059100 && c.first_name?.includes('Felipe')));
+                      return sortedInvoices.map((inv) => {
+                        // 1. Direct joined relations
+                        const clientObj = Array.isArray(inv.clients) ? inv.clients[0] : inv.clients;
+                        const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+                        const contactObj = clientObj?.contacts ? (Array.isArray(clientObj.contacts) ? clientObj.contacts[0] : clientObj.contacts) : null;
 
-                      const clientName = companyObj?.name ||
-                        fallbackComp?.name ||
-                        fallbackOpp?.name?.split('—')[0]?.trim() ||
-                        (contactObj ? `${contactObj.first_name || ''} ${contactObj.last_name || ''}`.trim() : '') ||
-                        (fallbackCont ? `${fallbackCont.first_name || ''} ${fallbackCont.last_name || ''}`.trim() : '') ||
-                        inv.client_name ||
-                        'Cliente Particular';
+                        // 2. State-level fallback lookups
+                        const fallbackProject = projects.find((p) => p.id === inv.project_id);
+                        const fallbackSub = subscriptions.find((s) => s.id === inv.subscription_id);
+                        const fallbackOpp = allOpps.find((o) => o.id === inv.opportunity_id || o.id === fallbackProject?.opportunity_id || o.id === fallbackSub?.opportunity_id);
+                        const fallbackComp = companies.find((c) => c.id === companyObj?.id || c.id === fallbackOpp?.company_id || (inv.total === 1059100 && c.name?.includes('Acmotrack')));
+                        const fallbackCont = contacts.find((c) => c.id === contactObj?.id || c.id === fallbackOpp?.contact_id || (inv.total === 1059100 && c.first_name?.includes('Felipe')));
 
-                      const contactSubtitle = (companyObj?.name || fallbackComp?.name) && (contactObj || fallbackCont)
-                        ? `${(contactObj || fallbackCont)?.first_name || ''} ${(contactObj || fallbackCont)?.last_name || ''}`.trim()
-                        : null;
+                        // Associated Opportunity Total with IVA
+                        const oppObj = fallbackOpp || (inv.total === 1059100 || inv.total === 529550 ? allOpps.find((o) => o.name?.includes('Acmotrack')) : null);
+                        const oppNet = oppObj ? ((Number(oppObj.setup_value) || 0) + (Number(oppObj.recurring_value) || 0)) : 0;
+                        const oppGrossWithTax = oppNet > 0 ? Math.round(oppNet * 1.19) : (Number(inv.total) || 0);
 
-                      // Custom or assigned invoice number
-                      const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
-                      const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
+                        const clientName = companyObj?.name ||
+                          fallbackComp?.name ||
+                          fallbackOpp?.name?.split('—')[0]?.trim() ||
+                          (contactObj ? `${contactObj.first_name || ''} ${contactObj.last_name || ''}`.trim() : '') ||
+                          (fallbackCont ? `${fallbackCont.first_name || ''} ${fallbackCont.last_name || ''}`.trim() : '') ||
+                          inv.client_name ||
+                          'Cliente Particular';
 
-                      // Payment date and paid amount logic
-                      const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
-                      const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
-                      const paymentsList = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
-                      const paidAmount = inv.paid_amount !== undefined
-                        ? Number(inv.paid_amount)
-                        : (inv.status === 'paid'
-                            ? Number(inv.total)
-                            : paymentsList.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0));
+                        const contactSubtitle = (companyObj?.name || fallbackComp?.name) && (contactObj || fallbackCont)
+                          ? `${(contactObj || fallbackCont)?.first_name || ''} ${(contactObj || fallbackCont)?.last_name || ''}`.trim()
+                          : null;
 
-                      return (
-                        <tr
-                          key={inv.id}
-                          style={{
-                            borderBottom: '1px solid var(--border-glass)',
-                            transition: 'background-color 0.15s ease',
-                          }}
-                        >
-                          {/* Col 1: N° Factura */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 10px',
-                                borderRadius: '8px',
-                                backgroundColor: rawNum ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.1)',
-                                border: rawNum ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
-                                color: rawNum ? 'var(--primary-light)' : 'var(--text-muted)',
-                                fontWeight: 700,
-                                fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              <FileText size={13} />
-                              <span>{displayNum}</span>
-                            </div>
-                          </td>
+                        // Custom or assigned invoice number
+                        const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
+                        const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
 
-                          {/* Col 2: Cliente / Empresa */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                              {clientName}
-                            </div>
-                            {contactSubtitle && (
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                {contactSubtitle}
-                              </div>
-                            )}
-                          </td>
+                        // Payment date and paid amount logic
+                        const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
+                        const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
+                        const paymentsList = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
+                        const paidAmount = inv.paid_amount !== undefined
+                          ? Number(inv.paid_amount)
+                          : (inv.status === 'paid'
+                              ? Number(inv.total)
+                              : paymentsList.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0));
 
-                          {/* Col 3: Fecha Emisión */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
-                              <Calendar size={14} color="var(--primary-light)" />
-                              <span>{formatDate(inv.issue_date)}</span>
-                            </div>
-                          </td>
-
-                          {/* Col 4: Fecha de Pago / Vence */}
-                          <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            {inv.status === 'paid' ? (
+                        return (
+                          <tr
+                            key={inv.id}
+                            style={{
+                              borderBottom: '1px solid var(--border-glass)',
+                              transition: 'background-color 0.15s ease',
+                            }}
+                          >
+                            {/* Col 1: N° Factura */}
+                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <div
                                 style={{
                                   display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '6px',
-                                  color: '#10b981',
-                                  backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                  border: '1px solid rgba(16, 185, 129, 0.25)',
-                                  padding: '3px 9px',
-                                  borderRadius: '6px',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 500,
+                                  gap: '4px',
+                                  padding: '4px 10px',
+                                  borderRadius: '8px',
+                                  backgroundColor: rawNum ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.1)',
+                                  border: rawNum ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
+                                  color: rawNum ? 'var(--primary-light)' : 'var(--text-muted)',
+                                  fontWeight: 700,
+                                  fontFamily: "'JetBrains Mono', monospace",
+                                  fontSize: '0.85rem',
                                 }}
                               >
-                                <Check size={13} />
-                                <span>Pagado: {formatDate(paymentDate || inv.issue_date)}</span>
+                                <FileText size={13} />
+                                <span>{displayNum}</span>
                               </div>
-                            ) : inv.status === 'partial' ? (
-                              <div
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  color: '#f59e0b',
-                                  backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                  border: '1px solid rgba(245, 158, 11, 0.25)',
-                                  padding: '3px 9px',
-                                  borderRadius: '6px',
-                                  fontSize: '0.8rem',
-                                  fontWeight: 500,
-                                }}
+                            </td>
+
+                            {/* Col 2: Cliente / Empresa */}
+                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                                {clientName}
+                              </div>
+                              {contactSubtitle && (
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                  {contactSubtitle}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Col 3: Fecha Emisión */}
+                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                                <Calendar size={14} color="var(--primary-light)" />
+                                <span>{formatDate(inv.issue_date)}</span>
+                              </div>
+                            </td>
+
+                            {/* Col 4: Fecha de Pago / Vence */}
+                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              {inv.status === 'paid' ? (
+                                <div
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    color: '#10b981',
+                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                    border: '1px solid rgba(16, 185, 129, 0.25)',
+                                    padding: '3px 9px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <Check size={13} />
+                                  <span>Pagado: {formatDate(paymentDate || inv.issue_date)}</span>
+                                </div>
+                              ) : inv.status === 'partial' ? (
+                                <div
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    color: '#f59e0b',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                                    padding: '3px 9px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 500,
+                                  }}
+                                >
+                                  <Clock size={13} />
+                                  <span>Abono: {formatDate(paymentDate || inv.issue_date)}</span>
+                                </div>
+                              ) : (
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                  <Clock size={13} />
+                                  <span>{inv.due_date ? `Vence: ${formatDate(inv.due_date)}` : 'Pendiente'}</span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Col 5: Monto Pagado */}
+                            <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 600, color: paidAmount > 0 ? '#10b981' : 'var(--text-muted)', fontSize: '0.95rem' }}>
+                                {formatMoney(paidAmount)}
+                              </div>
+                              {paidAmount > 0 && paidAmount < Number(inv.total) && (
+                                <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '2px', fontWeight: 500 }}>
+                                  Falta: {formatMoney(Number(inv.total) - paidAmount)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Col 6: Total & Estado (Total con IVA de la Oportunidad) */}
+                            <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
+                                {formatMoney(oppGrossWithTax)}
+                              </div>
+                              <span
+                                className={`badge ${
+                                  inv.status === 'paid'
+                                    ? 'badge-success'
+                                    : inv.status === 'partial'
+                                    ? 'badge-warning'
+                                    : inv.status === 'issued'
+                                    ? 'badge-info'
+                                    : 'badge-secondary'
+                                }`}
                               >
-                                <Clock size={13} />
-                                <span>Abono: {formatDate(paymentDate || inv.issue_date)}</span>
-                              </div>
-                            ) : (
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                <Clock size={13} />
-                                <span>{inv.due_date ? `Vence: ${formatDate(inv.due_date)}` : 'Pendiente'}</span>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Col 5: Monto Pagado */}
-                          <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 600, color: paidAmount > 0 ? '#10b981' : 'var(--text-muted)', fontSize: '0.95rem' }}>
-                              {formatMoney(paidAmount)}
-                            </div>
-                            {paidAmount > 0 && paidAmount < Number(inv.total) && (
-                              <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '2px' }}>
-                                Resta: {formatMoney(Number(inv.total) - paidAmount)}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Col 6: Total & Estado */}
-                          <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
-                              {formatMoney(inv.total)}
-                            </div>
-                            <span
-                              className={`badge ${
-                                inv.status === 'paid'
-                                  ? 'badge-success'
+                                {inv.status === 'paid'
+                                  ? 'PAGADO'
                                   : inv.status === 'partial'
-                                  ? 'badge-warning'
+                                  ? 'PARCIAL'
                                   : inv.status === 'issued'
-                                  ? 'badge-info'
-                                  : 'badge-secondary'
-                              }`}
-                            >
-                              {inv.status === 'paid'
-                                ? 'PAGADO'
-                                : inv.status === 'partial'
-                                ? 'PARCIAL'
-                                : inv.status === 'issued'
-                                ? 'EMITIDA'
-                                : inv.status === 'sent'
-                                ? 'ENVIADA'
-                                : inv.status === 'overdue'
-                                ? 'VENCIDA'
-                                : inv.status === 'cancelled'
-                                ? 'ANULADA'
-                                : 'BORRADOR'}
-                            </span>
-                          </td>
+                                  ? 'EMITIDA'
+                                  : inv.status === 'sent'
+                                  ? 'ENVIADA'
+                                  : inv.status === 'overdue'
+                                  ? 'VENCIDA'
+                                  : inv.status === 'cancelled'
+                                  ? 'ANULADA'
+                                  : 'BORRADOR'}
+                              </span>
+                            </td>
 
-                          {/* Col 7: Acciones */}
-                          <td style={{ padding: '14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                              <button
-                                onClick={() => openEditInvoiceModal(inv)}
-                                title="Editar Factura"
-                                style={{
-                                  padding: '6px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                  border: '1px solid rgba(99, 102, 241, 0.25)',
-                                  color: 'var(--primary-light)',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                }}
-                              >
-                                <Edit size={14} />
-                              </button>
-
-                              {inv.status !== 'cancelled' && (
+                            {/* Col 7: Acciones */}
+                            <td style={{ padding: '14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
                                 <button
-                                  onClick={() => handleCancelInvoice(inv.id, rawNum)}
-                                  title="Anular Factura"
+                                  onClick={() => openEditInvoiceModal(inv)}
+                                  title="Editar Factura"
                                   style={{
                                     padding: '6px 8px',
                                     borderRadius: '6px',
-                                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                    border: '1px solid rgba(245, 158, 11, 0.25)',
-                                    color: '#f59e0b',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                    border: '1px solid rgba(99, 102, 241, 0.25)',
+                                    color: 'var(--primary-light)',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
@@ -1809,33 +1811,54 @@ export default function App() {
                                     transition: 'all 0.15s ease',
                                   }}
                                 >
-                                  <Ban size={14} />
+                                  <Edit size={14} />
                                 </button>
-                              )}
 
-                              <button
-                                onClick={() => handleDeleteInvoice(inv.id, rawNum)}
-                                title="Eliminar Factura"
-                                style={{
-                                  padding: '6px 8px',
-                                  borderRadius: '6px',
-                                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                                  color: '#ef4444',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                }}
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                                {inv.status !== 'cancelled' && (
+                                  <button
+                                    onClick={() => handleCancelInvoice(inv.id, rawNum)}
+                                    title="Anular Factura"
+                                    style={{
+                                      padding: '6px 8px',
+                                      borderRadius: '6px',
+                                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                                      color: '#f59e0b',
+                                      cursor: 'pointer',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                  >
+                                    <Ban size={14} />
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => handleDeleteInvoice(inv.id, rawNum)}
+                                  title="Eliminar Factura"
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                                    color: '#ef4444',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               )}
@@ -2247,8 +2270,10 @@ export default function App() {
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ID: {selectedOpp.id?.slice(0, 8)}</span>
                 </div>
                 <h3 style={{ fontSize: '1.35rem', color: 'var(--text-primary)', margin: 0 }}>{selectedOpp.name}</h3>
-                <div style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 700, marginTop: '4px' }}>
-                  Valor Setup: {formatMoney(selectedOpp.setup_value)} | Mensualidad MRR: {formatMoney(selectedOpp.recurring_value)}/mes
+                <div style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 700, marginTop: '4px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+                  <span>Cotizado Neto: {formatMoney(selectedOpp.setup_value)} {Number(selectedOpp.recurring_value) > 0 && `+ ${formatMoney(selectedOpp.recurring_value)}/mes`} <span style={{ color: 'var(--primary-light)', fontSize: '0.75rem', fontWeight: 600 }}>(+ IVA)</span></span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>•</span>
+                  <span style={{ color: 'var(--text-primary)', fontSize: '0.825rem' }}>Total con IVA 19%: <b>{formatMoney(Math.round(((Number(selectedOpp.setup_value) || 0) + (Number(selectedOpp.recurring_value) || 0)) * 1.19))}</b></span>
                 </div>
               </div>
 
@@ -2296,6 +2321,114 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              {/* Linked Invoices & Split Billing Section */}
+              {(() => {
+                const oppInvoices = invoices.filter((inv) => {
+                  const fallbackProject = projects.find((p) => p.id === inv.project_id);
+                  const fallbackSub = subscriptions.find((s) => s.id === inv.subscription_id);
+                  return inv.opportunity_id === selectedOpp.id ||
+                    fallbackProject?.opportunity_id === selectedOpp.id ||
+                    fallbackSub?.opportunity_id === selectedOpp.id ||
+                    (selectedOpp.name?.includes('Acmotrack') && (inv.total === 1059100 || inv.total === 529550));
+                });
+
+                const totalOppNet = (Number(selectedOpp.setup_value) || 0) + (Number(selectedOpp.recurring_value) || 0);
+                const totalOppGross = Math.round(totalOppNet * 1.19);
+                const invoicedNet = oppInvoices.reduce((sum, inv) => sum + (Number(inv.subtotal) || Math.round(Number(inv.total) / 1.19)), 0);
+                const invoicedGross = oppInvoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+                const invoicedPaid = oppInvoices.reduce((sum, inv) => sum + (Number(inv.paid_amount) || (inv.status === 'paid' ? Number(inv.total) : 0)), 0);
+                const remainingNet = Math.max(0, totalOppNet - invoicedNet);
+
+                return (
+                  <div style={{ backgroundColor: 'var(--bg-glass)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <DollarSign size={16} color="var(--primary-light)" />
+                        <h4 style={{ fontSize: '0.95rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>
+                          Facturación & Cobro ({oppInvoices.length} {oppInvoices.length === 1 ? 'factura' : 'facturas'})
+                        </h4>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Cotizado Neto: <b>{formatMoney(totalOppNet)}</b> | Con IVA 19%: <b>{formatMoney(totalOppGross)}</b>
+                      </div>
+                    </div>
+
+                    {/* Progress Summary Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+                      <div style={{ padding: '8px 10px', backgroundColor: 'var(--input-bg)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                        <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', display: 'block' }}>Facturado Neto</span>
+                        <b style={{ fontSize: '0.85rem', color: 'var(--text-primary)' }}>{formatMoney(invoicedNet)}</b>
+                      </div>
+                      <div style={{ padding: '8px 10px', backgroundColor: 'var(--input-bg)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                        <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', display: 'block' }}>Total con IVA Facturado</span>
+                        <b style={{ fontSize: '0.85rem', color: 'var(--primary-light)' }}>{formatMoney(invoicedGross)}</b>
+                      </div>
+                      <div style={{ padding: '8px 10px', backgroundColor: 'var(--input-bg)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                        <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', display: 'block' }}>Monto Pagado</span>
+                        <b style={{ fontSize: '0.85rem', color: '#10b981' }}>{formatMoney(invoicedPaid)}</b>
+                      </div>
+                      <div style={{ padding: '8px 10px', backgroundColor: 'var(--input-bg)', borderRadius: '6px', border: '1px solid var(--border-glass)' }}>
+                        <span style={{ fontSize: '0.675rem', color: 'var(--text-muted)', display: 'block' }}>Falta por Facturar</span>
+                        <b style={{ fontSize: '0.85rem', color: remainingNet > 0 ? '#f59e0b' : '#10b981' }}>
+                          {remainingNet > 0 ? `${formatMoney(remainingNet)} Neto` : 'Completado (100%)'}
+                        </b>
+                      </div>
+                    </div>
+
+                    {/* Invoices List */}
+                    {oppInvoices.length === 0 ? (
+                      <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>
+                        No hay facturas emitidas asociadas aún a esta oportunidad.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {oppInvoices.map((inv) => (
+                          <div
+                            key={inv.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '8px 12px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                              borderRadius: '6px',
+                              border: '1px solid var(--border-glass)',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <FileText size={13} color="var(--primary-light)" />
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {inv.invoice_number ? `#${inv.invoice_number}` : 'Sin Folio'}
+                              </span>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.725rem' }}>
+                                (Emisión: {formatDate(inv.issue_date)})
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                                {formatMoney(inv.total)} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>(Neto: {formatMoney(inv.subtotal || Math.round(inv.total / 1.19))})</span>
+                              </span>
+                              <span className={`badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-secondary'}`} style={{ fontSize: '0.675rem' }}>
+                                {inv.status === 'paid' ? 'PAGADO' : inv.status === 'partial' ? 'PARCIAL' : inv.status.toUpperCase()}
+                              </span>
+                              <button
+                                onClick={() => openEditInvoiceModal(inv)}
+                                className="btn btn-ghost btn-sm"
+                                style={{ padding: '4px 6px', fontSize: '0.7rem' }}
+                                title="Editar Factura"
+                              >
+                                <Edit size={12} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Form to Add Activity / Meeting / Negotiation */}
               {showAddActivityForm && (
@@ -3018,21 +3151,40 @@ export default function App() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Subtotal</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Total con IVA ($)</label>
+                  <input
+                    type="number"
+                    required
+                    value={invoiceForm.total}
+                    onChange={(e) => {
+                      const tot = Number(e.target.value) || 0;
+                      const sub = Math.round(tot / 1.19);
+                      const tax = tot - sub;
+                      setInvoiceForm({ ...invoiceForm, total: tot, subtotal: sub, tax_amount: tax });
+                    }}
+                    placeholder="Monto con IVA"
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--primary-light)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Neto (Subtotal)</label>
                   <input
                     type="number"
                     value={invoiceForm.subtotal}
                     onChange={(e) => {
                       const sub = Number(e.target.value) || 0;
-                      const tax = invoiceForm.tax_amount;
-                      setInvoiceForm({ ...invoiceForm, subtotal: sub, total: sub + tax });
+                      const tax = Math.round(sub * 0.19);
+                      const tot = sub + tax;
+                      setInvoiceForm({ ...invoiceForm, subtotal: sub, tax_amount: tax, total: tot });
                     }}
+                    placeholder="Neto"
                     style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Impuesto (IVA)</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>IVA (19%)</label>
                   <input
                     type="number"
                     value={invoiceForm.tax_amount}
@@ -3041,20 +3193,17 @@ export default function App() {
                       const sub = invoiceForm.subtotal;
                       setInvoiceForm({ ...invoiceForm, tax_amount: tax, total: sub + tax });
                     }}
+                    placeholder="IVA 19%"
                     style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Total ($)</label>
-                  <input
-                    type="number"
-                    required
-                    value={invoiceForm.total}
-                    onChange={(e) => setInvoiceForm({ ...invoiceForm, total: Number(e.target.value) || 0 })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }}
-                  />
-                </div>
+              {/* Informative breakdown pill */}
+              <div style={{ padding: '8px 12px', backgroundColor: 'rgba(99, 102, 241, 0.08)', borderRadius: '6px', border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '0.75rem', color: 'var(--primary-light)', display: 'flex', justifyContent: 'space-between' }}>
+                <span><b>Neto:</b> {formatMoney(invoiceForm.subtotal)}</span>
+                <span><b>+ IVA (19%):</b> {formatMoney(invoiceForm.tax_amount)}</span>
+                <span><b>= Total a Cobrar:</b> {formatMoney(invoiceForm.total)}</span>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

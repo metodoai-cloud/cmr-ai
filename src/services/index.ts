@@ -405,9 +405,11 @@ export const OpportunityService = {
       });
     }
 
-    // 5. Create draft invoice
-    const invoiceTotal = Number(opp.setup_value) + Number(opp.recurring_value);
-    if (invoiceTotal > 0) {
+    // 5. Create draft invoice (Net + 19% VAT = Gross Total)
+    const netTotal = (Number(opp.setup_value) || 0) + (Number(opp.recurring_value) || 0);
+    if (netTotal > 0) {
+      const grossTotal = Math.round(netTotal * 1.19);
+      const taxAmount = grossTotal - netTotal;
       result.invoice = await invoiceRepo.create({
         invoice_number: null,
         client_id: result.client.id,
@@ -415,10 +417,10 @@ export const OpportunityService = {
         subscription_id: result.subscription?.id,
         issue_date: new Date().toISOString().split('T')[0],
         due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        subtotal: invoiceTotal,
-        tax_amount: 0,
-        total: invoiceTotal,
-        currency: opp.currency || 'USD',
+        subtotal: netTotal,
+        tax_amount: taxAmount,
+        total: grossTotal,
+        currency: opp.currency || 'CLP',
         status: 'draft',
       });
       await eventRepo.create({
@@ -560,6 +562,26 @@ export const InvoiceService = {
     if (status === 'sent') status = 'issued';
     if (status === 'void') status = 'cancelled';
 
+    let total = 0;
+    let subtotal = 0;
+    let tax_amount = 0;
+
+    if (data.total !== undefined && Number(data.total) > 0) {
+      total = Number(data.total);
+      if (data.subtotal !== undefined && Number(data.subtotal) > 0 && Number(data.subtotal) !== total) {
+        subtotal = Number(data.subtotal);
+        tax_amount = data.tax_amount !== undefined ? Number(data.tax_amount) : total - subtotal;
+      } else {
+        // Monto ingresado ya viene con IVA incluido: desglosar Neto e IVA 19%
+        subtotal = Math.round(total / 1.19);
+        tax_amount = total - subtotal;
+      }
+    } else if (data.subtotal !== undefined && Number(data.subtotal) > 0) {
+      subtotal = Number(data.subtotal);
+      tax_amount = data.tax_amount !== undefined ? Number(data.tax_amount) : Math.round(subtotal * 0.19);
+      total = subtotal + tax_amount;
+    }
+
     const payload: any = {
       client_id: data.client_id,
       project_id: data.project_id || null,
@@ -567,9 +589,9 @@ export const InvoiceService = {
       invoice_number: data.invoice_number ? String(data.invoice_number).trim() : null,
       issue_date: data.issue_date || new Date().toISOString().split('T')[0],
       due_date: data.due_date || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      subtotal: Number(data.subtotal) || 0,
-      tax_amount: Number(data.tax_amount) || 0,
-      total: data.total !== undefined ? Number(data.total) : (Number(data.subtotal) || 0) + (Number(data.tax_amount) || 0),
+      subtotal,
+      tax_amount,
+      total,
       currency: data.currency || 'CLP',
       status,
     };
@@ -605,11 +627,24 @@ export const InvoiceService = {
     }
     if (data.issue_date !== undefined) payload.issue_date = data.issue_date;
     if (data.due_date !== undefined) payload.due_date = data.due_date;
-    if (data.subtotal !== undefined) payload.subtotal = Number(data.subtotal);
-    if (data.tax_amount !== undefined) payload.tax_amount = Number(data.tax_amount);
-    if (data.total !== undefined) payload.total = Number(data.total);
     if (data.currency !== undefined) payload.currency = data.currency;
     if (data.document_url !== undefined) payload.document_url = data.document_url;
+
+    if (data.total !== undefined && Number(data.total) > 0) {
+      payload.total = Number(data.total);
+      if (data.subtotal !== undefined && Number(data.subtotal) > 0 && Number(data.subtotal) !== payload.total) {
+        payload.subtotal = Number(data.subtotal);
+        payload.tax_amount = data.tax_amount !== undefined ? Number(data.tax_amount) : payload.total - payload.subtotal;
+      } else {
+        // Desglosar IVA 19% automáticamente
+        payload.subtotal = Math.round(payload.total / 1.19);
+        payload.tax_amount = payload.total - payload.subtotal;
+      }
+    } else if (data.subtotal !== undefined) {
+      payload.subtotal = Number(data.subtotal);
+      payload.tax_amount = data.tax_amount !== undefined ? Number(data.tax_amount) : Math.round(payload.subtotal * 0.19);
+      payload.total = payload.subtotal + payload.tax_amount;
+    }
 
     const updated = await invoiceRepo.update(id, payload);
     await auditRepo.logAction({

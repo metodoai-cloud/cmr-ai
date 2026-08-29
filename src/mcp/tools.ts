@@ -418,6 +418,45 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- cerrar_oportunidad_perdida ---
+  srv.tool(
+    'cerrar_oportunidad_perdida',
+    'Marcar una oportunidad como perdida en el pipeline, registrando el motivo de pérdida.',
+    {
+      id: z.string().describe('ID de la oportunidad perdida'),
+      reason: z.string().optional().describe('Motivo de la pérdida (ej: Precio alto, Decidió esperar, Eligió a la competencia)'),
+    },
+    async ({ id, reason }) => {
+      try {
+        const result = await OpportunityService.closeLost(id, reason);
+        return {
+          content: [{ type: 'text' as const, text: `📉 Oportunidad marcada como PERDIDA (ID: ${id}). Motivo: ${reason || 'No especificado'}.` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al cerrar oportunidad perdida: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- eliminar_oportunidad ---
+  srv.tool(
+    'eliminar_oportunidad',
+    'Eliminar permanentemente una oportunidad del pipeline de ventas por su ID.',
+    {
+      id: z.string().describe('ID de la oportunidad a eliminar'),
+    },
+    async ({ id }) => {
+      try {
+        await OpportunityService.delete(id, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `🗑️ Oportunidad eliminada permanentemente del CRM (ID: ${id}).` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al eliminar oportunidad: ${err.message}` }] };
+      }
+    }
+  );
+
   // --- registrar_pago ---
   srv.tool(
     'registrar_pago',

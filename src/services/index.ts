@@ -249,6 +249,21 @@ export const OpportunityService = {
     return opp;
   },
 
+  async delete(id: string, source: 'web' | 'mcp' = 'mcp') {
+    const opp = await oppRepo.findById(id);
+    if (!opp) throw new Error(`Opportunity ${id} not found`);
+    await oppRepo.hardDelete(id);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'opportunity',
+      entityId: id,
+      action: 'deleted',
+      beforeData: opp,
+    });
+    return { success: true, deleted: opp };
+  },
+
   async closeWon(id: string, finalValue?: number, source: 'web' | 'mcp' = 'mcp') {
     if (finalValue !== undefined && Number(finalValue) > 0) {
       await oppRepo.update(id, { setup_value: finalValue });

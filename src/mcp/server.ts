@@ -229,6 +229,44 @@ server.tool(
   }
 );
 
+// --- actualizar_oportunidad ---
+server.tool(
+  'actualizar_oportunidad',
+  'Modificar o actualizar cualquier campo de una oportunidad existente en el pipeline (nombre, montos, etapa, notas, etc.).',
+  {
+    id: z.string().describe('ID de la oportunidad a actualizar'),
+    name: z.string().optional().describe('Nuevo nombre de la oportunidad'),
+    stage: z.enum(['new', 'contacted', 'qualified', 'meeting_scheduled', 'meeting_completed', 'proposal_sent', 'negotiation', 'won', 'lost']).optional().describe('Nueva etapa del pipeline'),
+    setup_value: z.number().optional().describe('Valor de setup / implementación'),
+    recurring_value: z.number().optional().describe('Valor recurrente mensual (MRR)'),
+    service_id: z.string().optional().describe('ID del servicio asociado'),
+    notes: z.string().optional().describe('Notas o comentarios'),
+    next_action: z.string().optional().describe('Próxima acción'),
+    next_action_date: z.string().optional().describe('Fecha de próxima acción (YYYY-MM-DD)'),
+  },
+  async ({ id, ...data }) => {
+    const opp = await OpportunityService.update(id, data, 'mcp');
+    return {
+      content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" (Etapa: ${opp.stage}, Setup: $${opp.setup_value}, MRR: $${opp.recurring_value}/mes)` }],
+    };
+  }
+);
+
+// --- eliminar_oportunidad ---
+server.tool(
+  'eliminar_oportunidad',
+  'Eliminar permanentemente una oportunidad del pipeline de ventas por su ID.',
+  {
+    id: z.string().describe('ID de la oportunidad a eliminar'),
+  },
+  async ({ id }) => {
+    await OpportunityService.delete(id, 'mcp');
+    return {
+      content: [{ type: 'text' as const, text: `🗑️ Oportunidad eliminada permanentemente del CRM (ID: ${id}).` }],
+    };
+  }
+);
+
 // --- registrar_actividad ---
 server.tool(
   'registrar_actividad',
@@ -311,6 +349,8 @@ server.tool(
       }],
     };
   }
+);
+
 // --- eliminar_factura ---
 server.tool(
   'eliminar_factura',

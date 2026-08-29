@@ -40,7 +40,18 @@ jobs:
         run: |
           VPS_SSH_KEY="${SEC_KEY:-$VAR_KEY}"
           VPS_PASSWORD="${SEC_PASS:-$VAR_PASS}"
-          VPS_USER="${VPS_USER:-root}"
+          
+          # Limpiar y separar si VPS_HOST incluye usuario (ej: root@2.25.164.77)
+          RAW_HOST="${VPS_HOST:-$SEC_HOST}"
+          if [[ "$RAW_HOST" == *"@"* ]]; then
+            VPS_USER="${RAW_HOST%%@*}"
+            VPS_HOST="${RAW_HOST##*@}"
+          else
+            VPS_HOST="$RAW_HOST"
+          fi
+          
+          VPS_HOST=$(echo "$VPS_HOST" | tr -d '[:space:]')
+          VPS_USER=$(echo "${VPS_USER:-root}" | tr -d '[:space:]')
           
           if [ -z "$VPS_HOST" ]; then
             echo "❌ ERROR: VPS_HOST no está definido."

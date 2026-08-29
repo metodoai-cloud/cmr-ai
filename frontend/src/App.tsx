@@ -36,6 +36,9 @@ import {
   Building,
   UserPlus,
   Edit3,
+  Edit,
+  Trash2,
+  Ban,
   LogOut,
   User as UserIcon,
 } from 'lucide-react';
@@ -139,6 +142,20 @@ export default function App() {
     website: '',
   });
   const [isSavingCompany, setIsSavingCompany] = useState(false);
+
+  // Invoice Edit Modal State
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [invoiceForm, setInvoiceForm] = useState({
+    invoice_number: '',
+    status: 'draft',
+    subtotal: 0,
+    tax_amount: 0,
+    total: 0,
+    issue_date: '',
+    due_date: '',
+  });
+  const [isSavingInvoice, setIsSavingInvoice] = useState(false);
 
   // AI Chat State
   const [messages, setMessages] = useState<AiMessage[]>([
@@ -467,6 +484,73 @@ export default function App() {
       alert(`Error al guardar empresa: ${err.message}`);
     } finally {
       setIsSavingCompany(false);
+    }
+  };
+
+  // Open Invoice Edit Modal
+  const openEditInvoiceModal = (inv: any) => {
+    setEditingInvoiceId(inv.id);
+    setInvoiceForm({
+      invoice_number: inv.invoice_number || '',
+      status: inv.status || 'draft',
+      subtotal: Number(inv.subtotal) || 0,
+      tax_amount: Number(inv.tax_amount) || 0,
+      total: Number(inv.total) || 0,
+      issue_date: inv.issue_date || '',
+      due_date: inv.due_date || '',
+    });
+    setShowInvoiceModal(true);
+  };
+
+  // Save Invoice Updates
+  const handleSaveInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInvoiceId) return;
+    try {
+      setIsSavingInvoice(true);
+      await crmApi.updateInvoice(editingInvoiceId, {
+        invoice_number: invoiceForm.invoice_number.trim() || null,
+        status: invoiceForm.status,
+        subtotal: Number(invoiceForm.subtotal),
+        tax_amount: Number(invoiceForm.tax_amount),
+        total: Number(invoiceForm.total),
+        issue_date: invoiceForm.issue_date || undefined,
+        due_date: invoiceForm.due_date || undefined,
+      });
+      setShowInvoiceModal(false);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al actualizar factura: ${err.message}`);
+    } finally {
+      setIsSavingInvoice(false);
+    }
+  };
+
+  // Delete Invoice Permanently
+  const handleDeleteInvoice = async (id: string, num?: string) => {
+    const label = num ? `#${num}` : `ID ${id.slice(0, 8)}...`;
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente la factura ${label}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+    try {
+      await crmApi.deleteInvoice(id);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al eliminar factura: ${err.message}`);
+    }
+  };
+
+  // Cancel/Anular Invoice
+  const handleCancelInvoice = async (id: string, num?: string) => {
+    const label = num ? `#${num}` : `ID ${id.slice(0, 8)}...`;
+    if (!window.confirm(`¿Deseas anular la factura ${label}? Su estado cambiará a ANULADA.`)) {
+      return;
+    }
+    try {
+      await crmApi.cancelInvoice(id);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al anular factura: ${err.message}`);
     }
   };
 
@@ -1483,12 +1567,13 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '11%', whiteSpace: 'nowrap' }}>N° Factura</th>
-                      <th style={{ padding: '12px 14px', width: '25%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '15%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
-                      <th style={{ padding: '12px 14px', width: '18%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '15%', whiteSpace: 'nowrap' }}>Monto Pagado</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '16%', whiteSpace: 'nowrap' }}>Total & Estado</th>
+                      <th style={{ padding: '12px 14px', width: '10%', whiteSpace: 'nowrap' }}>N° Factura</th>
+                      <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
+                      <th style={{ padding: '12px 14px', width: '14%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
+                      <th style={{ padding: '12px 14px', width: '16%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Monto Pagado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Total & Estado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'center', width: '12%', whiteSpace: 'nowrap' }}>Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1669,6 +1754,70 @@ export default function App() {
                                 ? 'ANULADA'
                                 : 'BORRADOR'}
                             </span>
+                          </td>
+
+                          {/* Col 7: Acciones */}
+                          <td style={{ padding: '14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                              <button
+                                onClick={() => openEditInvoiceModal(inv)}
+                                title="Editar Factura"
+                                style={{
+                                  padding: '6px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                                  color: 'var(--primary-light)',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <Edit size={14} />
+                              </button>
+
+                              {inv.status !== 'cancelled' && (
+                                <button
+                                  onClick={() => handleCancelInvoice(inv.id, rawNum)}
+                                  title="Anular Factura"
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '6px',
+                                    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                    border: '1px solid rgba(245, 158, 11, 0.25)',
+                                    color: '#f59e0b',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                >
+                                  <Ban size={14} />
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleDeleteInvoice(inv.id, rawNum)}
+                                title="Eliminar Factura"
+                                style={{
+                                  padding: '6px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                                  color: '#ef4444',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -2762,6 +2911,155 @@ export default function App() {
                 <button type="submit" disabled={isSavingCompany} className="btn btn-primary">
                   <Check size={16} />
                   {isSavingCompany ? 'Guardando...' : companyModalMode === 'create' ? 'Crear Empresa' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── INVOICE EDIT MODAL ── */}
+      {showInvoiceModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setShowInvoiceModal(false)}
+        >
+          <div
+            className="glass-card animate-fade-in"
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-glass)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-glass)' }}>
+              <h3 style={{ fontSize: '1.2rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={20} color="var(--primary-light)" />
+                Editar Factura
+              </h3>
+              <button onClick={() => setShowInvoiceModal(false)} className="btn btn-ghost btn-sm" style={{ padding: '6px' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveInvoice} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Número / Folio Factura</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 1042 o INV-2026-001"
+                    value={invoiceForm.invoice_number}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Dejar en blanco si no tiene folio asignado</span>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Estado</label>
+                  <select
+                    value={invoiceForm.status}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, status: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  >
+                    <option value="draft">BORRADOR (draft)</option>
+                    <option value="issued">EMITIDA (issued)</option>
+                    <option value="partial">PAGO PARCIAL (partial)</option>
+                    <option value="paid">PAGADA (paid)</option>
+                    <option value="overdue">VENCIDA (overdue)</option>
+                    <option value="cancelled">ANULADA (cancelled)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Subtotal</label>
+                  <input
+                    type="number"
+                    value={invoiceForm.subtotal}
+                    onChange={(e) => {
+                      const sub = Number(e.target.value) || 0;
+                      const tax = invoiceForm.tax_amount;
+                      setInvoiceForm({ ...invoiceForm, subtotal: sub, total: sub + tax });
+                    }}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Impuesto (IVA)</label>
+                  <input
+                    type="number"
+                    value={invoiceForm.tax_amount}
+                    onChange={(e) => {
+                      const tax = Number(e.target.value) || 0;
+                      const sub = invoiceForm.subtotal;
+                      setInvoiceForm({ ...invoiceForm, tax_amount: tax, total: sub + tax });
+                    }}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Total ($)</label>
+                  <input
+                    type="number"
+                    required
+                    value={invoiceForm.total}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, total: Number(e.target.value) || 0 })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', fontWeight: 700, outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Fecha de Emisión</label>
+                  <input
+                    type="date"
+                    value={invoiceForm.issue_date}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, issue_date: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Fecha de Vencimiento</label>
+                  <input
+                    type="date"
+                    value={invoiceForm.due_date}
+                    onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setShowInvoiceModal(false)} className="btn btn-ghost">Cancelar</button>
+                <button type="submit" disabled={isSavingInvoice} className="btn btn-primary">
+                  <Check size={16} />
+                  {isSavingInvoice ? 'Guardando...' : 'Guardar Factura'}
                 </button>
               </div>
             </form>

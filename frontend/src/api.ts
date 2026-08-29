@@ -38,6 +38,7 @@ export const crmApi = {
   updateContact: (id: string, data: any) => fetchApi(`/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getCompanies: () => fetchApi('/companies'),
   createCompany: (data: any) => fetchApi('/companies', { method: 'POST', body: JSON.stringify(data) }),
+  updateCompany: (id: string, data: any) => fetchApi(`/companies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   // Leads
   getLeads: () => fetchApi('/leads'),

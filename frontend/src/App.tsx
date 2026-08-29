@@ -137,9 +137,10 @@ export default function App() {
   const [companyForm, setCompanyForm] = useState({
     name: '',
     industry: '',
-    email: '',
-    phone: '',
     website: '',
+    tax_id: '',
+    city: '',
+    country: '',
   });
   const [isSavingCompany, setIsSavingCompany] = useState(false);
 
@@ -449,7 +450,7 @@ export default function App() {
   const openCreateCompanyModal = () => {
     setCompanyModalMode('create');
     setEditingCompanyId(null);
-    setCompanyForm({ name: '', industry: '', email: '', phone: '', website: '' });
+    setCompanyForm({ name: '', industry: '', website: '', tax_id: '', city: '', country: '' });
     setShowCompanyModal(true);
   };
 
@@ -460,9 +461,10 @@ export default function App() {
     setCompanyForm({
       name: co.name || '',
       industry: co.industry || '',
-      email: co.email || '',
-      phone: co.phone || '',
       website: co.website || '',
+      tax_id: co.tax_id || '',
+      city: co.city || '',
+      country: co.country || '',
     });
     setShowCompanyModal(true);
   };
@@ -479,18 +481,15 @@ export default function App() {
       const payload: any = {
         name: companyForm.name.trim(),
         industry: companyForm.industry.trim() || undefined,
-        email: companyForm.email.trim() || undefined,
-        phone: companyForm.phone.trim() || undefined,
         website: companyForm.website.trim() || undefined,
+        tax_id: companyForm.tax_id?.trim() || undefined,
+        city: companyForm.city?.trim() || undefined,
+        country: companyForm.country?.trim() || undefined,
       };
       if (companyModalMode === 'create') {
         await crmApi.createCompany(payload);
       } else if (editingCompanyId) {
-        await fetch(`/api/companies/${editingCompanyId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+        await crmApi.updateCompany(editingCompanyId, payload);
       }
       setShowCompanyModal(false);
       await loadData();
@@ -1442,7 +1441,7 @@ export default function App() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                      {['Empresa', 'Industria', 'Email', 'Teléfono', 'Web', 'Contactos', 'Acciones'].map(h => (
+                      {['Empresa', 'Industria', 'Web', 'RUT / Tax ID', 'Ubicación', 'Contactos', 'Acciones'].map(h => (
                         <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.775rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
                       ))}
                     </tr>
@@ -1450,6 +1449,7 @@ export default function App() {
                   <tbody>
                     {companies.map((co: any) => {
                       const linkedContacts = contacts.filter((c: any) => c.company_id === co.id);
+                      const locationStr = [co.city, co.country].filter(Boolean).join(', ');
                       return (
                         <tr key={co.id} style={{ borderBottom: '1px solid var(--border-glass)', transition: 'background 0.15s' }}
                           onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-glass)')}
@@ -1463,19 +1463,31 @@ export default function App() {
                               {co.name}
                             </div>
                           </td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{co.industry || '—'}</td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{co.email || '—'}</td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{co.phone || '—'}</td>
+                          <td style={{ padding: '12px' }}>
+                            {co.industry ? (
+                              <span className="badge badge-primary" style={{ fontSize: '0.75rem', fontWeight: 600 }}>
+                                {co.industry}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Sin industria</span>
+                            )}
+                          </td>
                           <td style={{ padding: '12px' }}>
                             {co.website ? (
-                              <a href={co.website} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <a href={co.website.startsWith('http') ? co.website : `https://${co.website}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary-light)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <ExternalLink size={12} /> {co.website.replace(/^https?:\/\//, '')}
                               </a>
                             ) : '—'}
                           </td>
+                          <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontFamily: "'JetBrains Mono', monospace" }}>
+                            {co.tax_id || '—'}
+                          </td>
+                          <td style={{ padding: '12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                            {locationStr || '—'}
+                          </td>
                           <td style={{ padding: '12px' }}>
                             {linkedContacts.length > 0 ? (
-                              <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
+                              <span className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
                                 {linkedContacts.length} contacto{linkedContacts.length !== 1 ? 's' : ''}
                               </span>
                             ) : (
@@ -1486,7 +1498,7 @@ export default function App() {
                             <button
                               onClick={() => openEditCompanyModal(co)}
                               className="btn btn-ghost btn-sm"
-                              style={{ fontSize: '0.775rem', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              style={{ fontSize: '0.775rem', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-light)', border: '1px solid rgba(99, 102, 241, 0.25)' }}
                               title="Editar empresa"
                             >
                               <Edit3 size={13} /> Editar
@@ -3019,35 +3031,12 @@ export default function App() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Industria</label>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Industria / Sector</label>
                   <input
                     type="text"
-                    placeholder="Ej: Salud, SaaS, Retail"
+                    placeholder="Ej: Minería, SaaS, Retail, Salud..."
                     value={companyForm.industry}
                     onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Email</label>
-                  <input
-                    type="email"
-                    placeholder="contacto@empresa.com"
-                    value={companyForm.email}
-                    onChange={(e) => setCompanyForm({ ...companyForm, email: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Teléfono</label>
-                  <input
-                    type="text"
-                    placeholder="+54 11 4444 5555"
-                    value={companyForm.phone}
-                    onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>
@@ -3058,6 +3047,39 @@ export default function App() {
                     placeholder="https://empresa.com"
                     value={companyForm.website}
                     onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>RUT / Tax ID</label>
+                  <input
+                    type="text"
+                    placeholder="76.123.456-7"
+                    value={companyForm.tax_id}
+                    onChange={(e) => setCompanyForm({ ...companyForm, tax_id: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Ciudad</label>
+                  <input
+                    type="text"
+                    placeholder="Santiago"
+                    value={companyForm.city}
+                    onChange={(e) => setCompanyForm({ ...companyForm, city: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>País</label>
+                  <input
+                    type="text"
+                    placeholder="Chile"
+                    value={companyForm.country}
+                    onChange={(e) => setCompanyForm({ ...companyForm, country: e.target.value })}
                     style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
                   />
                 </div>

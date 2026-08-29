@@ -137,6 +137,30 @@ server.tool(
   }
 );
 
+// --- actualizar_empresa ---
+server.tool(
+  'actualizar_empresa',
+  'Actualizar datos de una empresa en el CRM (industria, nombre, sitio web, RUT, ubicación).',
+  {
+    id: z.string().describe('ID de la empresa a actualizar'),
+    name: z.string().optional().describe('Nombre de la empresa'),
+    industry: z.string().optional().describe('Industria o sector (ej: Minería, SaaS, Retail, Salud)'),
+    website: z.string().optional().describe('Sitio web'),
+    tax_id: z.string().optional().describe('RUT o identificación fiscal'),
+    city: z.string().optional().describe('Ciudad'),
+    country: z.string().optional().describe('País'),
+  },
+  async ({ id, ...data }) => {
+    const company = await CompanyService.update(id, data, 'mcp');
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `✅ Empresa "${company.name}" actualizada con éxito (ID: ${company.id})\n- Industria: ${company.industry || 'Sin definir'}\n- Web: ${company.website || 'Sin definir'}`,
+      }],
+    };
+  }
+);
+
 // --- crear_lead ---
 server.tool(
   'crear_lead',

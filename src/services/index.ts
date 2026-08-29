@@ -102,7 +102,20 @@ export const CompanyService = {
   },
 
   async create(data: any, source: 'web' | 'mcp' = 'web') {
-    const company = await companyRepo.create(data);
+    const payload: any = {
+      name: data.name ? String(data.name).trim() : 'Empresa sin nombre',
+    };
+    if (data.legal_name !== undefined) payload.legal_name = data.legal_name ? String(data.legal_name).trim() : null;
+    if (data.tax_id !== undefined) payload.tax_id = data.tax_id ? String(data.tax_id).trim() : null;
+    if (data.website !== undefined) payload.website = data.website ? String(data.website).trim() : null;
+    if (data.industry !== undefined) payload.industry = data.industry ? String(data.industry).trim() : null;
+    if (data.company_size !== undefined) payload.company_size = data.company_size ? String(data.company_size).trim() : null;
+    if (data.country !== undefined) payload.country = data.country ? String(data.country).trim() : null;
+    if (data.city !== undefined) payload.city = data.city ? String(data.city).trim() : null;
+    if (data.sales_owner_id !== undefined) payload.sales_owner_id = data.sales_owner_id || null;
+    if (data.is_active_client !== undefined) payload.is_active_client = Boolean(data.is_active_client);
+
+    const company = await companyRepo.create(payload);
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -116,7 +129,23 @@ export const CompanyService = {
 
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
     const before = await companyRepo.findById(id);
-    const company = await companyRepo.update(id, data);
+    if (!before) {
+      throw new Error(`Empresa no encontrada con ID: ${id}`);
+    }
+
+    const payload: any = {};
+    if (data.name !== undefined) payload.name = String(data.name).trim();
+    if (data.legal_name !== undefined) payload.legal_name = data.legal_name ? String(data.legal_name).trim() : null;
+    if (data.tax_id !== undefined) payload.tax_id = data.tax_id ? String(data.tax_id).trim() : null;
+    if (data.website !== undefined) payload.website = data.website ? String(data.website).trim() : null;
+    if (data.industry !== undefined) payload.industry = data.industry ? String(data.industry).trim() : null;
+    if (data.company_size !== undefined) payload.company_size = data.company_size ? String(data.company_size).trim() : null;
+    if (data.country !== undefined) payload.country = data.country ? String(data.country).trim() : null;
+    if (data.city !== undefined) payload.city = data.city ? String(data.city).trim() : null;
+    if (data.sales_owner_id !== undefined) payload.sales_owner_id = data.sales_owner_id || null;
+    if (data.is_active_client !== undefined) payload.is_active_client = Boolean(data.is_active_client);
+
+    const company = await companyRepo.update(id, payload);
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,

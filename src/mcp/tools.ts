@@ -178,6 +178,34 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- actualizar_empresa ---
+  srv.tool(
+    'actualizar_empresa',
+    'Actualizar datos de una empresa en el CRM (industria, nombre, sitio web, RUT / tax_id, ciudad, país).',
+    {
+      id: z.string().describe('ID de la empresa a actualizar'),
+      name: z.string().optional().describe('Nombre de la empresa'),
+      industry: z.string().optional().describe('Industria o sector (ej: Minería, SaaS, Retail, Salud)'),
+      website: z.string().optional().describe('Sitio web'),
+      tax_id: z.string().optional().describe('RUT o identificación fiscal'),
+      city: z.string().optional().describe('Ciudad'),
+      country: z.string().optional().describe('País'),
+    },
+    async ({ id, ...data }) => {
+      try {
+        const company = await CompanyService.update(id, data, 'mcp');
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `✅ Empresa "${company.name}" actualizada con éxito (ID: ${company.id})\n- Industria: ${company.industry || 'Sin definir'}\n- Web: ${company.website || 'Sin definir'}\n- Ubicación: ${[company.city, company.country].filter(Boolean).join(', ') || 'Sin definir'}`,
+          }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar empresa: ${err.message}` }] };
+      }
+    }
+  );
+
   // --- crear_oportunidad ---
   srv.tool(
     'crear_oportunidad',

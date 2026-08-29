@@ -15,11 +15,10 @@ jobs:
       - name: Conectar por SSH y Desplegar
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.VPS_HOST || secrets.HOST || secrets.VPS_IP || secrets.SERVER_IP }}
-          username: ${{ secrets.VPS_USER || secrets.USERNAME || secrets.USER || 'root' }}
-          key: ${{ secrets.VPS_SSH_KEY || secrets.SSH_KEY || secrets.PRIVATE_KEY }}
-          password: ${{ secrets.VPS_PASSWORD || secrets.PASSWORD }}
-          port: ${{ secrets.VPS_PORT || secrets.PORT || 22 }}
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
           script: |
             echo "🚀 Iniciando despliegue en el VPS..."
             

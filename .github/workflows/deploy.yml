@@ -33,35 +33,41 @@ jobs:
         env:
           VPS_HOST: ${{ vars.VPS_HOST }}
           VPS_USER: ${{ vars.VPS_USER }}
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SEC_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VAR_KEY: ${{ vars.VPS_SSH_KEY }}
+          SEC_PASS: ${{ secrets.VPS_PASSWORD }}
+          VAR_PASS: ${{ vars.VPS_PASSWORD }}
         run: |
-          if [ -z "$VPS_HOST" ]; then
-            VPS_HOST="${{ secrets.VPS_HOST }}"
-          fi
-          if [ -z "$VPS_USER" ]; then
-            VPS_USER="${{ secrets.VPS_USER }}"
-            VPS_USER="${VPS_USER:-root}"
-          fi
-          if [ -z "$VPS_SSH_KEY" ]; then
-            VPS_SSH_KEY="${{ vars.VPS_SSH_KEY }}"
-          fi
+          VPS_SSH_KEY="${SEC_KEY:-$VAR_KEY}"
+          VPS_PASSWORD="${SEC_PASS:-$VAR_PASS}"
+          VPS_USER="${VPS_USER:-root}"
           
           if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: VPS_HOST está vacío."
+            echo "❌ ERROR: VPS_HOST no está definido."
             exit 1
           fi
-          if [ -z "$VPS_SSH_KEY" ]; then
-            echo "❌ ERROR: VPS_SSH_KEY está vacío en Secrets."
+          
+          if [ -z "$VPS_SSH_KEY" ] && [ -z "$VPS_PASSWORD" ]; then
+            echo "❌ ERROR: No se encontró VPS_SSH_KEY ni VPS_PASSWORD."
+            echo "👉 Agrega VPS_SSH_KEY (clave privada SSH) o VPS_PASSWORD (contraseña) en Settings -> Secrets."
             exit 1
           fi
           
           mkdir -p ~/.ssh
-          echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           
           echo "🚀 Conectando a $VPS_USER@$VPS_HOST..."
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=15 "$VPS_USER@$VPS_HOST" "bash -s" << 'EOF'
+          
+          if [ -n "$VPS_SSH_KEY" ]; then
+            echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+          else
+            sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+            SSH_CMD="sshpass -p $VPS_PASSWORD ssh -o StrictHostKeyChecking=no -o ConnectTimeout=20"
+          fi
+          
+          $SSH_CMD "$VPS_USER@$VPS_HOST" "bash -s" << 'EOF'
             set -e
             echo "📂 Buscando carpeta del CRM en el VPS..."
             

@@ -1,0 +1,44 @@
+name: Auto Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Conectar por SSH y Desplegar
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Iniciando despliegue en el VPS..."
+            
+            # 1. Navegar a la carpeta del proyecto (ajustar si la ruta es diferente)
+            cd ${{ secrets.VPS_PROJECT_DIR || '/var/www/cmr' }}
+            
+            # 2. Descargar los últimos cambios de GitHub
+            git pull origin main
+            
+            # 3. Instalar dependencias y compilar frontend
+            cd frontend
+            npm install
+            npm run build
+            cd ..
+            
+            # 4. Instalar dependencias de backend si cambiaron
+            npm install
+            
+            # 5. Reiniciar servicios de backend y frontend
+            if command -v pm2 &> /dev/null; then
+              pm2 restart all || pm2 start npm --name "crm" -- run dev
+            fi
+            
+            echo "✅ ¡Despliegue completado exitosamente!"

@@ -525,6 +525,51 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- eliminar_factura ---
+  srv.tool(
+    'eliminar_factura',
+    'Eliminar una factura del CRM permanentemente por su ID.',
+    {
+      id: z.string().describe('ID de la factura a eliminar'),
+    },
+    async (data) => {
+      try {
+        const result = await InvoiceService.delete(data.id, 'mcp');
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `✅ Factura (ID: ${data.id}) eliminada exitosamente.`,
+          }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al eliminar factura: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- anular_factura ---
+  srv.tool(
+    'anular_factura',
+    'Anular una factura en el CRM (cambia su estado a cancelled).',
+    {
+      id: z.string().describe('ID de la factura a anular'),
+    },
+    async (data) => {
+      try {
+        const invoice = await InvoiceService.cancel(data.id, 'mcp');
+        const folioText = invoice.invoice_number ? `N° ${invoice.invoice_number}` : 'Sin Folio';
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `✅ Factura ${folioText} (ID: ${data.id}) anulada exitosamente (Estado: cancelled).`,
+          }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al anular factura: ${err.message}` }] };
+      }
+    }
+  );
+
   // --- registrar_gasto ---
   srv.tool(
     'registrar_gasto',

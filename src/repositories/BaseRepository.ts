@@ -127,6 +127,15 @@ export class BaseRepository<T extends Record<string, any>> {
     if (error) throw error;
   }
 
+  async hardDelete(id: string): Promise<void> {
+    const { error } = await this.db
+      .from(this.tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+
   async search(field: string, value: string): Promise<T[]> {
     let query = this.db
       .from(this.tableName)

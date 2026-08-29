@@ -202,6 +202,16 @@ app.patch('/api/invoices/:id', async (req, res) => {
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+app.delete('/api/invoices/:id', async (req, res) => {
+  try { res.json(await InvoiceService.delete(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/invoices/:id/cancel', async (req, res) => {
+  try { res.json(await InvoiceService.cancel(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/invoices/:id/issue', async (req, res) => {
   try { res.json(await InvoiceService.issue(req.params.id)); }
   catch (e: any) { res.status(500).json({ error: e.message }); }

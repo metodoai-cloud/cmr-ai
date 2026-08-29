@@ -311,6 +311,41 @@ server.tool(
       }],
     };
   }
+// --- eliminar_factura ---
+server.tool(
+  'eliminar_factura',
+  'Eliminar una factura del CRM permanentemente por su ID.',
+  {
+    id: z.string().describe('ID de la factura a eliminar'),
+  },
+  async (data) => {
+    const result = await InvoiceService.delete(data.id, 'mcp');
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `✅ Factura (ID: ${data.id}) eliminada exitosamente del CRM.`,
+      }],
+    };
+  }
+);
+
+// --- anular_factura ---
+server.tool(
+  'anular_factura',
+  'Anular una factura en el CRM (cambia su estado a cancelled).',
+  {
+    id: z.string().describe('ID de la factura a anular'),
+  },
+  async (data) => {
+    const invoice = await InvoiceService.cancel(data.id, 'mcp');
+    const folioText = invoice.invoice_number ? `N° ${invoice.invoice_number}` : 'Sin Folio';
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `✅ Factura ${folioText} (ID: ${data.id}) anulada exitosamente (Estado: cancelled).`,
+      }],
+    };
+  }
 );
 
 // --- registrar_pago ---

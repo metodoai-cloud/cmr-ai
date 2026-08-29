@@ -619,6 +619,34 @@ export const InvoiceService = {
     });
     return enrichInvoice(invoice);
   },
+
+  async delete(id: string, source: 'web' | 'mcp' = 'web') {
+    const existing = await invoiceRepo.findById(id);
+    if (!existing) {
+      throw new Error(`Factura no encontrada con ID: ${id}`);
+    }
+
+    try {
+      await invoiceRepo.softDelete(id);
+    } catch {
+      await invoiceRepo.hardDelete(id);
+    }
+
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'invoice',
+      entityId: id,
+      action: 'deleted',
+      beforeData: existing,
+    });
+
+    return { success: true, message: `Factura ${existing.invoice_number ? '#' + existing.invoice_number : id} eliminada correctamente.` };
+  },
+
+  async cancel(id: string, source: 'web' | 'mcp' = 'web') {
+    return this.update(id, { status: 'cancelled' }, source);
+  },
 };
 
 // ============================================================================

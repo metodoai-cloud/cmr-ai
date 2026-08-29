@@ -299,10 +299,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const candidatePaths = [
-  path.resolve(process.cwd(), 'dist'),
   path.resolve(process.cwd(), 'frontend/dist'),
-  path.resolve(__dirname, '../../dist'),
   path.resolve(__dirname, '../../frontend/dist'),
+  path.resolve(process.cwd(), 'dist'),
+  path.resolve(__dirname, '../../dist'),
   path.resolve(__dirname, '../dist'),
 ];
 
@@ -316,9 +316,17 @@ for (const p of candidatePaths) {
 
 if (distPath) {
   console.log(`🌐 Serving frontend SPA from: ${distPath}`);
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    maxAge: '1h',
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      }
+    }
+  }));
   app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/mcp') && !req.path.startsWith('/sse')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.sendFile(path.join(distPath!, 'index.html'));
     }
     next();

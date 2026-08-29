@@ -97,17 +97,35 @@ jobs:
             echo "📂 Trabajando en: $(pwd)"
             git pull origin main
             
+            # Instalar dependencias raíz
+            npm install --prefer-offline 2>/dev/null || npm install
+            
+            # Compilar frontend
             if [ -d "frontend" ]; then
               echo "🔨 Compilando frontend..."
               cd frontend
               npm install --prefer-offline 2>/dev/null || npm install
               npm run build
               cd ..
+              
+              # Sincronizar directorios estáticos
+              mkdir -p dist
+              cp -rf frontend/dist/* dist/ 2>/dev/null || true
+              
+              if [ -d "/var/www/html" ]; then
+                cp -rf frontend/dist/* /var/www/html/ 2>/dev/null || true
+              fi
             fi
             
             echo "🔄 Reiniciando procesos..."
             if command -v pm2 &> /dev/null; then
-              pm2 restart all || true
+              pm2 restart all --update-env || pm2 restart all || true
+            fi
+            if systemctl is-active --quiet crm 2>/dev/null; then
+              systemctl restart crm || true
+            fi
+            if systemctl is-active --quiet nginx 2>/dev/null; then
+              systemctl reload nginx || true
             fi
             
             echo "✨ ¡Despliegue completado exitosamente en el VPS!"

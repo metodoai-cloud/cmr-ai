@@ -23,8 +23,15 @@ jobs:
           script: |
             echo "🚀 Iniciando despliegue en el VPS..."
             
-            # 1. Navegar a la carpeta del proyecto (ajustar si la ruta es diferente)
-            cd ${{ secrets.VPS_PROJECT_DIR || '/var/www/cmr' }}
+            # 1. Navegar a la carpeta del proyecto
+            TARGET_DIR="${{ secrets.VPS_PROJECT_DIR }}"
+            if [ -z "$TARGET_DIR" ] || [ ! -d "$TARGET_DIR" ]; then
+              for d in /var/www/cmr /var/www/CMR /root/CMR /root/cmr /home/*/CMR /home/*/cmr /root/GESTION\ AG/CMR; do
+                if [ -d "$d" ]; then TARGET_DIR="$d"; break; fi
+              done
+            fi
+            cd "${TARGET_DIR:-/var/www/cmr}"
+            echo "📂 Directorio de trabajo: $(pwd)"
             
             # 2. Descargar los últimos cambios de GitHub
             git pull origin main

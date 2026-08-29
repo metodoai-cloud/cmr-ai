@@ -774,15 +774,6 @@ export default function App() {
             {!isSidebarCollapsed && <span>Empresas ({companies.length})</span>}
           </button>
           <button
-            onClick={() => setActiveTab('marketing')}
-            className={`btn ${activeTab === 'marketing' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Marketing & ROAS"
-          >
-            <Megaphone size={18} />
-            {!isSidebarCollapsed && <span>Marketing & ROAS</span>}
-          </button>
-          <button
             onClick={() => setActiveTab('finance')}
             className={`btn ${activeTab === 'finance' ? 'btn-primary' : 'btn-ghost'}`}
             style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
@@ -790,6 +781,15 @@ export default function App() {
           >
             <DollarSign size={18} />
             {!isSidebarCollapsed && <span>Finanzas & Caja</span>}
+          </button>
+          <button
+            onClick={() => setActiveTab('marketing')}
+            className={`btn ${activeTab === 'marketing' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Marketing & ROAS"
+          >
+            <Megaphone size={18} />
+            {!isSidebarCollapsed && <span>Marketing & ROAS</span>}
           </button>
           <button
             onClick={() => setActiveTab('operations')}

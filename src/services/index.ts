@@ -912,7 +912,18 @@ export const HookService = {
 export const ServiceCatalog = {
   async getAll(filters: any = {}) {
     const activeFilter = filters.active !== undefined ? filters.active : true;
-    return serviceRepo.findAll({ ...filters, active: activeFilter });
+    const services = await serviceRepo.findAll({ ...filters, active: activeFilter });
+    return services.sort((a: any, b: any) => {
+      const catA = a.category || '';
+      const catB = b.category || '';
+      if (catA !== catB) {
+        return catA.localeCompare(catB, 'es', { numeric: true });
+      }
+      if (a.billing_type !== b.billing_type) {
+        return a.billing_type === 'one_time' ? -1 : 1;
+      }
+      return (Number(a.standard_setup_price) || 0) - (Number(b.standard_setup_price) || 0);
+    });
   },
   async getById(id: string) { return serviceRepo.findById(id); },
   async create(data: any) { return serviceRepo.create(data); },

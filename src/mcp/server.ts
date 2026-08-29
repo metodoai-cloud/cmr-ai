@@ -666,6 +666,49 @@ server.tool(
   }
 );
 
+// --- listar_servicios ---
+server.tool(
+  'listar_servicios',
+  'Ver el catálogo oficial de servicios estructurado en sus 4 Servicios Madre y orden ascendente de Up-selling con precios en pesos chilenos ($).',
+  {},
+  async () => {
+    const services = await ServiceCatalog.getAll();
+    if (services.length === 0) {
+      return { content: [{ type: 'text' as const, text: 'No hay servicios activos en el catálogo.' }] };
+    }
+
+    const grouped: Record<string, any[]> = {};
+    for (const s of services) {
+      const parent = s.category || 'Otros Servicios';
+      if (!grouped[parent]) grouped[parent] = [];
+      grouped[parent].push(s);
+    }
+
+    let formatted = `📋 **Catálogo Oficial de Servicios (Escalera de Valor & Up-Selling)**:\n`;
+    for (const [parent, items] of Object.entries(grouped)) {
+      formatted += `\n🏷️ **${parent}**\n`;
+      for (const item of items) {
+        const setup = Number(item.standard_setup_price || 0);
+        const mrr = Number(item.standard_recurring_price || 0);
+        let priceInfo = '';
+        if (setup > 0 && mrr > 0) {
+          priceInfo = `Setup: $${setup.toLocaleString('es-CL')} Neto (+ IVA) + MRR: $${mrr.toLocaleString('es-CL')}/mes Neto (+ IVA)`;
+        } else if (setup > 0) {
+          priceInfo = `Precio Único: $${setup.toLocaleString('es-CL')} Neto (+ IVA)`;
+        } else {
+          priceInfo = `Recurrente: $${mrr.toLocaleString('es-CL')}/mes Neto (+ IVA)`;
+        }
+        
+        formatted += `  • **${item.name}** ➔ ${priceInfo}\n    _${item.description || ''}_\n    ID: \`${item.id}\`\n`;
+      }
+    }
+
+    return {
+      content: [{ type: 'text' as const, text: formatted }],
+    };
+  }
+);
+
 // ============================================================================
 // START SERVER (Stdio for local Claude Desktop)
 // ============================================================================

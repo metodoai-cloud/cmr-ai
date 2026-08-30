@@ -1597,7 +1597,7 @@ export default function App() {
                       <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
                       <th style={{ padding: '12px 14px', width: '14%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
                       <th style={{ padding: '12px 14px', width: '16%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Monto Pagado</th>
+                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Monto</th>
                       <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Total & Estado</th>
                       <th style={{ padding: '12px 14px', textAlign: 'center', width: '12%', whiteSpace: 'nowrap' }}>Acciones</th>
                     </tr>
@@ -1760,16 +1760,11 @@ export default function App() {
                               )}
                             </td>
 
-                            {/* Col 5: Monto Pagado */}
+                            {/* Col 5: Monto (Monto de la Factura con IVA incluido) */}
                             <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ fontWeight: 600, color: paidAmount > 0 ? '#10b981' : 'var(--text-muted)', fontSize: '0.95rem' }}>
-                                {formatMoney(paidAmount)}
+                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                {formatMoney(Number(inv.total) || 0)}
                               </div>
-                              {paidAmount > 0 && paidAmount < Number(inv.total) && (
-                                <div style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '2px', fontWeight: 500 }}>
-                                  Falta: {formatMoney(Number(inv.total) - paidAmount)}
-                                </div>
-                              )}
                             </td>
 
                             {/* Col 6: Total & Estado (Total con IVA de la Oportunidad) */}

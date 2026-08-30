@@ -1654,15 +1654,9 @@ export default function App() {
                         const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
                         const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
 
-                        // Payment date and paid amount logic
+                        // Payment date logic
                         const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
                         const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
-                        const paymentsList = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
-                        const paidAmount = inv.paid_amount !== undefined
-                          ? Number(inv.paid_amount)
-                          : (inv.status === 'paid'
-                              ? Number(inv.total)
-                              : paymentsList.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0));
 
                         return (
                           <tr

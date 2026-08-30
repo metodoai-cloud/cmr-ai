@@ -287,6 +287,7 @@ export function registerTools(srv: McpServer) {
       notes: z.string().optional().describe('Notas adicionales'),
       name: z.string().optional().describe('Nuevo nombre de la oportunidad'),
       title: z.string().optional().describe('Alias para name'),
+      probability: z.number().optional().describe('Probabilidad de éxito o cierre (0 a 100)'),
     },
     async ({ id, ...data }) => {
       try {
@@ -296,6 +297,7 @@ export function registerTools(srv: McpServer) {
         if (data.setup_value !== undefined) payload.setup_value = data.setup_value;
         else if (data.estimated_value !== undefined) payload.setup_value = data.estimated_value;
         if (data.recurring_value !== undefined) payload.recurring_value = data.recurring_value;
+        if (data.probability !== undefined) payload.probability = data.probability;
         if (data.notes !== undefined) payload.notes = data.notes;
 
         const opp = await OpportunityService.update(id, payload);

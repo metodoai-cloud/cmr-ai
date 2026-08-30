@@ -264,6 +264,7 @@ server.tool(
     setup_value: z.number().optional().describe('Valor de setup / implementación'),
     recurring_value: z.number().optional().describe('Valor recurrente mensual (MRR)'),
     service_id: z.string().optional().describe('ID del servicio asociado'),
+    probability: z.number().optional().describe('Probabilidad de éxito o cierre en porcentaje (0 a 100)'),
     notes: z.string().optional().describe('Notas o comentarios'),
     next_action: z.string().optional().describe('Próxima acción'),
     next_action_date: z.string().optional().describe('Fecha de próxima acción (YYYY-MM-DD)'),

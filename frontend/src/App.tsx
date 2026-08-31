@@ -171,6 +171,7 @@ export default function App() {
     estimated_cost: 0,
   });
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [projectStatusView, setProjectStatusView] = useState<'active' | 'completed' | 'cancelled'>('active');
 
   // AI Chat State
   const [messages, setMessages] = useState<AiMessage[]>([
@@ -788,6 +789,7 @@ export default function App() {
 
         {/* Navigation Items */}
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          {/* 1. Dashboard */}
           <button
             onClick={() => setActiveTab('dashboard')}
             className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-ghost'}`}
@@ -797,51 +799,8 @@ export default function App() {
             <LayoutDashboard size={18} />
             {!isSidebarCollapsed && <span>Dashboard</span>}
           </button>
-          <button
-            onClick={() => setActiveTab('pipeline')}
-            className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Pipeline de Ventas (Kanban)"
-          >
-            <Kanban size={18} />
-            {!isSidebarCollapsed && <span>Pipeline Ventas</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('contacts')}
-            className={`btn ${activeTab === 'contacts' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Contactos"
-          >
-            <Users size={18} />
-            {!isSidebarCollapsed && <span>Contactos ({contacts.length})</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('companies')}
-            className={`btn ${activeTab === 'companies' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Empresas"
-          >
-            <Building size={18} />
-            {!isSidebarCollapsed && <span>Empresas ({companies.length})</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('finance')}
-            className={`btn ${activeTab === 'finance' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Finanzas & Caja"
-          >
-            <DollarSign size={18} />
-            {!isSidebarCollapsed && <span>Finanzas & Caja</span>}
-          </button>
-          <button
-            onClick={() => setActiveTab('marketing')}
-            className={`btn ${activeTab === 'marketing' ? 'btn-primary' : 'btn-ghost'}`}
-            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
-            title="Marketing & ROAS"
-          >
-            <Megaphone size={18} />
-            {!isSidebarCollapsed && <span>Marketing & ROAS</span>}
-          </button>
+
+          {/* 2. Operaciones (Debajo de Dashboard) */}
           <button
             onClick={() => setActiveTab('operations')}
             className={`btn ${activeTab === 'operations' ? 'btn-primary' : 'btn-ghost'}`}
@@ -851,6 +810,63 @@ export default function App() {
             <Briefcase size={18} />
             {!isSidebarCollapsed && <span>Operaciones</span>}
           </button>
+
+          {/* 3. Pipeline de Ventas */}
+          <button
+            onClick={() => setActiveTab('pipeline')}
+            className={`btn ${activeTab === 'pipeline' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Pipeline de Ventas (Kanban)"
+          >
+            <Kanban size={18} />
+            {!isSidebarCollapsed && <span>Pipeline Ventas</span>}
+          </button>
+
+          {/* 4. Finanzas & Caja */}
+          <button
+            onClick={() => setActiveTab('finance')}
+            className={`btn ${activeTab === 'finance' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Finanzas & Caja"
+          >
+            <DollarSign size={18} />
+            {!isSidebarCollapsed && <span>Finanzas & Caja</span>}
+          </button>
+
+          {/* 5. Contactos */}
+          <button
+            onClick={() => setActiveTab('contacts')}
+            className={`btn ${activeTab === 'contacts' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Contactos"
+          >
+            <Users size={18} />
+            {!isSidebarCollapsed && <span>Contactos ({contacts.length})</span>}
+          </button>
+
+          {/* 6. Empresas */}
+          <button
+            onClick={() => setActiveTab('companies')}
+            className={`btn ${activeTab === 'companies' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Empresas"
+          >
+            <Building size={18} />
+            {!isSidebarCollapsed && <span>Empresas ({companies.length})</span>}
+          </button>
+
+          {/* 7. Marketing & ROAS */}
+          <button
+            onClick={() => setActiveTab('marketing')}
+            className={`btn ${activeTab === 'marketing' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Marketing & ROAS"
+          >
+            <Megaphone size={18} />
+            {!isSidebarCollapsed && <span>Marketing & ROAS</span>}
+          </button>
+
+          {/* 8. IA Command Center */}
           <button
             onClick={() => setActiveTab('ai')}
             className={`btn ${activeTab === 'ai' ? 'btn-primary' : 'btn-ghost'}`}
@@ -860,6 +876,8 @@ export default function App() {
             <Bot size={18} />
             {!isSidebarCollapsed && <span>IA Center</span>}
           </button>
+
+          {/* Settings */}
           <button
             onClick={() => setActiveTab('settings')}
             className={`btn ${activeTab === 'settings' ? 'btn-primary' : 'btn-ghost'}`}
@@ -1963,20 +1981,8 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
               {/* Projects */}
               <div className="glass-card" style={{ padding: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Briefcase size={18} color="var(--primary)" />
-                    Proyectos en Curso (Implementaciones)
-                  </h3>
-                  <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                    {projects.length} activo{projects.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {projects.length === 0 ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '16px', textAlign: 'center' }}>No hay proyectos en curso.</div>
-                  ) : projects.map((p) => {
+                {(() => {
+                  const getProjectCompanyName = (p: any) => {
                     const clientObj = Array.isArray(p.clients) ? p.clients[0] : p.clients;
                     const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
                     const oppObj = allOpps.find((o) => o.id === p.opportunity_id);
@@ -1990,114 +1996,210 @@ export default function App() {
                       (p.name?.toLowerCase().includes('protea') && c.name?.toLowerCase().includes('protea'))
                     );
 
-                    const companyName = companyObj?.name ||
+                    return companyObj?.name ||
                       oppCompObj?.name ||
                       fallbackComp?.name ||
                       oppObj?.name?.split('—')[0]?.trim() ||
                       (p.name?.includes('—') ? p.name.split('—')[0].trim() : '') ||
                       'Empresa';
+                  };
 
-                    const projectName = p.name?.includes('—') && p.name.split('—')[1]?.trim()
-                      ? p.name.split('—')[1].trim()
-                      : p.name;
+                  const activeProjects = projects.filter((p) => !['completed', 'cancelled'].includes(p.status));
+                  const completedProjects = projects.filter((p) => p.status === 'completed');
+                  const cancelledProjects = projects.filter((p) => p.status === 'cancelled');
 
-                    const statusColor = p.status === 'completed' 
-                      ? 'badge-success' 
-                      : p.status === 'in_progress' 
-                      ? 'badge-info' 
-                      : 'badge-primary';
-                    const statusLabel = p.status === 'onboarding'
-                      ? 'ONBOARDING'
-                      : p.status === 'in_progress'
-                      ? 'EN PROCESO'
-                      : p.status === 'completed'
-                      ? 'COMPLETADO'
-                      : String(p.status).toUpperCase();
+                  const displayedProjects = (() => {
+                    if (projectStatusView === 'active') {
+                      const statusWeight: Record<string, number> = {
+                        onboarding: 1,
+                        in_progress: 2,
+                        review: 3,
+                      };
+                      return [...activeProjects].sort((a, b) => {
+                        const weightA = statusWeight[a.status] || 99;
+                        const weightB = statusWeight[b.status] || 99;
+                        if (weightA !== weightB) return weightA - weightB;
+                        return new Date(b.created_at || b.start_date || 0).getTime() - new Date(a.created_at || a.start_date || 0).getTime();
+                      });
+                    }
 
-                    return (
-                      <div
-                        key={p.id}
-                        onClick={() => openEditProjectModal(p, companyName)}
-                        title="Haz clic para editar este proyecto"
-                        style={{
-                          padding: '16px',
-                          backgroundColor: 'var(--bg-glass)',
-                          border: '1px solid var(--border-glass)',
-                          borderRadius: 'var(--radius-sm)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '10px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
-                          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'var(--bg-glass)';
-                          e.currentTarget.style.borderColor = 'var(--border-glass)';
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        {/* Top: Project Title & Status Badge */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
-                              {projectName}
-                            </div>
-                            {/* Company Name Badge */}
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
-                              <Building size={14} />
-                              <span>{companyName}</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                              {statusLabel}
-                            </span>
-                            <div
-                              style={{
-                                padding: '4px',
-                                borderRadius: '4px',
-                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                                color: 'var(--text-muted)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              <Edit size={12} />
-                            </div>
-                          </div>
-                        </div>
+                    if (projectStatusView === 'completed') {
+                      return [...completedProjects].sort((a, b) => {
+                        const compA = getProjectCompanyName(a);
+                        const compB = getProjectCompanyName(b);
+                        return compA.localeCompare(compB, 'es', { sensitivity: 'base' });
+                      });
+                    }
 
-                        {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) */}
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
-                            <b style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(p.sold_price)}</b>
-                          </div>
-                          <span style={{ color: 'var(--text-muted)' }}>•</span>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <Calendar size={13} color="var(--primary-light)" />
-                            <span style={{ color: 'var(--text-muted)' }}>Inicio:</span>
-                            <span>{formatDate(p.start_date)}</span>
-                          </div>
-                          <span style={{ color: 'var(--text-muted)' }}>•</span>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                            <Clock size={13} color="var(--text-muted)" />
-                            <span style={{ color: 'var(--text-muted)' }}>Entrega:</span>
-                            <span style={{ color: p.due_date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                              {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
-                            </span>
-                          </div>
+                    // Cancelled
+                    return [...cancelledProjects].sort((a, b) => {
+                      const compA = getProjectCompanyName(a);
+                      const compB = getProjectCompanyName(b);
+                      return compA.localeCompare(compB, 'es', { sensitivity: 'base' });
+                    });
+                  })();
+
+                  return (
+                    <>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                        <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Briefcase size={18} color="var(--primary)" />
+                          Proyectos en Curso (Implementaciones)
+                        </h3>
+
+                        {/* Dropdown Selector */}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                          <select
+                            value={projectStatusView}
+                            onChange={(e) => setProjectStatusView(e.target.value as any)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: 'var(--bg-glass)',
+                              border: '1px solid var(--border-glass)',
+                              borderRadius: 'var(--radius-sm)',
+                              color: 'var(--text-primary)',
+                              fontSize: '0.8rem',
+                              fontWeight: 600,
+                              outline: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <option value="active">Activos ({activeProjects.length})</option>
+                            <option value="completed">Completados ({completedProjects.length})</option>
+                            <option value="cancelled">Cancelados ({cancelledProjects.length})</option>
+                          </select>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {displayedProjects.length === 0 ? (
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '20px', textAlign: 'center' }}>
+                            {projectStatusView === 'active' 
+                              ? 'No hay proyectos activos en curso.' 
+                              : projectStatusView === 'completed' 
+                              ? 'No hay proyectos completados.' 
+                              : 'No hay proyectos cancelados.'}
+                          </div>
+                        ) : displayedProjects.map((p) => {
+                          const companyName = getProjectCompanyName(p);
+                          const isEditable = projectStatusView === 'active';
+
+                          const projectName = p.name?.includes('—') && p.name.split('—')[1]?.trim()
+                            ? p.name.split('—')[1].trim()
+                            : p.name;
+
+                          const statusColor = p.status === 'completed' 
+                            ? 'badge-success' 
+                            : p.status === 'in_progress' 
+                            ? 'badge-info' 
+                            : p.status === 'cancelled'
+                            ? 'badge-danger'
+                            : 'badge-primary';
+                          const statusLabel = p.status === 'onboarding'
+                            ? 'ONBOARDING'
+                            : p.status === 'in_progress'
+                            ? 'EN PROCESO'
+                            : p.status === 'review'
+                            ? 'EN REVISIÓN'
+                            : p.status === 'completed'
+                            ? 'COMPLETADO'
+                            : p.status === 'cancelled'
+                            ? 'CANCELADO'
+                            : String(p.status).toUpperCase();
+
+                          return (
+                            <div
+                              key={p.id}
+                              onClick={() => isEditable && openEditProjectModal(p, companyName)}
+                              title={isEditable ? 'Haz clic para editar este proyecto' : 'Proyecto finalizado (Solo lectura)'}
+                              style={{
+                                padding: '16px',
+                                backgroundColor: 'var(--bg-glass)',
+                                border: '1px solid var(--border-glass)',
+                                borderRadius: 'var(--radius-sm)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '10px',
+                                cursor: isEditable ? 'pointer' : 'default',
+                                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                              }}
+                              onMouseEnter={(e) => {
+                                if (isEditable) {
+                                  e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
+                                  e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                                  e.currentTarget.style.transform = 'translateY(-2px)';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (isEditable) {
+                                  e.currentTarget.style.backgroundColor = 'var(--bg-glass)';
+                                  e.currentTarget.style.borderColor = 'var(--border-glass)';
+                                  e.currentTarget.style.transform = 'translateY(0)';
+                                }
+                              }}
+                            >
+                              {/* Top: Project Title & Status Badge */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                                <div>
+                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
+                                    {projectName}
+                                  </div>
+                                  {/* Company Name Badge */}
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
+                                    <Building size={14} />
+                                    <span>{companyName}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                                    {statusLabel}
+                                  </span>
+                                  {isEditable && (
+                                    <div
+                                      style={{
+                                        padding: '4px',
+                                        borderRadius: '4px',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                        color: 'var(--text-muted)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                      }}
+                                    >
+                                      <Edit size={12} />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
+                                  <b style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(p.sold_price)}</b>
+                                </div>
+                                <span style={{ color: 'var(--text-muted)' }}>•</span>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Calendar size={13} color="var(--primary-light)" />
+                                  <span style={{ color: 'var(--text-muted)' }}>Inicio:</span>
+                                  <span>{formatDate(p.start_date)}</span>
+                                </div>
+                                <span style={{ color: 'var(--text-muted)' }}>•</span>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Clock size={13} color="var(--text-muted)" />
+                                  <span style={{ color: 'var(--text-muted)' }}>Entrega:</span>
+                                  <span style={{ color: p.due_date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Subscriptions */}

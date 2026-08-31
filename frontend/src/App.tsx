@@ -1549,7 +1549,7 @@ export default function App() {
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.map((co: any) => {
+                    {[...companies].sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' })).map((co: any) => {
                       const linkedContacts = contacts.filter((c: any) => c.company_id === co.id);
                       const locationStr = [co.city, co.country].filter(Boolean).join(', ');
                       return (

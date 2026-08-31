@@ -26,12 +26,25 @@ export class ContactRepository extends BaseRepository<any> {
 export class CompanyRepository extends BaseRepository<any> {
   constructor() { super('companies'); }
 
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('companies')
+      .select('*')
+      .is('deleted_at', null)
+      .order('name', { ascending: true });
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
   async searchByName(name: string) {
     const { data, error } = await this.db
       .from('companies')
       .select('*')
       .ilike('name', `%${name}%`)
       .is('deleted_at', null)
+      .order('name', { ascending: true })
       .limit(10);
     if (error) throw error;
     return data || [];

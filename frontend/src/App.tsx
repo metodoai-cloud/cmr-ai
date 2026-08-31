@@ -1229,6 +1229,29 @@ export default function App() {
                         const meetingCount = oppActs.filter((a) => a.type === 'meeting').length;
                         const negotiationCount = oppActs.filter((a) => a.type === 'negotiation' || a.type === 'follow_up').length;
 
+                        // Resolve Company Name
+                        const companyObj = opp.companies ? (Array.isArray(opp.companies) ? opp.companies[0] : opp.companies) : null;
+                        const fallbackComp = companies.find((c) =>
+                          c.id === opp.company_id ||
+                          c.id === companyObj?.id ||
+                          (opp.name?.toLowerCase().includes('acmotrack') && c.name?.toLowerCase().includes('acmotrack')) ||
+                          (opp.name?.toLowerCase().includes('go plan be') && c.name?.toLowerCase().includes('go plan be')) ||
+                          (opp.name?.toLowerCase().includes('protea') && c.name?.toLowerCase().includes('protea')) ||
+                          (opp.name?.toLowerCase().includes('abc consultora') && c.name?.toLowerCase().includes('abc consultora')) ||
+                          (opp.name?.toLowerCase().includes('ascendra') && c.name?.toLowerCase().includes('ascendra')) ||
+                          (opp.name?.toLowerCase().includes('dentalpro') && c.name?.toLowerCase().includes('dentalpro'))
+                        );
+
+                        const companyName = companyObj?.name ||
+                          fallbackComp?.name ||
+                          (opp.name?.includes('—') ? opp.name.split('—')[0].trim() : '') ||
+                          'Empresa';
+
+                        // Clean Service / Opportunity Title
+                        const serviceName = opp.name?.includes('—') && opp.name.split('—')[1]?.trim()
+                          ? opp.name.split('—')[1].trim()
+                          : opp.name;
+
                         return (
                           <div
                             key={opp.id}
@@ -1244,9 +1267,18 @@ export default function App() {
                               border: selectedOpp?.id === opp.id ? '1px solid var(--primary)' : '1px solid var(--border-glass)'
                             }}
                           >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{opp.name}</div>
-                              <ExternalLink size={13} color="var(--text-muted)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                            {/* Top: Company Name Badge */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 700 }}>
+                                <Building size={14} />
+                                <span>{companyName}</span>
+                              </div>
+                              <ExternalLink size={13} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                            </div>
+
+                            {/* Service / Opportunity Title */}
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.35 }}>
+                              {serviceName}
                             </div>
 
                             <div style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: 700 }}>
@@ -3682,16 +3714,26 @@ export default function App() {
 
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                    Precio Vendido ($ CLP) *
+                    Precio Pactado en Venta (Solo Lectura)
                   </label>
-                  <input
-                    type="number"
-                    required
-                    value={projectForm.sold_price}
-                    onChange={(e) => setProjectForm({ ...projectForm, sold_price: Number(e.target.value) || 0 })}
-                    placeholder="1000000"
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
-                  />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid var(--border-glass)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--success)',
+                      fontWeight: 700,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '0.9rem',
+                    }}
+                  >
+                    <span>{formatMoney(projectForm.sold_price)}</span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontWeight: 500, fontFamily: 'inherit' }}>Fijado</span>
+                  </div>
                 </div>
               </div>
 

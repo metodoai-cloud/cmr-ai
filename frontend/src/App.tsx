@@ -2170,19 +2170,20 @@ export default function App() {
                                 }
                               }}
                             >
-                              {/* Top: Project Title & Status Badge */}
+                              {/* Top: Company Name Badge (ARRIBA), Project Title (ABAJO) & Status Badge */}
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                                <div>
-                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
-                                    {projectName}
-                                  </div>
-                                  {/* Company Name Badge */}
-                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                                  {/* Company Name Badge (ARRIBA) */}
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 700 }}>
                                     <Building size={14} />
                                     <span>{companyName}</span>
                                   </div>
+                                  {/* Project Title (ABAJO) */}
+                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
+                                    {projectName}
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                   <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                                     {statusLabel}
                                   </span>
@@ -2273,17 +2274,20 @@ export default function App() {
                           transition: 'all 0.15s ease',
                         }}
                       >
+                        {/* Top: Company Name Badge (ARRIBA), Service Title (ABAJO) & Status Badge */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
-                              {serviceName}
-                            </div>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                            {/* Company Name Badge (ARRIBA) */}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 700 }}>
                               <Building size={14} />
                               <span>{companyName}</span>
                             </div>
+                            {/* Service Title (ABAJO) */}
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
+                              {serviceName}
+                            </div>
                           </div>
-                          <span className="badge badge-success" style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                          <span className="badge badge-success" style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', flexShrink: 0 }}>
                             {s.status === 'active' ? 'ACTIVO' : String(s.status).toUpperCase()}
                           </span>
                         </div>

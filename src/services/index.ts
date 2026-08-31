@@ -957,7 +957,32 @@ export const SubscriptionService = {
 export const ProjectService = {
   async getAll(filters: any = {}) { return projectRepo.findAll(filters); },
   async getById(id: string) { return projectRepo.findById(id); },
-  async update(id: string, data: any) { return projectRepo.update(id, data); },
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+    const before = await projectRepo.findById(id);
+    if (!before) throw new Error(`Proyecto no encontrado con ID: ${id}`);
+
+    const payload: any = {};
+    if (data.name !== undefined) payload.name = String(data.name).trim();
+    if (data.status !== undefined) payload.status = data.status;
+    if (data.sold_price !== undefined) payload.sold_price = Number(data.sold_price);
+    if (data.estimated_cost !== undefined) payload.estimated_cost = Number(data.estimated_cost);
+    if (data.start_date !== undefined) payload.start_date = data.start_date || null;
+    if (data.due_date !== undefined) payload.due_date = data.due_date || null;
+    if (data.completed_at !== undefined) payload.completed_at = data.completed_at || null;
+    if (data.service_id !== undefined) payload.service_id = data.service_id || null;
+
+    const project = await projectRepo.update(id, payload);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'project',
+      entityId: id,
+      action: 'updated',
+      beforeData: before,
+      afterData: project,
+    });
+    return project;
+  },
 };
 
 // ============================================================================

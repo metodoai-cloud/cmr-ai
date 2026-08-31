@@ -158,6 +158,20 @@ export default function App() {
   });
   const [isSavingInvoice, setIsSavingInvoice] = useState(false);
 
+  // Project Edit Modal State
+  const [showProjectModal, setShowProjectModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [projectCompanyName, setProjectCompanyName] = useState<string>('');
+  const [projectForm, setProjectForm] = useState({
+    name: '',
+    status: 'onboarding',
+    sold_price: 0,
+    start_date: '',
+    due_date: '',
+    estimated_cost: 0,
+  });
+  const [isSavingProject, setIsSavingProject] = useState(false);
+
   // AI Chat State
   const [messages, setMessages] = useState<AiMessage[]>([
     {
@@ -536,6 +550,44 @@ export default function App() {
       alert(`Error al actualizar factura: ${err.message}`);
     } finally {
       setIsSavingInvoice(false);
+    }
+  };
+
+  // Open Project Edit Modal
+  const openEditProjectModal = (p: any, companyName: string) => {
+    setEditingProjectId(p.id);
+    setProjectCompanyName(companyName);
+    setProjectForm({
+      name: p.name || '',
+      status: p.status || 'onboarding',
+      sold_price: Number(p.sold_price) || 0,
+      start_date: p.start_date || '',
+      due_date: p.due_date || '',
+      estimated_cost: Number(p.estimated_cost) || 0,
+    });
+    setShowProjectModal(true);
+  };
+
+  // Save Project Updates
+  const handleSaveProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProjectId) return;
+    try {
+      setIsSavingProject(true);
+      await crmApi.updateProject(editingProjectId, {
+        name: projectForm.name.trim(),
+        status: projectForm.status,
+        sold_price: Number(projectForm.sold_price),
+        start_date: projectForm.start_date || null,
+        due_date: projectForm.due_date || null,
+        estimated_cost: Number(projectForm.estimated_cost) || 0,
+      });
+      setShowProjectModal(false);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al actualizar proyecto: ${err.message}`);
+    } finally {
+      setIsSavingProject(false);
     }
   };
 
@@ -1965,6 +2017,8 @@ export default function App() {
                     return (
                       <div
                         key={p.id}
+                        onClick={() => openEditProjectModal(p, companyName)}
+                        title="Haz clic para editar este proyecto"
                         style={{
                           padding: '16px',
                           backgroundColor: 'var(--bg-glass)',
@@ -1973,7 +2027,18 @@ export default function App() {
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '10px',
-                          transition: 'all 0.15s ease',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.08)';
+                          e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'var(--bg-glass)';
+                          e.currentTarget.style.borderColor = 'var(--border-glass)';
+                          e.currentTarget.style.transform = 'translateY(0)';
                         }}
                       >
                         {/* Top: Project Title & Status Badge */}
@@ -1988,9 +2053,24 @@ export default function App() {
                               <span>{companyName}</span>
                             </div>
                           </div>
-                          <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                            {statusLabel}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                              {statusLabel}
+                            </span>
+                            <div
+                              style={{
+                                padding: '4px',
+                                borderRadius: '4px',
+                                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                color: 'var(--text-muted)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              <Edit size={12} />
+                            </div>
+                          </div>
                         </div>
 
                         {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) */}
@@ -3374,6 +3454,194 @@ export default function App() {
                 <button type="submit" disabled={isSavingInvoice} className="btn btn-primary">
                   <Check size={16} />
                   {isSavingInvoice ? 'Guardando...' : 'Guardar Factura'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── PROJECT EDIT MODAL ── */}
+      {showProjectModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setShowProjectModal(false)}
+        >
+          <div
+            className="glass-card animate-fade-in"
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid var(--border-glass)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Briefcase size={20} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
+                  Editar Proyecto de Implementación
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowProjectModal(false)}
+                className="btn-icon"
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSaveProject} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Empresa (Read Only) */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Empresa / Cliente (Solo Lectura)
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 14px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                  }}
+                >
+                  <Building size={16} color="var(--primary-light)" />
+                  <span>{projectCompanyName || 'Empresa'}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>Fijo</span>
+                </div>
+              </div>
+
+              {/* Nombre del Proyecto */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Nombre del Proyecto *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej: Diagnóstico Estratégico y Orden Operativo"
+                  value={projectForm.name}
+                  onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                />
+              </div>
+
+              {/* Estado y Precio Acordado */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Estado del Proyecto *
+                  </label>
+                  <select
+                    value={projectForm.status}
+                    onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  >
+                    <option value="onboarding">Onboarding</option>
+                    <option value="in_progress">En Proceso</option>
+                    <option value="review">En Revisión</option>
+                    <option value="completed">Completado</option>
+                    <option value="cancelled">Cancelado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Precio Vendido ($ CLP) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={projectForm.sold_price}
+                    onChange={(e) => setProjectForm({ ...projectForm, sold_price: Number(e.target.value) || 0 })}
+                    placeholder="1000000"
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
+                  />
+                </div>
+              </div>
+
+              {/* Fechas de Inicio y Entrega */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Fecha de Inicio
+                  </label>
+                  <input
+                    type="date"
+                    value={projectForm.start_date}
+                    onChange={(e) => setProjectForm({ ...projectForm, start_date: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                    Fecha de Entrega
+                  </label>
+                  <input
+                    type="date"
+                    value={projectForm.due_date}
+                    onChange={(e) => setProjectForm({ ...projectForm, due_date: e.target.value })}
+                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              {/* Costo Estimado (Opcional) */}
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Costo Estimado de Ejecución ($ CLP) — Opcional
+                </label>
+                <input
+                  type="number"
+                  value={projectForm.estimated_cost}
+                  onChange={(e) => setProjectForm({ ...projectForm, estimated_cost: Number(e.target.value) || 0 })}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setShowProjectModal(false)} className="btn btn-ghost">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={isSavingProject} className="btn btn-primary">
+                  <Check size={16} />
+                  {isSavingProject ? 'Guardando...' : 'Guardar Cambios'}
                 </button>
               </div>
             </form>

@@ -305,6 +305,33 @@ app.get('/api/vendors', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// === Projects ===
+app.get('/api/projects', async (req, res) => {
+  try { res.json(await ProjectService.getAll(req.query)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/projects/:id', async (req, res) => {
+  try { res.json(await ProjectService.getById(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.put('/api/projects/:id', async (req, res) => {
+  try { res.json(await ProjectService.update(req.params.id, req.body)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// === Subscriptions ===
+app.get('/api/subscriptions', async (req, res) => {
+  try { res.json(await SubscriptionService.getAll(req.query)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/subscriptions/:id/cancel', async (req, res) => {
+  try { res.json(await SubscriptionService.cancel(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // === Static Frontend Production Serving ===
 import path from 'path';
 import fs from 'fs';

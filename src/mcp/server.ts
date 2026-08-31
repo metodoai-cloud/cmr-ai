@@ -710,6 +710,47 @@ server.tool(
   }
 );
 
+// --- listar_proyectos ---
+server.tool(
+  'listar_proyectos',
+  'Listar proyectos de implementación en curso u operaciones del CRM.',
+  {
+    status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'cancelled']).optional().describe('Filtrar por estado del proyecto'),
+  },
+  async (filters) => {
+    const projs = await ProjectService.getAll(filters);
+    if (projs.length === 0) return { content: [{ type: 'text' as const, text: 'No hay proyectos en curso registrados.' }] };
+    const list = projs.map((p: any) => {
+      const compName = p.clients?.companies?.name || p.opportunities?.companies?.name || 'Empresa';
+      return `• [${p.status.toUpperCase()}] "${p.name}" (Empresa: ${compName}) | Precio: $${Number(p.sold_price).toLocaleString('es-CL')} | Inicio: ${p.start_date || 'N/A'} | Entrega: ${p.due_date || 'Pendiente'} | ID: ${p.id}`;
+    }).join('\n');
+    return {
+      content: [{ type: 'text' as const, text: `🚀 Proyectos (${projs.length}):\n\n${list}` }],
+    };
+  }
+);
+
+// --- actualizar_proyecto ---
+server.tool(
+  'actualizar_proyecto',
+  'Actualizar los datos operativos de un proyecto de implementación en curso (nombre, estado, precio acordado, fecha de inicio, fecha de entrega).',
+  {
+    id: z.string().describe('ID del proyecto a actualizar'),
+    name: z.string().optional().describe('Nuevo nombre del proyecto'),
+    status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'cancelled']).optional().describe('Nuevo estado del proyecto'),
+    sold_price: z.number().optional().describe('Precio vendido / acordado'),
+    start_date: z.string().optional().describe('Fecha de inicio (YYYY-MM-DD)'),
+    due_date: z.string().optional().describe('Fecha de entrega estimada (YYYY-MM-DD)'),
+    estimated_cost: z.number().optional().describe('Costo estimado'),
+  },
+  async ({ id, ...data }) => {
+    const updated = await ProjectService.update(id, data, 'mcp');
+    return {
+      content: [{ type: 'text' as const, text: `✅ Proyecto actualizado con éxito:\n- Nombre: "${updated.name}"\n- Estado: ${updated.status}\n- Precio: $${Number(updated.sold_price).toLocaleString('es-CL')}\n- Inicio: ${updated.start_date || 'N/A'}\n- Entrega: ${updated.due_date || 'Pendiente'}` }],
+    };
+  }
+);
+
 // ============================================================================
 // START SERVER (Stdio for local Claude Desktop)
 // ============================================================================

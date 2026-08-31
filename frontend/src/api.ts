@@ -47,6 +47,7 @@ export const crmApi = {
   // Operations
   getClients: () => fetchApi('/clients'),
   getProjects: () => fetchApi('/projects'),
+  updateProject: (id: string, data: any) => fetchApi(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getSubscriptions: () => fetchApi('/subscriptions'),
 
   // Finance

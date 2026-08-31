@@ -1911,59 +1911,189 @@ export default function App() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
               {/* Projects */}
               <div className="glass-card" style={{ padding: '24px' }}>
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '16px' }}>Proyectos en Curso (Implementaciones)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Briefcase size={18} color="var(--primary)" />
+                    Proyectos en Curso (Implementaciones)
+                  </h3>
+                  <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
+                    {projects.length} activo{projects.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {projects.length === 0 ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No hay proyectos en curso.</div>
-                  ) : projects.map((p) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        padding: '14px',
-                        backgroundColor: 'var(--bg-glass)',
-                        border: '1px solid var(--border-glass)',
-                        borderRadius: 'var(--radius-sm)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</span>
-                        <span className={`badge ${p.status === 'completed' ? 'badge-success' : 'badge-primary'}`}>
-                          {p.status}
-                        </span>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '16px', textAlign: 'center' }}>No hay proyectos en curso.</div>
+                  ) : projects.map((p) => {
+                    const clientObj = Array.isArray(p.clients) ? p.clients[0] : p.clients;
+                    const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+                    const oppObj = allOpps.find((o) => o.id === p.opportunity_id);
+                    const oppCompObj = oppObj?.companies ? (Array.isArray(oppObj.companies) ? oppObj.companies[0] : oppObj.companies) : null;
+                    const fallbackComp = companies.find((c) => 
+                      c.id === companyObj?.id || 
+                      c.id === oppObj?.company_id || 
+                      c.id === clientObj?.company_id ||
+                      (p.name?.toLowerCase().includes('acmotrack') && c.name?.toLowerCase().includes('acmotrack')) ||
+                      (p.name?.toLowerCase().includes('go plan be') && c.name?.toLowerCase().includes('go plan be')) ||
+                      (p.name?.toLowerCase().includes('protea') && c.name?.toLowerCase().includes('protea'))
+                    );
+
+                    const companyName = companyObj?.name ||
+                      oppCompObj?.name ||
+                      fallbackComp?.name ||
+                      oppObj?.name?.split('—')[0]?.trim() ||
+                      (p.name?.includes('—') ? p.name.split('—')[0].trim() : '') ||
+                      'Empresa';
+
+                    const projectName = p.name?.includes('—') && p.name.split('—')[1]?.trim()
+                      ? p.name.split('—')[1].trim()
+                      : p.name;
+
+                    const statusColor = p.status === 'completed' 
+                      ? 'badge-success' 
+                      : p.status === 'in_progress' 
+                      ? 'badge-info' 
+                      : 'badge-primary';
+                    const statusLabel = p.status === 'onboarding'
+                      ? 'ONBOARDING'
+                      : p.status === 'in_progress'
+                      ? 'EN PROCESO'
+                      : p.status === 'completed'
+                      ? 'COMPLETADO'
+                      : String(p.status).toUpperCase();
+
+                    return (
+                      <div
+                        key={p.id}
+                        style={{
+                          padding: '16px',
+                          backgroundColor: 'var(--bg-glass)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {/* Top: Project Title & Status Badge */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
+                              {projectName}
+                            </div>
+                            {/* Company Name Badge */}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
+                              <Building size={14} />
+                              <span>{companyName}</span>
+                            </div>
+                          </div>
+                          <span className={`badge ${statusColor}`} style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
+                            <b style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(p.sold_price)}</b>
+                          </div>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={13} color="var(--primary-light)" />
+                            <span style={{ color: 'var(--text-muted)' }}>Inicio:</span>
+                            <span>{formatDate(p.start_date)}</span>
+                          </div>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={13} color="var(--text-muted)" />
+                            <span style={{ color: 'var(--text-muted)' }}>Entrega:</span>
+                            <span style={{ color: p.due_date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                              {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                        Precio: {formatMoney(p.sold_price)} | Inicio: {formatDate(p.start_date)} | Entrega: {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Subscriptions */}
               <div className="glass-card" style={{ padding: '24px' }}>
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '16px' }}>Suscripciones Recurrentes (MRR)</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Clock size={18} color="var(--success)" />
+                    Suscripciones Recurrentes (MRR)
+                  </h3>
+                  <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>
+                    {subscriptions.length} activa{subscriptions.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {subscriptions.length === 0 ? (
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>No hay suscripciones activas.</div>
-                  ) : subscriptions.map((s) => (
-                    <div
-                      key={s.id}
-                      style={{
-                        padding: '14px',
-                        backgroundColor: 'var(--bg-glass)',
-                        border: '1px solid var(--border-glass)',
-                        borderRadius: 'var(--radius-sm)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>MRR: {formatMoney(s.amount)}/mes</span>
-                        <span className="badge badge-success">{s.status}</span>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', padding: '16px', textAlign: 'center' }}>No hay suscripciones activas.</div>
+                  ) : subscriptions.map((s) => {
+                    const clientObj = Array.isArray(s.clients) ? s.clients[0] : s.clients;
+                    const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+                    const oppObj = allOpps.find((o) => o.id === s.opportunity_id);
+                    const fallbackComp = companies.find((c) => c.id === companyObj?.id || c.id === oppObj?.company_id || c.id === clientObj?.company_id);
+                    const serviceObj = Array.isArray(s.services) ? s.services[0] : (s.services || services.find((serv) => serv.id === s.service_id));
+
+                    const companyName = companyObj?.name || fallbackComp?.name || oppObj?.name?.split('—')[0]?.trim() || 'Empresa';
+                    const serviceName = serviceObj?.name || 'Servicio Recurrente';
+
+                    return (
+                      <div
+                        key={s.id}
+                        style={{
+                          padding: '16px',
+                          backgroundColor: 'var(--bg-glass)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', lineHeight: 1.35 }}>
+                              {serviceName}
+                            </div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', color: 'var(--primary-light)', fontSize: '0.825rem', fontWeight: 600 }}>
+                              <Building size={14} />
+                              <span>{companyName}</span>
+                            </div>
+                          </div>
+                          <span className="badge badge-success" style={{ fontSize: '0.725rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                            {s.status === 'active' ? 'ACTIVO' : String(s.status).toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>MRR:</span>
+                            <b style={{ color: 'var(--success)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(s.amount)}/mes</b>
+                          </div>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ color: 'var(--text-muted)' }}>Frecuencia:</span>
+                            <span style={{ textTransform: 'capitalize' }}>{s.billing_frequency || 'mensual'}</span>
+                          </div>
+                          <span style={{ color: 'var(--text-muted)' }}>•</span>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={13} color="var(--text-muted)" />
+                            <span style={{ color: 'var(--text-muted)' }}>Próximo cobro:</span>
+                            <span>{s.next_billing_date ? formatDate(s.next_billing_date) : 'Pendiente'}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                        Frecuencia: {s.billing_frequency} | Próximo cobro: {s.next_billing_date}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

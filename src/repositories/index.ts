@@ -126,17 +126,46 @@ export class ClientRepository extends BaseRepository<any> {
 // --- Projects ---
 export class ProjectRepository extends BaseRepository<any> {
   constructor() { super('projects'); }
+
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('projects')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), opportunities(*, companies(*))')
+      .order('created_at', { ascending: false });
+
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.client_id) query = query.eq('client_id', filters.client_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
 }
 
 // --- Subscriptions ---
 export class SubscriptionRepository extends BaseRepository<any> {
   constructor() { super('subscriptions'); }
 
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('subscriptions')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), services(*), opportunities(*, companies(*))')
+      .order('created_at', { ascending: false });
+
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.client_id) query = query.eq('client_id', filters.client_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
   async findActive() {
     const { data, error } = await this.db
       .from('subscriptions')
-      .select('*, clients(id, companies(name)), services(name)')
-      .eq('status', 'active');
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), services(*), opportunities(*, companies(*))')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   }

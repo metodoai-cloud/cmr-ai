@@ -1,27 +1,23 @@
 import { supabase } from '../db/connection.js';
 
-async function main() {
+async function checkOpps() {
   const { data: opps, error } = await supabase
     .from('opportunities')
-    .select('id, name, stage, setup_value, recurring_value, probability, created_at');
+    .select('id, name, company_id, service_id, companies(id, name), services(id, name)');
 
   if (error) {
-    console.error('Error fetching opportunities:', error);
+    console.error(error);
     process.exit(1);
   }
 
-  console.log('--- OPORTUNIDADES EN SUPABASE ---');
-  opps.forEach((o, i) => {
-    console.log(`${i + 1}. [${o.stage}] ${o.name} | Setup: $${o.setup_value} | Recurrente: $${o.recurring_value} | Prob: ${o.probability}%`);
-  });
-
-  const openOpps = opps.filter(o => o.stage !== 'won' && o.stage !== 'lost');
-  console.log('\n--- OPORTUNIDADES ABIERTAS (NO WON / NO LOST) ---');
-  openOpps.forEach((o, i) => {
-    console.log(`${i + 1}. [${o.stage}] ${o.name} | Setup: $${o.setup_value} | Recurrente: $${o.recurring_value}`);
-  });
+  for (const o of opps) {
+    console.log(`Opp ID: ${o.id}`);
+    console.log(`  opp.name: "${o.name}"`);
+    console.log(`  company: "${(o.companies as any)?.name}"`);
+    console.log(`  service: "${(o.services as any)?.name}"`);
+  }
 
   process.exit(0);
 }
 
-main();
+checkOpps();

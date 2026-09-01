@@ -4,13 +4,13 @@ import {
   Mail,
   Eye,
   EyeOff,
-  Shield,
   ShieldCheck,
   ArrowRight,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import CrmLogo from './CrmLogo';
 
 export default function LoginScreen() {
   const { signIn } = useAuth();
@@ -121,23 +121,23 @@ export default function LoginScreen() {
           zIndex: 10,
         }}
       >
-        {/* Header with Glowing Shield Icon */}
+        {/* Header with Glowing CRM Monitor Icon */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
             <div
               style={{
-                width: '58px',
-                height: '58px',
-                borderRadius: '16px',
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(59, 130, 246, 0.35))',
-                border: '1px solid rgba(129, 140, 248, 0.35)',
+                width: '68px',
+                height: '68px',
+                borderRadius: '18px',
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(14, 165, 233, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 25px rgba(99, 102, 241, 0.35)',
+                boxShadow: '0 0 30px rgba(14, 165, 233, 0.35)',
               }}
             >
-              <Shield size={28} color="#818cf8" strokeWidth={2.2} />
+              <CrmLogo size={52} />
             </div>
           </div>
 
@@ -145,14 +145,14 @@ export default function LoginScreen() {
             style={{
               fontFamily: "'Outfit', sans-serif",
               fontSize: '1.85rem',
-              fontWeight: 700,
+              fontWeight: 800,
               letterSpacing: '-0.03em',
               color: '#ffffff',
               margin: '0 0 8px 0',
               lineHeight: 1.2,
             }}
           >
-            Acceso Seguro
+            CRM IA
           </h1>
           <p
             style={{
@@ -162,7 +162,7 @@ export default function LoginScreen() {
               fontWeight: 400,
             }}
           >
-            Inicia sesión con tus credenciales autorizadas
+            Acceso Autorizado • Gestión Comercial &amp; Operativa
           </p>
         </div>
 

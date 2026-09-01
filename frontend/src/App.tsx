@@ -12,7 +12,6 @@ import {
   CreditCard,
   Clock,
   Send,
-  Sparkles,
   ShieldCheck,
   RefreshCw,
   Check,
@@ -47,6 +46,7 @@ import { processNaturalLanguageInput } from './aiSimulator';
 import type { AiMessage } from './aiSimulator';
 import { useAuth } from './context/AuthContext';
 import LoginScreen from './components/LoginScreen';
+import CrmLogo from './components/CrmLogo';
 
 // Chilean currency & number formatter (es-CL: '.' for thousands, e.g. $500.000)
 export const formatMoney = (val: number | string | undefined | null): string => {
@@ -705,22 +705,21 @@ export default function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '36px',
-                height: '36px',
-                minWidth: '36px',
+                width: '38px',
+                height: '38px',
+                minWidth: '38px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 15px rgba(99, 102, 241, 0.4)',
+                filter: 'drop-shadow(0 0 10px rgba(14, 165, 233, 0.45))',
               }}
             >
-              <Sparkles size={18} color="#fff" />
+              <CrmLogo size={36} />
             </div>
             {!isSidebarCollapsed && (
               <div>
-                <h1 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.2 }}>CRM IA</h1>
+                <h1 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, lineHeight: 1.2, fontWeight: 800 }}>CRM IA</h1>
                 <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>Supabase + MCP</span>
               </div>
             )}

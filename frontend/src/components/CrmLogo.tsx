@@ -1,0 +1,75 @@
+import React from 'react';
+
+interface CrmLogoProps {
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+export const CrmLogo: React.FC<CrmLogoProps> = ({ size = 36, className, style }) => {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 128 128"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={{ display: 'block', flexShrink: 0, ...style }}
+    >
+      {/* Top Node (Cyan) */}
+      <polygon points="64,8 74,14 74,24 64,30 54,24 54,14" fill="#0ea5e9" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="64,12 70,15.5 70,22.5 64,26 58,22.5 58,15.5" fill="#7dd3fc" />
+      <line x1="64" y1="30" x2="64" y2="44" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
+
+      {/* Top Left Node (Orange) */}
+      <polygon points="20,24 30,30 30,40 20,46 10,40 10,30" fill="#f97316" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="20,28 26,31.5 26,38.5 20,42 14,38.5 14,31.5" fill="#fdba74" />
+      <line x1="28" y1="44" x2="42" y2="52" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
+
+      {/* Top Right Node (Orange) */}
+      <polygon points="108,24 118,30 118,40 108,46 98,40 98,30" fill="#f97316" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="108,28 114,31.5 114,38.5 108,42 102,38.5 102,31.5" fill="#fdba74" />
+      <line x1="100" y1="44" x2="86" y2="52" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
+
+      {/* Bottom Left Node (Teal) */}
+      <polygon points="18,92 28,98 28,108 18,114 8,108 8,98" fill="#06b6d4" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="18,96 24,99.5 24,106.5 18,110 12,106.5 12,99.5" fill="#67e8f9" />
+      <line x1="26" y1="94" x2="38" y2="86" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
+
+      {/* Bottom Right Node (Teal) */}
+      <polygon points="110,92 120,98 120,108 110,114 100,108 100,98" fill="#06b6d4" stroke="#1e293b" strokeWidth="3" strokeLinejoin="round" />
+      <polygon points="110,96 116,99.5 116,106.5 110,110 104,106.5 104,99.5" fill="#67e8f9" />
+      <line x1="102" y1="94" x2="90" y2="86" stroke="#1e293b" strokeWidth="4.5" strokeLinecap="round" />
+
+      {/* Accent Dots */}
+      <circle cx="16" cy="68" r="3.5" fill="#1e293b" />
+      <circle cx="112" cy="68" r="3.5" fill="#1e293b" />
+      <circle cx="40" cy="28" r="2.5" fill="#1e293b" />
+      <circle cx="88" cy="28" r="2.5" fill="#1e293b" />
+
+      {/* Main Central Screen Monitor */}
+      <rect x="34" y="46" width="60" height="42" rx="9" fill="#1e293b" />
+      <rect x="38" y="50" width="52" height="34" rx="6" fill="#e2f1f8" />
+
+      {/* CRM Letters inside Screen */}
+      <text
+        x="64"
+        y="74"
+        fontFamily="'Outfit', 'Inter', system-ui, -apple-system, sans-serif"
+        fontSize="18.5"
+        fontWeight="900"
+        fill="#1e293b"
+        textAnchor="middle"
+        letterSpacing="-0.5"
+      >
+        CRM
+      </text>
+
+      {/* Stand / Base Bar */}
+      <rect x="38" y="94" width="52" height="5" rx="2.5" fill="#1e293b" />
+    </svg>
+  );
+};
+
+export default CrmLogo;

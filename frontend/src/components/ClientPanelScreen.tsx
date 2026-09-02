@@ -93,18 +93,20 @@ export const ClientPanelScreen: React.FC = () => {
 
   const filteredClients = useMemo(() => {
     if (!data?.clients) return [];
-    return data.clients.filter(c => {
-      const matchesSearch =
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.services.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.billing_status.toLowerCase().includes(searchTerm.toLowerCase());
+    return data.clients
+      .filter(c => {
+        const matchesSearch =
+          c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.services.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.stage.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.billing_status.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
-      const matchesCategory = categoryFilter === 'all' || c.service_category === categoryFilter;
+        const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+        const matchesCategory = categoryFilter === 'all' || c.service_category === categoryFilter;
 
-      return matchesSearch && matchesStatus && matchesCategory;
-    });
+        return matchesSearch && matchesStatus && matchesCategory;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
   }, [data?.clients, searchTerm, statusFilter, categoryFilter]);
 
   const getStatusBadgeStyle = (status: string) => {

@@ -1312,9 +1312,8 @@ export const AnalyticsService = {
       });
     }
 
-    // Sort: Activos first, then Cerrados, then Inactivos/Prospectos
-    const orderScore: Record<string, number> = { active: 1, prospect: 2, closed: 3, inactive: 4 };
-    clientRows.sort((a, b) => (orderScore[a.status] || 99) - (orderScore[b.status] || 99));
+    // Sort: Alphabetically ascending A-Z
+    clientRows.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
     // Calculate exact metrics matching the Cowork panel
     const activeCount = clientRows.filter(r => r.status === 'active').length;

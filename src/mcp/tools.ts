@@ -723,23 +723,6 @@ export function registerTools(srv: McpServer) {
     }
   );
 
-  // --- listar_proyectos ---
-  srv.tool(
-    'listar_proyectos',
-    'Ver proyectos activos con su estado y progreso.',
-    {},
-    async () => {
-      try {
-        const projects = await ProjectService.getAll();
-        const list = projects.map((p: any) => `• ${p.name} | ${p.status} | Inicio: ${p.start_date || 'N/A'}`).join('\n');
-        return {
-          content: [{ type: 'text' as const, text: projects.length > 0 ? `🗂 Proyectos (${projects.length}):\n\n${list}` : 'No hay proyectos activos.' }],
-        };
-      } catch (err: any) {
-        return { content: [{ type: 'text' as const, text: `❌ Error al listar proyectos: ${err.message}` }] };
-      }
-    }
-  );
 
   // --- registrar_retiro ---
   srv.tool(

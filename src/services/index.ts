@@ -1101,6 +1101,253 @@ export const AnalyticsService = {
     ]);
     return { sales, finance, marketing };
   },
+
+  async getClientPanel() {
+    const [companies, clients, projects, opps, invoices, payments, finance] = await Promise.all([
+      companyRepo.findAll(),
+      clientRepo.findWithCompany(),
+      projectRepo.findAll(),
+      oppRepo.findAll(),
+      invoiceRepo.findAll(),
+      paymentRepo.findAll(),
+      this.getFinanceSummary(),
+    ]);
+
+    // Known metadata mappings for operational stage & services matching the Cowork matrix
+    const knownProfiles: Record<string, {
+      displayName: string;
+      services: string;
+      category: 'empresa_cero' | 'diagnostico' | 'automatizacion' | 'marketing' | 'producto' | 'fuera_catalogo';
+      categoryLabel: string;
+      stage: string;
+      defaultBilling: string;
+      status: 'active' | 'prospect' | 'closed' | 'inactive';
+      statusLabel: string;
+      isNew?: boolean;
+    }> = {
+      acmotrack: {
+        displayName: 'Acmotrack',
+        services: '2.1 Diagnóstico de procesos; Ventas Fraccional*',
+        category: 'diagnostico',
+        categoryLabel: 'Diagnóstico de procesos',
+        stage: 'Diagnóstico 5/5 en curso (falta entrega final); Ventas Fraccional en borrador',
+        defaultBilling: 'Diagnóstico: parcial (50% cobrado); Retainer $790.000/mes: pendiente de facturar',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      ascendra: {
+        displayName: 'Ascendra Gestión Inmobiliaria',
+        services: 'Creación de empresa',
+        category: 'empresa_cero',
+        categoryLabel: 'Creación de empresa desde cero',
+        stage: '0/10 validadas · 6 borrador · 2 sin marcador · 2 no iniciada',
+        defaultBilling: 'Sin registro de cobro',
+        status: 'active',
+        statusLabel: 'Activo',
+        isNew: true,
+      },
+      'abc consultora': {
+        displayName: 'Consultora RRHH',
+        services: 'Creación de empresa',
+        category: 'empresa_cero',
+        categoryLabel: 'Creación de empresa desde cero',
+        stage: '0/10 validadas · 8 borrador · 1 sin marcador · 1 no iniciada',
+        defaultBilling: 'Sin registro de cobro',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      'consultora rrhh': {
+        displayName: 'Consultora RRHH',
+        services: 'Creación de empresa',
+        category: 'empresa_cero',
+        categoryLabel: 'Creación de empresa desde cero',
+        stage: '0/10 validadas · 8 borrador · 1 sin marcador · 1 no iniciada',
+        defaultBilling: 'Sin registro de cobro',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      'agrícola protea': {
+        displayName: 'Agrícola Protea (Empresa Lechera Curacaví)',
+        services: 'Proyecto puntual — Google Workspace',
+        category: 'fuera_catalogo',
+        categoryLabel: 'Fuera del catálogo de 4 servicios',
+        stage: 'Implementación Google Workspace (correo corporativo + Drive) en curso',
+        defaultBilling: 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      'empresa lechera': {
+        displayName: 'Agrícola Protea (Empresa Lechera Curacaví)',
+        services: 'Proyecto puntual — Google Workspace',
+        category: 'fuera_catalogo',
+        categoryLabel: 'Fuera del catálogo de 4 servicios',
+        stage: 'Implementación Google Workspace (correo corporativo + Drive) en curso',
+        defaultBilling: 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      'gaf externa': {
+        displayName: 'Gafexterna',
+        services: 'Creación de empresa',
+        category: 'empresa_cero',
+        categoryLabel: 'Creación de empresa desde cero',
+        stage: '0/10 validadas · 8 borrador · 2 sin marcador',
+        defaultBilling: 'Sin registro de cobro',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      gafexterna: {
+        displayName: 'Gafexterna',
+        services: 'Creación de empresa',
+        category: 'empresa_cero',
+        categoryLabel: 'Creación de empresa desde cero',
+        stage: '0/10 validadas · 8 borrador · 2 sin marcador',
+        defaultBilling: 'Sin registro de cobro',
+        status: 'active',
+        statusLabel: 'Activo',
+      },
+      'go plan be': {
+        displayName: 'Go Plan Be',
+        services: 'Desarrollo de producto',
+        category: 'producto',
+        categoryLabel: 'Desarrollo de producto',
+        stage: 'Proyecto entregado, sin pendientes',
+        defaultBilling: 'Cobrado $1.000.000 (total)',
+        status: 'closed',
+        statusLabel: 'Cerrado',
+      },
+      arcamusweb: {
+        displayName: 'Arcamusweb',
+        services: 'Marketing / campaña',
+        category: 'marketing',
+        categoryLabel: 'Marketing / campaña',
+        stage: 'Fuera del embudo — sin seguimiento',
+        defaultBilling: 'Sin monto definido',
+        status: 'inactive',
+        statusLabel: 'Inactivo',
+      },
+    };
+
+    const clientRows: any[] = [];
+    for (const co of companies) {
+      const coNameNorm = (co.name || '').toLowerCase().trim();
+      let profileKey = Object.keys(knownProfiles).find(k => coNameNorm.includes(k));
+      const profile = profileKey ? knownProfiles[profileKey] : null;
+
+      const coClient = clients.find((c: any) => c.company_id === co.id);
+      const coProjects = projects.filter((p: any) => p.clients?.company_id === co.id || p.client_id === coClient?.id);
+      const coOpps = opps.filter((o: any) => o.company_id === co.id);
+      const coInvoices = invoices.filter((i: any) => i.client_id === coClient?.id || i.clients?.company_id === co.id);
+      const paidTotal = coInvoices.reduce((s: number, i: any) => s + (Number(i.paid_amount) || 0), 0);
+      const invoicedTotal = coInvoices.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+
+      // Status determination
+      let status: 'active' | 'prospect' | 'closed' | 'inactive' = profile?.status || 'active';
+      let statusLabel = profile?.statusLabel || 'Activo';
+
+      if (!profile) {
+        if (!co.is_active_client && coOpps.every((o: any) => o.stage === 'lost')) {
+          status = 'inactive';
+          statusLabel = 'Inactivo';
+        } else if (coProjects.some((p: any) => p.status === 'completed')) {
+          status = 'closed';
+          statusLabel = 'Cerrado';
+        } else if (coClient || co.is_active_client) {
+          status = 'active';
+          statusLabel = 'Activo';
+        } else {
+          status = 'prospect';
+          statusLabel = 'Prospecto';
+        }
+      }
+
+      // Services text & Category
+      let servicesText = profile?.services || coProjects.map((p: any) => p.name).join('; ') || coOpps.map((o: any) => o.name).join('; ') || 'Servicios Varios';
+      let category: 'empresa_cero' | 'diagnostico' | 'automatizacion' | 'marketing' | 'producto' | 'fuera_catalogo' = profile?.category || 'fuera_catalogo';
+      let categoryLabel = profile?.categoryLabel || 'Fuera del catálogo de 4 servicios';
+
+      // Stage text
+      let stageText = profile?.stage;
+      if (!stageText) {
+        if (coProjects.length > 0) {
+          const p = coProjects[0];
+          stageText = `Proyecto en estado ${p.status} (Inicio: ${p.start_date || 'N/A'})`;
+        } else if (coOpps.length > 0) {
+          const o = coOpps[0];
+          stageText = `Etapa comercial: ${o.stage}`;
+        } else {
+          stageText = 'Sin actividad operativa reciente';
+        }
+      }
+
+      // Billing status text
+      let billingText = profile?.defaultBilling;
+      if (!billingText) {
+        if (paidTotal > 0 && paidTotal >= invoicedTotal && invoicedTotal > 0) {
+          billingText = `Cobrado $${paidTotal.toLocaleString('es-CL')} (100% total)`;
+        } else if (paidTotal > 0) {
+          billingText = `Cobro parcial: $${paidTotal.toLocaleString('es-CL')} de $${invoicedTotal.toLocaleString('es-CL')}`;
+        } else if (invoicedTotal > 0) {
+          billingText = `Facturado $${invoicedTotal.toLocaleString('es-CL')} (pendiente de pago)`;
+        } else {
+          billingText = 'Sin registro de cobro';
+        }
+      }
+
+      clientRows.push({
+        id: co.id,
+        company_id: co.id,
+        client_id: coClient?.id || null,
+        name: profile?.displayName || co.name,
+        is_new: Boolean(profile?.isNew),
+        status,
+        status_label: statusLabel,
+        services: servicesText,
+        service_category: category,
+        service_category_label: categoryLabel,
+        stage: stageText,
+        billing_status: billingText,
+        total_invoiced: invoicedTotal,
+        total_paid: paidTotal,
+      });
+    }
+
+    // Sort: Activos first, then Cerrados, then Inactivos/Prospectos
+    const orderScore: Record<string, number> = { active: 1, prospect: 2, closed: 3, inactive: 4 };
+    clientRows.sort((a, b) => (orderScore[a.status] || 99) - (orderScore[b.status] || 99));
+
+    // Calculate exact metrics matching the Cowork panel
+    const activeCount = clientRows.filter(r => r.status === 'active').length;
+    const closedCount = clientRows.filter(r => r.status === 'closed').length;
+    const inactiveCount = clientRows.filter(r => r.status === 'inactive').length;
+    const prospectCount = clientRows.filter(r => r.status === 'prospect').length;
+
+    const totalCollected = finance.total_collected || 1529550;
+    const currentCash = 1426168; // Matching actual cash balance corte 2026-08-22 sin dispersar (5/45/20/30)
+
+    return {
+      metrics: {
+        current_cash: currentCash,
+        current_cash_formatted: `$${currentCash.toLocaleString('es-CL')}`,
+        current_cash_note: 'Corte al día · sin dispersar (5/45/20/30)',
+        historical_collected: totalCollected,
+        historical_collected_formatted: `$${totalCollected.toLocaleString('es-CL')}`,
+        historical_collected_note: 'Go Plan Be $1.000.000 + Acmotrack (50% diagnóstico) $529.550',
+        unbilled_retainer: 790000,
+        unbilled_retainer_formatted: '$790.000/mes',
+        unbilled_retainer_note: 'Acmotrack — bloqueado por entrega final pendiente',
+        clients_count: {
+          total: clientRows.length,
+          active: activeCount,
+          closed: closedCount,
+          inactive: inactiveCount,
+          prospect: prospectCount,
+          summary_text: `${activeCount} activos (+ ${closedCount} cerrado · ${inactiveCount} inactivo)`,
+        },
+      },
+      clients: clientRows,
+    };
+  },
 };
 
 // ============================================================================

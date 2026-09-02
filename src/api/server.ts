@@ -30,6 +30,14 @@ app.get('/api/dashboard', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// === Panel de Clientes (Matriz Cowork) ===
+app.get('/api/client-panel', async (_req, res) => {
+  try {
+    const data = await AnalyticsService.getClientPanel();
+    res.json(data);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/analytics/sales', async (_req, res) => {
   try { res.json(await AnalyticsService.getSalesSummary()); }
   catch (e: any) { res.status(500).json({ error: e.message }); }

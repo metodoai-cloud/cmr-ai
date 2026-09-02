@@ -970,5 +970,34 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- consultar_panel_clientes ---
+  srv.tool(
+    'consultar_panel_clientes',
+    'Consultar la matriz ejecutiva del Panel de Clientes (Servicio contratado, etapa operativa y estado de cobro/pago cruzado con finanzas).',
+    {},
+    async () => {
+      try {
+        const data = await AnalyticsService.getClientPanel();
+        const m = data.metrics;
+        let header = `📊 **PANEL DE CLIENTES (CRM METODOAI)**\n`;
+        header += `• Saldo actual en caja: ${m.current_cash_formatted} (${m.current_cash_note})\n`;
+        header += `• Cobrado histórico: ${m.historical_collected_formatted} (${m.historical_collected_note})\n`;
+        header += `• Retainer sin facturar: ${m.unbilled_retainer_formatted} (${m.unbilled_retainer_note})\n`;
+        header += `• Clientes: ${m.clients_count.summary_text}\n\n`;
+        header += `**Matriz de Clientes (Servicio, Etapa y Cobro):**\n`;
+
+        const rows = data.clients.map((c: any) => {
+          return `• **${c.name}** [${c.status_label.toUpperCase()}]\n  - Servicio(s): ${c.services} (${c.service_category_label})\n  - Etapa: ${c.stage}\n  - Cobro / Pago: ${c.billing_status}`;
+        }).join('\n\n');
+
+        return {
+          content: [{ type: 'text' as const, text: `${header}\n${rows}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al consultar panel de clientes: ${err.message}` }] };
+      }
+    }
+  );
+
 }
 

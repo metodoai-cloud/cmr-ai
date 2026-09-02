@@ -40,6 +40,7 @@ import {
   Ban,
   LogOut,
   User as UserIcon,
+  UserCheck,
 } from 'lucide-react';
 import { crmApi } from './api';
 import { processNaturalLanguageInput } from './aiSimulator';
@@ -47,6 +48,7 @@ import type { AiMessage } from './aiSimulator';
 import { useAuth } from './context/AuthContext';
 import LoginScreen from './components/LoginScreen';
 import CrmLogo from './components/CrmLogo';
+import { ClientPanelScreen } from './components/ClientPanelScreen';
 
 // Chilean currency & number formatter (es-CL: '.' for thousands, e.g. $500.000)
 export const formatMoney = (val: number | string | undefined | null): string => {
@@ -76,7 +78,7 @@ export const formatDate = (val: string | Date | undefined | null): string => {
 
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pipeline' | 'contacts' | 'companies' | 'marketing' | 'finance' | 'operations' | 'ai' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'panel_clientes' | 'pipeline' | 'contacts' | 'companies' | 'marketing' | 'finance' | 'operations' | 'ai' | 'settings'>('dashboard');
   const [loading, setLoading] = useState(true);
   const [serverOnline, setServerOnline] = useState(false);
   
@@ -799,7 +801,18 @@ export default function App() {
             {!isSidebarCollapsed && <span>Dashboard</span>}
           </button>
 
-          {/* 2. Operaciones (Debajo de Dashboard) */}
+          {/* 2. Panel Clientes (Posición 2 recomendada entre Dashboard y Operaciones) */}
+          <button
+            onClick={() => setActiveTab('panel_clientes')}
+            className={`btn ${activeTab === 'panel_clientes' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{ justifyContent: isSidebarCollapsed ? 'center' : 'flex-start', width: '100%', padding: '10px 12px' }}
+            title="Panel Clientes (Servicio, Etapa & Cobro)"
+          >
+            <UserCheck size={18} />
+            {!isSidebarCollapsed && <span>Panel Clientes</span>}
+          </button>
+
+          {/* 3. Operaciones (Debajo de Panel Clientes) */}
           <button
             onClick={() => setActiveTab('operations')}
             className={`btn ${activeTab === 'operations' ? 'btn-primary' : 'btn-ghost'}`}
@@ -1165,6 +1178,11 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* TAB 1.5: PANEL DE CLIENTES (MATRIZ COWORK) */}
+        {activeTab === 'panel_clientes' && (
+          <ClientPanelScreen />
         )}
 
         {/* TAB 2: PIPELINE KANBAN (SINGLE ROW HORIZONTAL SCROLL) */}

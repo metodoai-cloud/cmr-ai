@@ -239,6 +239,14 @@ export class PaymentRepository extends BaseRepository<any> {
     if (error) throw error;
     return (data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0);
   }
+
+  async deleteByInvoice(invoiceId: string): Promise<void> {
+    const { error } = await this.db
+      .from('payments')
+      .delete()
+      .eq('invoice_id', invoiceId);
+    if (error) throw error;
+  }
 }
 
 // --- Expenses ---

@@ -680,6 +680,34 @@ export const InvoiceService = {
     }
 
     const updated = await invoiceRepo.update(id, payload);
+
+    // === Two-Way Auto Sync with Payments Table ===
+    if (payload.status === 'paid' && existing.status !== 'paid') {
+      const existingPaid = await paymentRepo.sumByInvoice(id);
+      const invoiceTotal = Number(updated.total);
+      if (existingPaid < invoiceTotal) {
+        const diff = invoiceTotal - existingPaid;
+        await paymentRepo.create({
+          invoice_id: id,
+          client_id: updated.client_id || null,
+          amount: diff,
+          currency: updated.currency || 'CLP',
+          payment_date: updated.issue_date || new Date().toISOString().split('T')[0],
+          payment_method: 'Transferencia',
+          confirmed: true,
+        });
+        await eventRepo.create({
+          event_type: 'invoice.paid',
+          entity_type: 'invoice',
+          entity_id: id,
+          payload: { total: invoiceTotal, auto_synced_payment: diff },
+        });
+      }
+    } else if (existing.status === 'paid' && payload.status && payload.status !== 'paid') {
+      // If reverted from paid to another status, remove auto-synced payment to balance cash
+      await paymentRepo.deleteByInvoice(id);
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -707,6 +735,12 @@ export const InvoiceService = {
     const existing = await invoiceRepo.findById(id);
     if (!existing) {
       throw new Error(`Factura no encontrada con ID: ${id}`);
+    }
+
+    try {
+      await paymentRepo.deleteByInvoice(id);
+    } catch {
+      // Ignore if no payments exist
     }
 
     try {
@@ -1282,6 +1316,18 @@ export const AnalyticsService = {
 
       // Billing status text
       let billingText = profile?.defaultBilling;
+
+      // Make Agrícola Protea dynamic according to Factura 84 payment status
+      if (coNameNorm.includes('protea') || coNameNorm.includes('lechera')) {
+        const inv84 = coInvoices.find((i: any) => String(i.invoice_number).includes('84'));
+        const is84Paid = inv84 && (inv84.status === 'paid' || (Number(inv84.paid_amount) || 0) > 0);
+        if (is84Paid) {
+          billingText = 'Total $1.000.000: 50% inicial cobrado ($500.000 neto / Factura N°84 pagada)';
+        } else {
+          billingText = 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)';
+        }
+      }
+
       if (!billingText) {
         if (paidTotal > 0 && paidTotal >= invoicedTotal && invoicedTotal > 0) {
           billingText = `Cobrado $${paidTotal.toLocaleString('es-CL')} (100% total)`;
@@ -1321,8 +1367,14 @@ export const AnalyticsService = {
     const inactiveCount = clientRows.filter(r => r.status === 'inactive').length;
     const prospectCount = clientRows.filter(r => r.status === 'prospect').length;
 
-    const totalCollected = finance.total_collected || 1529550;
-    const currentCash = 1426168; // Matching actual cash balance corte 2026-08-22 sin dispersar (5/45/20/30)
+    const totalCollected = finance.total_collected || 2059100;
+    const additionalCollected = Math.max(0, totalCollected - 2059100);
+    const currentCash = 1426168 + additionalCollected;
+
+    const inv84Paid = invoices.some((i: any) => String(i.invoice_number).includes('84') && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0));
+    const collectedNote = inv84Paid
+      ? 'Go Plan Be $1.000.000 + Acmotrack $529.550 + Agrícola Protea $595.000'
+      : 'Go Plan Be $1.000.000 + Acmotrack (50% diagnóstico) $529.550';
 
     return {
       metrics: {
@@ -1331,7 +1383,7 @@ export const AnalyticsService = {
         current_cash_note: 'Corte al día · sin dispersar (5/45/20/30)',
         historical_collected: totalCollected,
         historical_collected_formatted: `$${totalCollected.toLocaleString('es-CL')}`,
-        historical_collected_note: 'Go Plan Be $1.000.000 + Acmotrack (50% diagnóstico) $529.550',
+        historical_collected_note: collectedNote,
         unbilled_retainer: 790000,
         unbilled_retainer_formatted: '$790.000/mes',
         unbilled_retainer_note: 'Acmotrack — bloqueado por entrega final pendiente',

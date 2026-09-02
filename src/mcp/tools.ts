@@ -708,14 +708,17 @@ export function registerTools(srv: McpServer) {
   // --- listar_clientes ---
   srv.tool(
     'listar_clientes',
-    'Ver todos los clientes activos del negocio.',
+    'Ver todos los clientes activos del negocio con su nombre de empresa y respectivo ID.',
     {},
     async () => {
       try {
         const clients = await ClientService.getAll();
-        const list = clients.map((c: any) => `• ${c.name || c.id} | Estado: ${c.status}`).join('\n');
+        const list = clients.map((c: any) => {
+          const compName = c.companies?.name || c.companies?.legal_name || 'Sin Empresa';
+          return `• **${compName}** | ID Cliente: \`${c.id}\` | Estado: ${c.status} | Inicio: ${c.start_date || 'N/A'}`;
+        }).join('\n');
         return {
-          content: [{ type: 'text' as const, text: clients.length > 0 ? `🏢 Clientes (${clients.length}):\n\n${list}` : 'No hay clientes activos.' }],
+          content: [{ type: 'text' as const, text: clients.length > 0 ? `🏢 Clientes Activos (${clients.length}):\n\n${list}` : 'No hay clientes activos.' }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al listar clientes: ${err.message}` }] };

@@ -645,6 +645,10 @@ export const InvoiceService = {
     }
 
     const payload: any = {};
+    if (data.client_id !== undefined) payload.client_id = data.client_id;
+    if (data.project_id !== undefined) payload.project_id = data.project_id || null;
+    if (data.subscription_id !== undefined) payload.subscription_id = data.subscription_id || null;
+    if (data.notes !== undefined) payload.notes = data.notes ? String(data.notes).trim() : null;
     if (data.invoice_number !== undefined) {
       payload.invoice_number = data.invoice_number ? String(data.invoice_number).trim() : null;
     }

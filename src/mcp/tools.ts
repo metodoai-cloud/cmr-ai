@@ -569,6 +569,9 @@ export function registerTools(srv: McpServer) {
     'Actualizar datos de una factura existente, incluyendo folio (invoice_number), estado, fechas o montos.',
     {
       id: z.string().describe('ID de la factura a actualizar'),
+      client_id: z.string().optional().describe('ID del cliente asociado a la factura (para reasignar de empresa)'),
+      project_id: z.string().optional().describe('ID del proyecto asociado a la factura'),
+      subscription_id: z.string().optional().describe('ID de la suscripción asociada a la factura'),
       invoice_number: z.string().optional().describe('Número o folio de la factura'),
       status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Estado de la factura'),
       issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),

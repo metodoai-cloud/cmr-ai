@@ -8,11 +8,15 @@ import cors from 'cors';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerTools } from './tools.js';
+import { app as apiRouter } from '../api/server.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+// Mount REST API endpoints (/api/*, including /api/client-panel)
+app.use(apiRouter);
 
 // Full CORS for Claude Cowork
 app.use(cors({

@@ -981,9 +981,9 @@ export function registerTools(srv: McpServer) {
         const m = data.metrics;
         let header = `📊 **PANEL DE CLIENTES (CRM METODOAI)**\n`;
         header += `• Clientes en cartera: ${m.clients_count.summary_text}\n`;
-        header += `• Retainer: ${m.retainer?.formatted || '$790.000/mes'} (${m.retainer?.note || 'Cartera mensual recurrente contratada'})\n`;
-        header += `• Ticket promedio: ${m.avg_ticket?.note || 'Proyectos: $770.000 · Retainer: $790.000/mes'}\n`;
-        header += `• Pendiente por cobrar: ${m.pending_collection?.formatted || '$529.550'} (${m.pending_collection?.note || 'Factura N° 68 Acmotrack'})\n\n`;
+        header += `• Retainer total: ${m.retainer?.formatted || '$790.000/mes'} (${m.retainer?.note || 'Cartera mensual recurrente contratada'})\n`;
+        header += `• Ticket promedio proyectos (One-Off): ${m.avg_ticket_projects?.formatted || '$770.000'}\n`;
+        header += `• Ticket promedio retainer: ${m.avg_ticket_retainer?.formatted || '$790.000/mes'}\n\n`;
         header += `**Matriz de Clientes (Servicio, Etapa y Cobro):**\n`;
 
         const rows = data.clients.map((c: any) => {

@@ -7,8 +7,8 @@ import {
   AlertCircle,
   TrendingUp,
   Building,
-  Tag,
-  Clock
+  Briefcase,
+  Repeat
 } from 'lucide-react';
 
 interface ClientPanelItem {
@@ -38,6 +38,16 @@ interface ClientPanelMetrics {
     summary_text: string;
   };
   retainer?: {
+    amount: number;
+    formatted: string;
+    note: string;
+  };
+  avg_ticket_projects?: {
+    amount: number;
+    formatted: string;
+    note: string;
+  };
+  avg_ticket_retainer?: {
     amount: number;
     formatted: string;
     note: string;
@@ -204,7 +214,7 @@ export const ClientPanelScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* TOP 4 STAT CARDS (PROPOSAL B: CLIENTES, RETAINER, TICKET PROMEDIO, PENDIENTE) */}
+      {/* TOP 4 STAT CARDS (CLIENTES, RETAINER, TICKET PROMEDIO PROYECTOS, TICKET PROMEDIO RETAINER) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
         {/* Card 1: Clientes en Cartera */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -225,12 +235,12 @@ export const ClientPanelScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 2: Retainer */}
+        {/* Card 2: Retainer Total */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Retainer
+                Retainer Total
               </span>
               <TrendingUp size={18} color="#10b981" />
             </div>
@@ -243,39 +253,39 @@ export const ClientPanelScreen: React.FC = () => {
           </div>
         </div>
 
-        {/* Card 3: Ticket Promedio */}
+        {/* Card 3: Ticket Promedio Proyectos */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Ticket Promedio
+                Ticket Promedio Proyectos
               </span>
-              <Tag size={18} color="#6366f1" />
+              <Briefcase size={18} color="#6366f1" />
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
-              {data?.metrics.avg_ticket?.setup_formatted || '$770.000'}
+              {data?.metrics.avg_ticket_projects?.formatted || data?.metrics.avg_ticket?.setup_formatted || '$770.000'}
             </div>
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
-            {data?.metrics.avg_ticket?.note || 'Proyectos: $770.000 · Retainer: $790.000/mes'}
+            {data?.metrics.avg_ticket_projects?.note || 'Pago único · Implementaciones y diagnósticos (One-Off)'}
           </div>
         </div>
 
-        {/* Card 4: Pendiente por Cobrar */}
+        {/* Card 4: Ticket Promedio Retainer */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Pendiente por Cobrar
+                Ticket Promedio Retainer
               </span>
-              <Clock size={18} color="#f59e0b" />
+              <Repeat size={18} color="#a855f7" />
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--warning)', marginTop: '8px', letterSpacing: '-0.02em' }}>
-              {data?.metrics.pending_collection?.formatted || '$529.550'}
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+              {data?.metrics.avg_ticket_retainer?.formatted || data?.metrics.retainer?.formatted || '$790.000/mes'}
             </div>
           </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--warning)', marginTop: '10px' }}>
-            {data?.metrics.pending_collection?.note || 'Factura N° 68 Acmotrack (pendiente de pago)'}
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
+            {data?.metrics.avg_ticket_retainer?.note || 'Promedio mensual por contrato recurrente'}
           </div>
         </div>
       </div>

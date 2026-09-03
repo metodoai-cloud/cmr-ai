@@ -1395,6 +1395,16 @@ export const AnalyticsService = {
           formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
           note: 'Cartera mensual recurrente contratada',
         },
+        avg_ticket_projects: {
+          amount: avgSetupTicket,
+          formatted: `$${avgSetupTicket.toLocaleString('es-CL')}`,
+          note: 'Pago único · Implementaciones y diagnósticos (One-Off)',
+        },
+        avg_ticket_retainer: {
+          amount: retainerMonthly,
+          formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
+          note: 'Promedio mensual por contrato recurrente',
+        },
         avg_ticket: {
           setup: avgSetupTicket,
           setup_formatted: `$${avgSetupTicket.toLocaleString('es-CL')}`,

@@ -6,9 +6,9 @@ import {
   Search,
   AlertCircle,
   TrendingUp,
-  Wallet,
-  CreditCard,
-  Building
+  Building,
+  Tag,
+  Clock
 } from 'lucide-react';
 
 interface ClientPanelItem {
@@ -29,15 +29,6 @@ interface ClientPanelItem {
 }
 
 interface ClientPanelMetrics {
-  current_cash: number;
-  current_cash_formatted: string;
-  current_cash_note: string;
-  historical_collected: number;
-  historical_collected_formatted: string;
-  historical_collected_note: string;
-  unbilled_retainer: number;
-  unbilled_retainer_formatted: string;
-  unbilled_retainer_note: string;
   clients_count: {
     total: number;
     active: number;
@@ -46,6 +37,32 @@ interface ClientPanelMetrics {
     prospect: number;
     summary_text: string;
   };
+  retainer?: {
+    amount: number;
+    formatted: string;
+    note: string;
+  };
+  avg_ticket?: {
+    setup: number;
+    setup_formatted: string;
+    retainer: number;
+    retainer_formatted: string;
+    note: string;
+  };
+  pending_collection?: {
+    amount: number;
+    formatted: string;
+    note: string;
+  };
+  current_cash?: number;
+  current_cash_formatted?: string;
+  current_cash_note?: string;
+  historical_collected?: number;
+  historical_collected_formatted?: string;
+  historical_collected_note?: string;
+  unbilled_retainer?: number;
+  unbilled_retainer_formatted?: string;
+  unbilled_retainer_note?: string;
 }
 
 interface ClientPanelData {
@@ -187,68 +204,14 @@ export const ClientPanelScreen: React.FC = () => {
         </div>
       </div>
 
-      {/* TOP 4 STAT CARDS */}
+      {/* TOP 4 STAT CARDS (PROPOSAL B: CLIENTES, RETAINER, TICKET PROMEDIO, PENDIENTE) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-        {/* Card 1: Saldo actual en caja */}
+        {/* Card 1: Clientes en Cartera */}
         <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Saldo actual en caja
-              </span>
-              <Wallet size={18} color="#10b981" />
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
-              {data?.metrics.current_cash_formatted || '$1.426.168'}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span>{data?.metrics.current_cash_note || 'Corte al día · sin dispersar (5/45/20/30)'}</span>
-          </div>
-        </div>
-
-        {/* Card 2: Cobrado histórico registrado */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Cobrado histórico registrado
-              </span>
-              <CreditCard size={18} color="#6366f1" />
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
-              {data?.metrics.historical_collected_formatted || '$1.529.550'}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
-            {data?.metrics.historical_collected_note || 'Go Plan Be $1.000.000 + Acmotrack $529.550'}
-          </div>
-        </div>
-
-        {/* Card 3: Retainer cerrado sin facturar */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Retainer cerrado sin facturar
-              </span>
-              <TrendingUp size={18} color="#f59e0b" />
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
-              {data?.metrics.unbilled_retainer_formatted || '$790.000/mes'}
-            </div>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--warning)', marginTop: '10px' }}>
-            {data?.metrics.unbilled_retainer_note || 'Acmotrack — bloqueado por entrega final pendiente'}
-          </div>
-        </div>
-
-        {/* Card 4: Clientes */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
-              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Clientes
+                Clientes en Cartera
               </span>
               <Building size={18} color="#06b6d4" />
             </div>
@@ -259,6 +222,60 @@ export const ClientPanelScreen: React.FC = () => {
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
             {data?.metrics.clients_count.summary_text || '+ 1 cerrado (Go Plan Be) · 1 inactivo (Arcamusweb)'}
+          </div>
+        </div>
+
+        {/* Card 2: Retainer */}
+        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Retainer
+              </span>
+              <TrendingUp size={18} color="#10b981" />
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+              {data?.metrics.retainer?.formatted || data?.metrics.unbilled_retainer_formatted || '$790.000/mes'}
+            </div>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
+            {data?.metrics.retainer?.note || 'Cartera mensual recurrente contratada'}
+          </div>
+        </div>
+
+        {/* Card 3: Ticket Promedio */}
+        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Ticket Promedio
+              </span>
+              <Tag size={18} color="#6366f1" />
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+              {data?.metrics.avg_ticket?.setup_formatted || '$770.000'}
+            </div>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>
+            {data?.metrics.avg_ticket?.note || 'Proyectos: $770.000 · Retainer: $790.000/mes'}
+          </div>
+        </div>
+
+        {/* Card 4: Pendiente por Cobrar */}
+        <div className="glass-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Pendiente por Cobrar
+              </span>
+              <Clock size={18} color="#f59e0b" />
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--warning)', marginTop: '8px', letterSpacing: '-0.02em' }}>
+              {data?.metrics.pending_collection?.formatted || '$529.550'}
+            </div>
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--warning)', marginTop: '10px' }}>
+            {data?.metrics.pending_collection?.note || 'Factura N° 68 Acmotrack (pendiente de pago)'}
           </div>
         </div>
       </div>

@@ -1376,17 +1376,12 @@ export const AnalyticsService = {
       ? 'Go Plan Be $1.000.000 + Acmotrack $529.550 + Agrícola Protea $595.000'
       : 'Go Plan Be $1.000.000 + Acmotrack (50% diagnóstico) $529.550';
 
+    const outstanding = finance.outstanding || 529550;
+    const retainerMonthly = 790000;
+    const avgSetupTicket = 770000;
+
     return {
       metrics: {
-        current_cash: currentCash,
-        current_cash_formatted: `$${currentCash.toLocaleString('es-CL')}`,
-        current_cash_note: 'Corte al día · sin dispersar (5/45/20/30)',
-        historical_collected: totalCollected,
-        historical_collected_formatted: `$${totalCollected.toLocaleString('es-CL')}`,
-        historical_collected_note: collectedNote,
-        unbilled_retainer: 790000,
-        unbilled_retainer_formatted: '$790.000/mes',
-        unbilled_retainer_note: 'Acmotrack — bloqueado por entrega final pendiente',
         clients_count: {
           total: clientRows.length,
           active: activeCount,
@@ -1395,6 +1390,33 @@ export const AnalyticsService = {
           prospect: prospectCount,
           summary_text: `${activeCount} activos (+ ${closedCount} cerrado · ${inactiveCount} inactivo)`,
         },
+        retainer: {
+          amount: retainerMonthly,
+          formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
+          note: 'Cartera mensual recurrente contratada',
+        },
+        avg_ticket: {
+          setup: avgSetupTicket,
+          setup_formatted: `$${avgSetupTicket.toLocaleString('es-CL')}`,
+          retainer: retainerMonthly,
+          retainer_formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
+          note: `Proyectos: $${avgSetupTicket.toLocaleString('es-CL')} · Retainer: $${retainerMonthly.toLocaleString('es-CL')}/mes`,
+        },
+        pending_collection: {
+          amount: outstanding,
+          formatted: `$${outstanding.toLocaleString('es-CL')}`,
+          note: 'Factura N° 68 Acmotrack (pendiente de pago)',
+        },
+        // Compatibility properties
+        current_cash: currentCash,
+        current_cash_formatted: `$${currentCash.toLocaleString('es-CL')}`,
+        current_cash_note: 'Corte al día · sin dispersar (5/45/20/30)',
+        historical_collected: totalCollected,
+        historical_collected_formatted: `$${totalCollected.toLocaleString('es-CL')}`,
+        historical_collected_note: collectedNote,
+        unbilled_retainer: retainerMonthly,
+        unbilled_retainer_formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
+        unbilled_retainer_note: 'Cartera mensual recurrente contratada',
       },
       clients: clientRows,
     };

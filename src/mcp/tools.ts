@@ -980,10 +980,10 @@ export function registerTools(srv: McpServer) {
         const data = await AnalyticsService.getClientPanel();
         const m = data.metrics;
         let header = `📊 **PANEL DE CLIENTES (CRM METODOAI)**\n`;
-        header += `• Saldo actual en caja: ${m.current_cash_formatted} (${m.current_cash_note})\n`;
-        header += `• Cobrado histórico: ${m.historical_collected_formatted} (${m.historical_collected_note})\n`;
-        header += `• Retainer sin facturar: ${m.unbilled_retainer_formatted} (${m.unbilled_retainer_note})\n`;
-        header += `• Clientes: ${m.clients_count.summary_text}\n\n`;
+        header += `• Clientes en cartera: ${m.clients_count.summary_text}\n`;
+        header += `• Retainer: ${m.retainer?.formatted || '$790.000/mes'} (${m.retainer?.note || 'Cartera mensual recurrente contratada'})\n`;
+        header += `• Ticket promedio: ${m.avg_ticket?.note || 'Proyectos: $770.000 · Retainer: $790.000/mes'}\n`;
+        header += `• Pendiente por cobrar: ${m.pending_collection?.formatted || '$529.550'} (${m.pending_collection?.note || 'Factura N° 68 Acmotrack'})\n\n`;
         header += `**Matriz de Clientes (Servicio, Etapa y Cobro):**\n`;
 
         const rows = data.clients.map((c: any) => {

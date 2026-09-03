@@ -231,6 +231,20 @@ export class InvoiceRepository extends BaseRepository<any> {
 export class PaymentRepository extends BaseRepository<any> {
   constructor() { super('payments'); }
 
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('payments')
+      .select('*, invoices(id, status, deleted_at)')
+      .order('payment_date', { ascending: false });
+
+    if (filters.invoice_id) query = query.eq('invoice_id', filters.invoice_id);
+    if (filters.client_id) query = query.eq('client_id', filters.client_id);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []).filter((p: any) => !p.invoices || p.invoices.deleted_at === null);
+  }
+
   async sumByInvoice(invoiceId: string): Promise<number> {
     const { data, error } = await this.db
       .from('payments')

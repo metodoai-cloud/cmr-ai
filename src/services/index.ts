@@ -1367,8 +1367,8 @@ export const AnalyticsService = {
     const inactiveCount = clientRows.filter(r => r.status === 'inactive').length;
     const prospectCount = clientRows.filter(r => r.status === 'prospect').length;
 
-    const totalCollected = finance.total_collected || 2059100;
-    const additionalCollected = Math.max(0, totalCollected - 2059100);
+    const totalCollected = finance.total_collected || 2124550;
+    const additionalCollected = Math.max(0, totalCollected - 1529550);
     const currentCash = 1426168 + additionalCollected;
 
     const inv84Paid = invoices.some((i: any) => String(i.invoice_number).includes('84') && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0));

@@ -9,7 +9,6 @@ import {
   Settings,
   ArrowUpRight,
   TrendingUp,
-  CreditCard,
   Clock,
   Send,
   ShieldCheck,
@@ -1034,20 +1033,26 @@ export default function App() {
                   {formatMoney(dashboardData.sales.pipeline_total)}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--primary-light)', marginTop: '6px' }}>
-                  Forecast: {formatMoney(dashboardData.sales.weighted_forecast)} ({dashboardData.sales.open_opportunities} oportunidades)
+                  {dashboardData.sales.open_opportunities} oportunidades comerciales abiertas
                 </div>
               </div>
 
               <div className="glass-card" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>TOTAL COBRADO</span>
-                  <CreditCard size={18} color="#06b6d4" />
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>TOTAL FACTURADO</span>
+                  <FileText size={18} color="#06b6d4" />
                 </div>
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                  {formatMoney(dashboardData.finance.total_collected)}
+                  {formatMoney(dashboardData.finance.total_invoiced)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  De {formatMoney(dashboardData.finance.total_invoiced)} facturado
+                <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                    Cobrado: {formatMoney(dashboardData.finance.total_collected)}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)' }}>·</span>
+                  <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
+                    Por cobrar: {formatMoney(dashboardData.finance.outstanding)}
+                  </span>
                 </div>
               </div>
 
@@ -1059,8 +1064,18 @@ export default function App() {
                 <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
                   {formatMoney(dashboardData.finance.net_cash)}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--warning)', marginTop: '6px' }}>
-                  Impuestos previstos: {formatMoney(dashboardData.finance.pending_taxes)}
+                <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>
+                    Cobrado: {formatMoney(dashboardData.finance.total_collected)}
+                  </span>
+                  {Number(dashboardData.finance.pending_taxes || 0) > 0 && (
+                    <>
+                      <span style={{ color: 'var(--text-muted)' }}>·</span>
+                      <span style={{ color: 'var(--warning)' }}>
+                        IVA (F29): {formatMoney(dashboardData.finance.pending_taxes)}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

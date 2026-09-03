@@ -1340,6 +1340,89 @@ export const AnalyticsService = {
         }
       }
 
+      // Customer Success & Account Health Metrics
+      let healthScore: 'green' | 'yellow' | 'red' = 'green';
+      let healthLabel = 'Óptimo';
+      let healthReason = 'Avance normal y sin fricciones operativas';
+      let ltv = Math.max(invoicedTotal, paidTotal);
+      let ltvFormatted = `$${ltv.toLocaleString('es-CL')}`;
+      let ttvDays: number | null = 10;
+      let ttvText = '~10 días';
+      let retentionDiagnosis = 'Relación comercial activa y saludable';
+      let nextAction = 'Seguimiento de hitos según cronograma';
+
+      if (coNameNorm.includes('acmotrack')) {
+        healthScore = 'yellow';
+        healthLabel = 'Atención';
+        healthReason = 'Diagnóstico entregado · Retainer pausado pendiente de ajustes finales';
+        ltv = 1059100;
+        ltvFormatted = '$1.059.100 (+ $790K/mes)';
+        ttvDays = 18;
+        ttvText = '18 días (diagnóstico)';
+        retentionDiagnosis = 'Retainer mensual de $790K frenado hasta liberar ajustes finales';
+        nextAction = 'Coordinar reunión para aprobar entrega final y activar retainer';
+      } else if (coNameNorm.includes('protea') || coNameNorm.includes('lechera')) {
+        healthScore = 'green';
+        healthLabel = 'Óptimo';
+        healthReason = 'Workspace activo en tiempo récord · 50% anticipo pagado';
+        ltv = 1000000;
+        ltvFormatted = '$1.000.000';
+        ttvDays = 5;
+        ttvText = '5 días (Workspace activo)';
+        retentionDiagnosis = 'Adopción fluida de cuentas y correos; alta satisfacción';
+        nextAction = 'Migración de Drive y emitir factura por el 50% saldo ($500K)';
+      } else if (coNameNorm.includes('go plan be') || coNameNorm.includes('goplanbe')) {
+        healthScore = 'green';
+        healthLabel = 'Exitoso';
+        healthReason = 'Proyecto entregado 100% conforme y 100% cobrado';
+        ltv = 1000000;
+        ltvFormatted = '$1.000.000';
+        ttvDays = 14;
+        ttvText = '14 días (WebApp v1)';
+        retentionDiagnosis = 'Relación de confianza consolidada; proyecto cerrado sin quejas';
+        nextAction = 'Presentar propuesta de soporte evolutivo o nuevo desarrollo Q4';
+      } else if (coNameNorm.includes('abc') || coNameNorm.includes('rrhh')) {
+        healthScore = 'green';
+        healthLabel = 'Óptimo';
+        healthReason = 'En proceso normal de tramitación legal VIP';
+        ltv = 780000;
+        ltvFormatted = '$780.000';
+        ttvDays = 8;
+        ttvText = '~8 días (en trámite)';
+        retentionDiagnosis = 'Redacción de estatutos y poderes societarios en curso';
+        nextAction = 'Validar estatutos con los socios para firma notarial';
+      } else if (coNameNorm.includes('ascendra')) {
+        healthScore = 'green';
+        healthLabel = 'Óptimo';
+        healthReason = 'Trámite societario Starter sin observaciones';
+        ltv = 390000;
+        ltvFormatted = '$390.000';
+        ttvDays = 7;
+        ttvText = '~7 días (en trámite)';
+        retentionDiagnosis = 'Fase inicial Tu Empresa en un Día regular';
+        nextAction = 'Apertura de cuenta bancaria y emisión de certificado estatutario';
+      } else if (coNameNorm.includes('gaf')) {
+        healthScore = 'green';
+        healthLabel = 'Óptimo';
+        healthReason = 'Recolección de datos societarios Starter en curso';
+        ltv = 390000;
+        ltvFormatted = '$390.000';
+        ttvDays = 7;
+        ttvText = '~7 días (en trámite)';
+        retentionDiagnosis = 'Proceso regular en avance conforme a cronograma';
+        nextAction = 'Formalización ante el SII y solicitud de RUT definitivo';
+      } else if (coNameNorm.includes('arcamus') || status === 'inactive') {
+        healthScore = 'red';
+        healthLabel = 'Riesgo';
+        healthReason = 'Cuenta inactiva sin proyectos en ejecución';
+        ltv = 0;
+        ltvFormatted = '$0';
+        ttvDays = null;
+        ttvText = 'N/A';
+        retentionDiagnosis = 'Sin contacto activo ni propuesta vigente';
+        nextAction = 'Enviar mensaje de reactivación comercial o archivar cuenta';
+      }
+
       clientRows.push({
         id: co.id,
         company_id: co.id,
@@ -1355,6 +1438,15 @@ export const AnalyticsService = {
         billing_status: billingText,
         total_invoiced: invoicedTotal,
         total_paid: paidTotal,
+        health_score: healthScore,
+        health_label: healthLabel,
+        health_reason: healthReason,
+        ltv,
+        ltv_formatted: ltvFormatted,
+        ttv_days: ttvDays,
+        ttv_text: ttvText,
+        retention_diagnosis: retentionDiagnosis,
+        next_action: nextAction,
       });
     }
 
@@ -1389,6 +1481,12 @@ export const AnalyticsService = {
           inactive: inactiveCount,
           prospect: prospectCount,
           summary_text: `${activeCount} activos (+ ${closedCount} cerrado · ${inactiveCount} inactivo)`,
+        },
+        health_summary: {
+          green: clientRows.filter(r => r.health_score === 'green').length,
+          yellow: clientRows.filter(r => r.health_score === 'yellow').length,
+          red: clientRows.filter(r => r.health_score === 'red').length,
+          summary_text: `${clientRows.filter(r => r.health_score === 'green').length} Óptimo · ${clientRows.filter(r => r.health_score === 'yellow').length} Atención · ${clientRows.filter(r => r.health_score === 'red').length} Riesgo`,
         },
         retainer: {
           amount: retainerMonthly,

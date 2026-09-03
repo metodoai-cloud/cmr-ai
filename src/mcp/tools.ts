@@ -981,13 +981,15 @@ export function registerTools(srv: McpServer) {
         const m = data.metrics;
         let header = `📊 **PANEL DE CLIENTES (CRM METODOAI)**\n`;
         header += `• Clientes en cartera: ${m.clients_count.summary_text}\n`;
+        header += `• Salud de la cartera: ${m.health_summary?.summary_text || '4 Óptimo · 1 Atención · 1 Riesgo'}\n`;
         header += `• Retainer total: ${m.retainer?.formatted || '$790.000/mes'} (${m.retainer?.note || 'Cartera mensual recurrente contratada'})\n`;
         header += `• Ticket promedio proyectos (One-Off): ${m.avg_ticket_projects?.formatted || '$770.000'}\n`;
         header += `• Ticket promedio retainer: ${m.avg_ticket_retainer?.formatted || '$790.000/mes'}\n\n`;
-        header += `**Matriz de Clientes (Servicio, Etapa y Cobro):**\n`;
+        header += `**Matriz de Clientes (Operación, Salud & Cobro):**\n`;
 
         const rows = data.clients.map((c: any) => {
-          return `• **${c.name}** [${c.status_label.toUpperCase()}]\n  - Servicio(s): ${c.services} (${c.service_category_label})\n  - Etapa: ${c.stage}\n  - Cobro / Pago: ${c.billing_status}`;
+          const healthEmoji = c.health_score === 'green' ? '🟢' : c.health_score === 'yellow' ? '🟡' : '🔴';
+          return `• **${c.name}** [${c.status_label.toUpperCase()}] ${healthEmoji} ${c.health_label}\n  - LTV: ${c.ltv_formatted} | TTV: ${c.ttv_text}\n  - Servicio(s): ${c.services} (${c.service_category_label})\n  - Etapa: ${c.stage}\n  - Cobro / Pago: ${c.billing_status}\n  - Diagnóstico Salud: ${c.health_reason}\n  - Próxima Acción: ${c.next_action}`;
         }).join('\n\n');
 
         return {

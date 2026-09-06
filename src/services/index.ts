@@ -10,7 +10,11 @@ import {
   PaymentRepository, ExpenseRepository, VendorRepository,
   CampaignRepository, HookRepository, ServiceRepository,
   TaxRepository, WithdrawalRepository, BusinessEventRepository,
-  AuditLogRepository
+  AuditLogRepository,
+  AgencyProfileRepository, CustomerProfileRepository,
+  EntryOfferRepository, EntryOfferServiceRepository,
+  MessagingFrameworkRepository, SalesPlaybookRepository,
+  SalesPlaybookStepRepository, SalesObjectionRepository
 } from '../repositories/index.js';
 
 // Instantiate all repositories
@@ -33,6 +37,16 @@ const taxRepo = new TaxRepository();
 const withdrawalRepo = new WithdrawalRepository();
 const eventRepo = new BusinessEventRepository();
 const auditRepo = new AuditLogRepository();
+
+// Strategy Layer repositories
+const agencyProfileRepo = new AgencyProfileRepository();
+const customerProfileRepo = new CustomerProfileRepository();
+const entryOfferRepo = new EntryOfferRepository();
+const entryOfferServiceRepo = new EntryOfferServiceRepository();
+const messagingFrameworkRepo = new MessagingFrameworkRepository();
+const salesPlaybookRepo = new SalesPlaybookRepository();
+const salesPlaybookStepRepo = new SalesPlaybookStepRepository();
+const salesObjectionRepo = new SalesObjectionRepository();
 
 // ============================================================================
 // CONTACT SERVICE
@@ -1539,3 +1553,298 @@ export const VendorService = {
   async getAll() { return vendorRepo.findAll(); },
   async create(data: any) { return vendorRepo.create(data); },
 };
+
+// ============================================================================
+// STRATEGY LAYER SERVICES
+// ============================================================================
+
+// 1. AGENCY PROFILE SERVICE
+export const AgencyProfileService = {
+  async getActive(organizationId?: string) {
+    return agencyProfileRepo.getActive(organizationId);
+  },
+  async getById(id: string) {
+    return agencyProfileRepo.findById(id);
+  },
+  async getAll(filters: any = {}) {
+    return agencyProfileRepo.findAll(filters);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const profile = await agencyProfileRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_agency_profile',
+      entityType: 'agency_profiles',
+      entityId: profile.id,
+      action: 'create',
+      afterData: profile,
+    });
+    return profile;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await agencyProfileRepo.findById(id);
+    const updated = await agencyProfileRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_agency_profile',
+      entityType: 'agency_profiles',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+
+// 2. CUSTOMER PROFILE SERVICE (Avatares / ICPs)
+export const CustomerProfileService = {
+  async getActive(filters: any = {}) {
+    return customerProfileRepo.findActive(filters);
+  },
+  async getById(id: string) {
+    return customerProfileRepo.findById(id);
+  },
+  async getAll(filters: any = {}) {
+    return customerProfileRepo.findAll(filters);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const cp = await customerProfileRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_customer_profile',
+      entityType: 'customer_profiles',
+      entityId: cp.id,
+      action: 'create',
+      afterData: cp,
+    });
+    return cp;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await customerProfileRepo.findById(id);
+    const updated = await customerProfileRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_customer_profile',
+      entityType: 'customer_profiles',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+
+// 3. ENTRY OFFER SERVICE (Puertas de Entrada Comerciales)
+export const EntryOfferService = {
+  async getActive(filters: any = {}) {
+    return entryOfferRepo.findActive(filters);
+  },
+  async getBySlug(slug: string) {
+    const offer = await entryOfferRepo.findBySlug(slug);
+    if (!offer) return null;
+    return this.resolveSuperPromise(offer);
+  },
+  async getById(id: string) {
+    const offer = await entryOfferRepo.findById(id);
+    if (!offer) return null;
+    return this.resolveSuperPromise(offer);
+  },
+  // Regla de Super Promesa: si offer.super_promise es NULL, fallback a agency_profiles.super_promise
+  async resolveSuperPromise(offer: any) {
+    if (offer && !offer.super_promise) {
+      const activeAgency = await agencyProfileRepo.getActive(offer.organization_id);
+      if (activeAgency?.super_promise) {
+        return {
+          ...offer,
+          super_promise: activeAgency.super_promise,
+          is_super_promise_inherited: true,
+        };
+      }
+    }
+    return {
+      ...offer,
+      is_super_promise_inherited: false,
+    };
+  },
+  async create(data: any, source: any = 'mcp') {
+    const offer = await entryOfferRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_entry_offer',
+      entityType: 'entry_offers',
+      entityId: offer.id,
+      action: 'create',
+      afterData: offer,
+    });
+    return offer;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await entryOfferRepo.findById(id);
+    const updated = await entryOfferRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_entry_offer',
+      entityType: 'entry_offers',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+
+// 4. VALUE MATRIX SERVICE (Entry Offer + Service)
+export const ValueMatrixService = {
+  async getMatrixForEntryOffer(entryOfferId: string) {
+    return entryOfferServiceRepo.getMatrixForEntryOffer(entryOfferId);
+  },
+  async getValueMatrix(entryOfferId: string, serviceId: string) {
+    return entryOfferServiceRepo.getValueMatrix(entryOfferId, serviceId);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const record = await entryOfferServiceRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_matriz_valor',
+      entityType: 'entry_offer_services',
+      entityId: record.id,
+      action: 'create',
+      afterData: record,
+    });
+    return record;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await entryOfferServiceRepo.findById(id);
+    const updated = await entryOfferServiceRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_matriz_valor',
+      entityType: 'entry_offer_services',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+
+// 5. MESSAGING FRAMEWORK SERVICE
+export const MessagingFrameworkService = {
+  async getActive(filters: any = {}) {
+    return messagingFrameworkRepo.getActive(filters);
+  },
+  async getById(id: string) {
+    return messagingFrameworkRepo.findById(id);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const framework = await messagingFrameworkRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_messaging_framework',
+      entityType: 'messaging_frameworks',
+      entityId: framework.id,
+      action: 'create',
+      afterData: framework,
+    });
+    return framework;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await messagingFrameworkRepo.findById(id);
+    const updated = await messagingFrameworkRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_messaging_framework',
+      entityType: 'messaging_frameworks',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+
+// 6. SALES PLAYBOOK SERVICE
+export const SalesPlaybookService = {
+  async getActive(filters: any = {}) {
+    return salesPlaybookRepo.getActive(filters);
+  },
+  async getById(id: string) {
+    return salesPlaybookRepo.getWithSteps(id);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const playbook = await salesPlaybookRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_sales_playbook',
+      entityType: 'sales_playbooks',
+      entityId: playbook.id,
+      action: 'create',
+      afterData: playbook,
+    });
+    return playbook;
+  },
+  async addStep(stepData: any) {
+    return salesPlaybookStepRepo.create(stepData);
+  },
+  async updateStep(stepId: string, stepData: any) {
+    return salesPlaybookStepRepo.update(stepId, stepData);
+  },
+};
+
+// 7. SALES OBJECTION SERVICE
+export const SalesObjectionService = {
+  async getActive(filters: any = {}) {
+    return salesObjectionRepo.findActive(filters);
+  },
+  async search(query: string) {
+    return salesObjectionRepo.searchByText(query);
+  },
+  async getById(id: string) {
+    return salesObjectionRepo.findById(id);
+  },
+  async create(data: any, source: any = 'mcp') {
+    const obj = await salesObjectionRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'crear_sales_objection',
+      entityType: 'sales_objections',
+      entityId: obj.id,
+      action: 'create',
+      afterData: obj,
+    });
+    return obj;
+  },
+  async update(id: string, data: any, source: any = 'mcp') {
+    const before = await salesObjectionRepo.findById(id);
+    const updated = await salesObjectionRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'actualizar_sales_objection',
+      entityType: 'sales_objections',
+      entityId: id,
+      action: 'update',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+};
+

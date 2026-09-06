@@ -363,3 +363,206 @@ export class AuditLogRepository extends BaseRepository<any> {
     });
   }
 }
+
+// ============================================================================
+// STRATEGY LAYER REPOSITORIES
+// ============================================================================
+
+// --- Agency Profiles ---
+export class AgencyProfileRepository extends BaseRepository<any> {
+  constructor() { super('agency_profiles'); }
+
+  async getActive(organizationId?: string) {
+    let query = this.db
+      .from('agency_profiles')
+      .select('*')
+      .eq('status', 'active');
+    
+    if (organizationId) {
+      query = query.eq('organization_id', organizationId);
+    }
+    const { data, error } = await query.order('version', { ascending: false }).limit(1).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+}
+
+// --- Customer Profiles ---
+export class CustomerProfileRepository extends BaseRepository<any> {
+  constructor() { super('customer_profiles'); }
+
+  async findActive(filters: any = {}) {
+    let query = this.db
+      .from('customer_profiles')
+      .select('*')
+      .eq('status', 'active');
+    
+    if (filters.industry) query = query.ilike('industry', `%${filters.industry}%`);
+    if (filters.organization_id) query = query.eq('organization_id', filters.organization_id);
+    query = query.order('name', { ascending: true });
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+}
+
+// --- Entry Offers ---
+export class EntryOfferRepository extends BaseRepository<any> {
+  constructor() { super('entry_offers'); }
+
+  async findActive(filters: any = {}) {
+    let query = this.db
+      .from('entry_offers')
+      .select('*, customer_profiles(id, name, industry)')
+      .eq('status', 'active')
+      .order('priority', { ascending: true });
+    
+    if (filters.organization_id) query = query.eq('organization_id', filters.organization_id);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async findBySlug(slug: string) {
+    const { data, error } = await this.db
+      .from('entry_offers')
+      .select('*, customer_profiles(*)')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+}
+
+// --- Entry Offer Services (Value Matrix) ---
+export class EntryOfferServiceRepository extends BaseRepository<any> {
+  constructor() { super('entry_offer_services'); }
+
+  async getMatrixForEntryOffer(entryOfferId: string) {
+    const { data, error } = await this.db
+      .from('entry_offer_services')
+      .select('*, services(*), entry_offers(id, name, slug)')
+      .eq('entry_offer_id', entryOfferId)
+      .eq('active', true);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getValueMatrix(entryOfferId: string, serviceId: string) {
+    const { data, error } = await this.db
+      .from('entry_offer_services')
+      .select('*, services(*), entry_offers(*)')
+      .eq('entry_offer_id', entryOfferId)
+      .eq('service_id', serviceId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+}
+
+// --- Messaging Frameworks ---
+export class MessagingFrameworkRepository extends BaseRepository<any> {
+  constructor() { super('messaging_frameworks'); }
+
+  async getActive(filters: any = {}) {
+    let query = this.db
+      .from('messaging_frameworks')
+      .select('*, entry_offers(id, name, slug), customer_profiles(id, name)')
+      .eq('status', 'active');
+    
+    if (filters.entry_offer_id) query = query.eq('entry_offer_id', filters.entry_offer_id);
+    if (filters.customer_profile_id) query = query.eq('customer_profile_id', filters.customer_profile_id);
+    if (filters.organization_id) query = query.eq('organization_id', filters.organization_id);
+
+    const { data, error } = await query.order('version', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+}
+
+// --- Sales Playbooks ---
+export class SalesPlaybookRepository extends BaseRepository<any> {
+  constructor() { super('sales_playbooks'); }
+
+  async getWithSteps(id: string) {
+    const { data, error } = await this.db
+      .from('sales_playbooks')
+      .select('*, sales_playbook_steps(*)')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (data && data.sales_playbook_steps) {
+      data.sales_playbook_steps.sort((a: any, b: any) => a.step_order - b.step_order);
+    }
+    return data;
+  }
+
+  async getActive(filters: any = {}) {
+    let query = this.db
+      .from('sales_playbooks')
+      .select('*, sales_playbook_steps(*), entry_offers(id, name), customer_profiles(id, name)')
+      .eq('status', 'active');
+
+    if (filters.entry_offer_id) query = query.eq('entry_offer_id', filters.entry_offer_id);
+    if (filters.customer_profile_id) query = query.eq('customer_profile_id', filters.customer_profile_id);
+
+    const { data, error } = await query.order('version', { ascending: false });
+    if (error) throw error;
+    if (data) {
+      data.forEach((pb: any) => {
+        if (pb.sales_playbook_steps) {
+          pb.sales_playbook_steps.sort((a: any, b: any) => a.step_order - b.step_order);
+        }
+      });
+    }
+    return data || [];
+  }
+}
+
+// --- Sales Playbook Steps ---
+export class SalesPlaybookStepRepository extends BaseRepository<any> {
+  constructor() { super('sales_playbook_steps'); }
+
+  async findByPlaybook(playbookId: string) {
+    const { data, error } = await this.db
+      .from('sales_playbook_steps')
+      .select('*')
+      .eq('playbook_id', playbookId)
+      .order('step_order', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+}
+
+// --- Sales Objections ---
+export class SalesObjectionRepository extends BaseRepository<any> {
+  constructor() { super('sales_objections'); }
+
+  async findActive(filters: any = {}) {
+    let query = this.db
+      .from('sales_objections')
+      .select('*, entry_offers(id, name), customer_profiles(id, name)')
+      .eq('active', true);
+    
+    if (filters.category) query = query.eq('category', filters.category);
+    if (filters.entry_offer_id) query = query.eq('entry_offer_id', filters.entry_offer_id);
+    if (filters.customer_profile_id) query = query.eq('customer_profile_id', filters.customer_profile_id);
+
+    query = query.order('priority', { ascending: true });
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async searchByText(text: string) {
+    const { data, error } = await this.db
+      .from('sales_objections')
+      .select('*')
+      .eq('active', true)
+      .or(`name.ilike.%${text}%,objection_text.ilike.%${text}%,underlying_concern.ilike.%${text}%`)
+      .limit(10);
+    if (error) throw error;
+    return data || [];
+  }
+}

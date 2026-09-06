@@ -174,6 +174,24 @@ export default function App() {
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [projectStatusView, setProjectStatusView] = useState<'active' | 'completed' | 'cancelled'>('active');
 
+  // Project Email Status Modal State
+  const [showProjectEmailModal, setShowProjectEmailModal] = useState(false);
+  const [projectEmailData, setProjectEmailData] = useState<{
+    to: string;
+    contactName: string;
+    companyName: string;
+    projectName: string;
+    statusLabel: string;
+    startDate: string;
+    dueDate: string;
+    soldPrice: number;
+    subject: string;
+    body: string;
+    opportunityId?: string;
+    contactId?: string;
+    companyId?: string;
+  } | null>(null);
+
   // AI Chat State
   const [messages, setMessages] = useState<AiMessage[]>([
     {
@@ -591,6 +609,86 @@ export default function App() {
     } finally {
       setIsSavingProject(false);
     }
+  };
+
+  // Open Project Email Status Modal
+  const handleOpenProjectEmail = (e: React.MouseEvent, p: any, companyName: string, statusLabel: string) => {
+    e.stopPropagation();
+    const clientObj = Array.isArray(p.clients) ? p.clients[0] : p.clients;
+    const oppObj = allOpps.find((o) => o.id === p.opportunity_id);
+    const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+    const companyId = companyObj?.id || oppObj?.company_id || clientObj?.company_id;
+    
+    // Find contact
+    const contact = contacts.find(c => c.id === clientObj?.primary_contact_id || c.id === oppObj?.contact_id || c.company_id === companyId);
+    
+    const contactEmail = contact?.email || '';
+    const contactName = contact ? `${contact.first_name} ${contact.last_name || ''}`.trim() : 'Estimado/a';
+    const projectName = p.name?.includes('—') && p.name.split('—')[1]?.trim() ? p.name.split('—')[1].trim() : p.name;
+    const formattedStart = formatDate(p.start_date);
+    const formattedDue = p.due_date ? formatDate(p.due_date) : 'A definir';
+
+    const subject = `Actualización de Estado: ${projectName} — Método AI`;
+    const body = `Hola ${contactName},
+
+Te compartimos la actualización de avance y estado de tu proyecto con Método AI:
+
+• Proyecto: ${projectName}
+• Empresa: ${companyName}
+• Estado Operativo: ${statusLabel}
+• Fecha de Inicio: ${formattedStart}
+• Fecha Comprometida de Entrega: ${formattedDue}
+• Inversión Acordada: ${formatMoney(p.sold_price)}
+
+Quedamos a tu entera disposición ante cualquier duda o para coordinar la sesión de revisión.
+
+Saludos cordiales,
+Equipo Método AI`;
+
+    setProjectEmailData({
+      to: contactEmail,
+      contactName,
+      companyName,
+      projectName,
+      statusLabel,
+      startDate: formattedStart,
+      dueDate: formattedDue,
+      soldPrice: p.sold_price || 0,
+      subject,
+      body,
+      opportunityId: p.opportunity_id,
+      contactId: contact?.id,
+      companyId,
+    });
+    setShowProjectEmailModal(true);
+  };
+
+  // Launch Email Client (mailto or Gmail Web)
+  const handleLaunchEmailClient = async (target: 'default' | 'gmail') => {
+    if (!projectEmailData) return;
+    const { to, subject, body } = projectEmailData;
+    
+    if (target === 'gmail') {
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(gmailUrl, '_blank');
+    } else {
+      const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.open(mailtoUrl, '_blank');
+    }
+
+    // Optional: Log activity in background if contact/company is available
+    if (projectEmailData.contactId || projectEmailData.opportunityId) {
+      crmApi.createActivity({
+        type: 'email',
+        contact_id: projectEmailData.contactId,
+        company_id: projectEmailData.companyId,
+        opportunity_id: projectEmailData.opportunityId,
+        notes: `Status Report enviado por correo al cliente: ${projectEmailData.subject}`,
+        result: `Enviado a ${projectEmailData.to || 'cliente'}`,
+      }).catch(console.error);
+    }
+
+    setShowProjectEmailModal(false);
   };
 
   // Delete Invoice Permanently
@@ -2237,26 +2335,60 @@ export default function App() {
                                 </div>
                               </div>
 
-                              {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
-                                  <b style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(p.sold_price)}</b>
+                              {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega | Botón Enviar Correo) */}
+                              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
+                                    <b style={{ color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>{formatMoney(p.sold_price)}</b>
+                                  </div>
+                                  <span style={{ color: 'var(--text-muted)' }}>•</span>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <Calendar size={13} color="var(--primary-light)" />
+                                    <span style={{ color: 'var(--text-muted)' }}>Inicio:</span>
+                                    <span>{formatDate(p.start_date)}</span>
+                                  </div>
+                                  <span style={{ color: 'var(--text-muted)' }}>•</span>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                    <Clock size={13} color="var(--text-muted)" />
+                                    <span style={{ color: 'var(--text-muted)' }}>Entrega:</span>
+                                    <span style={{ color: p.due_date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                      {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
+                                    </span>
+                                  </div>
                                 </div>
-                                <span style={{ color: 'var(--text-muted)' }}>•</span>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  <Calendar size={13} color="var(--primary-light)" />
-                                  <span style={{ color: 'var(--text-muted)' }}>Inicio:</span>
-                                  <span>{formatDate(p.start_date)}</span>
-                                </div>
-                                <span style={{ color: 'var(--text-muted)' }}>•</span>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  <Clock size={13} color="var(--text-muted)" />
-                                  <span style={{ color: 'var(--text-muted)' }}>Entrega:</span>
-                                  <span style={{ color: p.due_date ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                    {p.due_date ? formatDate(p.due_date) : 'Pendiente'}
-                                  </span>
-                                </div>
+
+                                {/* Botón Acción Rápida: Enviar Estado por Correo */}
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleOpenProjectEmail(e, p, companyName, statusLabel)}
+                                  style={{
+                                    padding: '4px 10px',
+                                    fontSize: '0.725rem',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    borderRadius: 'var(--radius-sm)',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                                    color: 'var(--primary-light)',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.25)';
+                                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
+                                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
+                                  }}
+                                  title="Previsualizar y enviar actualización de estado por correo al cliente"
+                                >
+                                  <Mail size={12} />
+                                  <span>Enviar Correo</span>
+                                </button>
                               </div>
                             </div>
                           );
@@ -3828,6 +3960,142 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Project Status Email Preview Modal */}
+      {showProjectEmailModal && projectEmailData && (
+        <div
+          className="modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setShowProjectEmailModal(false)}
+        >
+          <div
+            className="glass-card animate-fade-in"
+            style={{
+              width: '100%',
+              maxWidth: '580px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid var(--border-glass)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Mail size={20} color="var(--primary)" />
+                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
+                  Enviar Estado del Proyecto por Correo
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowProjectEmailModal(false)}
+                className="btn-icon"
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Destinatario (Correo del Cliente) *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ejemplo@cliente.com"
+                  value={projectEmailData.to}
+                  onChange={(e) => setProjectEmailData({ ...projectEmailData, to: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Asunto
+                </label>
+                <input
+                  type="text"
+                  value={projectEmailData.subject}
+                  onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Cuerpo del Mensaje (Previsualización Editable)
+                </label>
+                <textarea
+                  rows={8}
+                  value={projectEmailData.body}
+                  onChange={(e) => setProjectEmailData({ ...projectEmailData, body: e.target.value })}
+                  style={{ width: '100%', padding: '12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowProjectEmailModal(false)}
+                  className="btn btn-ghost"
+                  style={{ fontSize: '0.825rem' }}
+                >
+                  Cancelar
+                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchEmailClient('gmail')}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    title="Abrir en pestaña de Gmail Web"
+                  >
+                    <ExternalLink size={14} />
+                    Abrir en Gmail Web
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLaunchEmailClient('default')}
+                    className="btn btn-primary"
+                    style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    title="Abrir en tu cliente de correo predeterminado (Outlook, Apple Mail, etc.)"
+                  >
+                    <Send size={14} />
+                    Abrir en Mi Correo
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

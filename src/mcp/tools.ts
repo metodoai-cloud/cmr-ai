@@ -11,6 +11,9 @@ import {
   ExpenseService, TaxService, WithdrawalService, AnalyticsService,
   VendorService, CampaignService, HookService, ServiceCatalog,
   SubscriptionService, ProjectService,
+  AgencyProfileService, CustomerProfileService, EntryOfferService,
+  ValueMatrixService, MessagingFrameworkService, SalesPlaybookService,
+  SalesObjectionService
 } from '../services/index.js';
 
 // Map stage aliases to database enum values
@@ -209,17 +212,25 @@ export function registerTools(srv: McpServer) {
   // --- crear_oportunidad ---
   srv.tool(
     'crear_oportunidad',
-    'Crear una nueva oportunidad de venta en el pipeline del CRM.',
+    'Crear una nueva oportunidad de venta en el pipeline del CRM, incluyendo opcionalmente el snapshot estratégico.',
     {
       name: z.string().optional().describe('Nombre u objetivo del trato'),
       title: z.string().optional().describe('Alias de nombre para el trato'),
       contact_id: z.string().optional().describe('ID del contacto asociado'),
       company_id: z.string().optional().describe('ID de la empresa asociada'),
+      lead_id: z.string().optional().describe('ID del lead de origen si existe'),
+      service_id: z.string().optional().describe('ID del servicio principal cotizado'),
       estimated_value: z.number().optional().describe('Valor estimado del setup / venta'),
       setup_value: z.number().optional().describe('Valor de setup inicial'),
       recurring_value: z.number().optional().describe('Valor mensual recurrente (MRR)'),
       stage: z.enum(['new', 'contacted', 'qualified', 'meeting_scheduled', 'proposal_sent', 'negotiation', 'won', 'lost', 'nuevo', 'contactado', 'calificado', 'reunion', 'propuesta', 'negociacion', 'ganado', 'perdido']).optional().describe('Etapa del pipeline'),
       notes: z.string().optional().describe('Notas adicionales'),
+      // Snapshot Estratégico
+      agency_profile_id: z.string().optional().describe('ID de la estrategia/perfil de agencia activa'),
+      entry_offer_id: z.string().optional().describe('ID de la puerta de entrada comercial (Marketing, Automatización, etc.)'),
+      customer_profile_id: z.string().optional().describe('ID del avatar / ICP clasificado'),
+      messaging_framework_id: z.string().optional().describe('ID del framework de mensajes aplicado'),
+      sales_playbook_id: z.string().optional().describe('ID del playbook de ventas utilizado'),
     },
     async (data) => {
       try {
@@ -227,14 +238,21 @@ export function registerTools(srv: McpServer) {
         const setupVal = data.setup_value ?? data.estimated_value ?? 0;
         const normStage = normalizeStage(data.stage) || 'new';
 
-        const payload = {
+        const payload: any = {
           name: oppName,
           contact_id: data.contact_id,
           company_id: data.company_id,
+          lead_id: data.lead_id,
+          service_id: data.service_id,
           setup_value: setupVal,
           recurring_value: data.recurring_value ?? 0,
           stage: normStage,
           notes: data.notes,
+          agency_profile_id: data.agency_profile_id,
+          entry_offer_id: data.entry_offer_id,
+          customer_profile_id: data.customer_profile_id,
+          messaging_framework_id: data.messaging_framework_id,
+          sales_playbook_id: data.sales_playbook_id,
         };
 
         const opp = await OpportunityService.create(payload);
@@ -277,7 +295,7 @@ export function registerTools(srv: McpServer) {
   // --- actualizar_oportunidad ---
   srv.tool(
     'actualizar_oportunidad',
-    'Actualizar el estado o información de una oportunidad en el pipeline.',
+    'Actualizar el estado, información o snapshot estratégico de una oportunidad en el pipeline.',
     {
       id: z.string().describe('ID de la oportunidad a actualizar'),
       stage: z.string().optional().describe('Nueva etapa del pipeline (new, contacted, qualified, meeting_scheduled, proposal_sent, negotiation, won, lost)'),
@@ -288,6 +306,12 @@ export function registerTools(srv: McpServer) {
       name: z.string().optional().describe('Nuevo nombre de la oportunidad'),
       title: z.string().optional().describe('Alias para name'),
       probability: z.number().optional().describe('Probabilidad de éxito o cierre (0 a 100)'),
+      // Snapshot Estratégico
+      agency_profile_id: z.string().optional().describe('ID de la estrategia/perfil de agencia'),
+      entry_offer_id: z.string().optional().describe('ID de la puerta de entrada comercial'),
+      customer_profile_id: z.string().optional().describe('ID del avatar / ICP'),
+      messaging_framework_id: z.string().optional().describe('ID del framework de mensajes'),
+      sales_playbook_id: z.string().optional().describe('ID del playbook de ventas'),
     },
     async ({ id, ...data }) => {
       try {
@@ -299,6 +323,11 @@ export function registerTools(srv: McpServer) {
         if (data.recurring_value !== undefined) payload.recurring_value = data.recurring_value;
         if (data.probability !== undefined) payload.probability = data.probability;
         if (data.notes !== undefined) payload.notes = data.notes;
+        if (data.agency_profile_id !== undefined) payload.agency_profile_id = data.agency_profile_id;
+        if (data.entry_offer_id !== undefined) payload.entry_offer_id = data.entry_offer_id;
+        if (data.customer_profile_id !== undefined) payload.customer_profile_id = data.customer_profile_id;
+        if (data.messaging_framework_id !== undefined) payload.messaging_framework_id = data.messaging_framework_id;
+        if (data.sales_playbook_id !== undefined) payload.sales_playbook_id = data.sales_playbook_id;
 
         const opp = await OpportunityService.update(id, payload);
         return {
@@ -313,7 +342,7 @@ export function registerTools(srv: McpServer) {
   // --- registrar_actividad ---
   srv.tool(
     'registrar_actividad',
-    'Registrar una actividad comercial: reunión, llamada, propuesta, nota u otro contacto.',
+    'Registrar una actividad comercial: reunión, llamada, propuesta, nota u otro contacto, incluyendo los datos de la interacción real (dolor detectado, objeción real planteada, paso de playbook ejecutado).',
     {
       opportunity_id: z.string().optional().describe('ID de la oportunidad relacionada'),
       contact_id: z.string().optional().describe('ID del contacto relacionado'),
@@ -327,6 +356,16 @@ export function registerTools(srv: McpServer) {
       next_action_date: z.string().optional().describe('Fecha del siguiente paso (YYYY-MM-DD)'),
       scheduled_at: z.string().optional().describe('Fecha y hora programada o efectuada (ISO 8601)'),
       occurred_at: z.string().optional().describe('Fecha y hora efectuada (ISO 8601)'),
+      // Ejecución estratégica real
+      playbook_step_id: z.string().optional().describe('ID del paso de playbook ejecutado'),
+      objection_id: z.string().optional().describe('ID de la objeción estratégica vinculada'),
+      objection_text: z.string().optional().describe('Lo que realmente dijo el prospecto como objeción'),
+      response_used: z.string().optional().describe('Respuesta o argumento que se le dio al prospecto'),
+      buyer_signal: z.string().optional().describe('Señal de compra o estado de decisión detectado'),
+      pain_detected: z.string().optional().describe('Dolor o problema concreto manifestado por el prospecto'),
+      desired_outcome: z.string().optional().describe('Resultado o transformación que busca el prospecto'),
+      meeting_summary: z.string().optional().describe('Resumen ejecutivo de la reunión o llamada'),
+      ai_analysis: z.record(z.any()).optional().describe('Análisis o estructuración generada por IA'),
     },
     async (data) => {
       try {
@@ -345,11 +384,20 @@ export function registerTools(srv: McpServer) {
           next_action: data.next_action || null,
           next_action_date: data.next_action_date || null,
           occurred_at: data.occurred_at || data.scheduled_at || new Date().toISOString(),
+          playbook_step_id: data.playbook_step_id || null,
+          objection_id: data.objection_id || null,
+          objection_text: data.objection_text || null,
+          response_used: data.response_used || null,
+          buyer_signal: data.buyer_signal || null,
+          pain_detected: data.pain_detected || null,
+          desired_outcome: data.desired_outcome || null,
+          meeting_summary: data.meeting_summary || null,
+          ai_analysis: data.ai_analysis || null,
         };
 
         const activity = await ActivityService.create(payload);
         return {
-          content: [{ type: 'text' as const, text: `✅ Actividad registrada exitosamente:\n- Tipo: ${mappedType.toUpperCase()}\n- Detalle: ${combinedNotes}\n- ID: ${activity.id}` }],
+          content: [{ type: 'text' as const, text: `✅ Actividad registrada exitosamente:\n- Tipo: ${mappedType.toUpperCase()}\n- Detalle: ${combinedNotes}\n- ID: ${activity.id}${data.pain_detected ? `\n- Dolor detectado: ${data.pain_detected}` : ''}${data.objection_text ? `\n- Objeción: ${data.objection_text}` : ''}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al registrar actividad: ${err.message}` }] };
@@ -997,6 +1045,317 @@ export function registerTools(srv: McpServer) {
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al consultar panel de clientes: ${err.message}` }] };
+      }
+    }
+  );
+
+  // ============================================================================
+  // STRATEGY LAYER TOOLS (CAPA ESTRATÉGICA)
+  // ============================================================================
+
+  // --- 1. obtener_identidad_agencia ---
+  srv.tool(
+    'obtener_identidad_agencia',
+    'Obtener la identidad, nicho, posicionamiento, super promesa, mecanismo único y filosofía de ventas activa de la agencia.',
+    {},
+    async () => {
+      try {
+        const profile = await AgencyProfileService.getActive();
+        if (!profile) {
+          return { content: [{ type: 'text' as const, text: 'ℹ️ No hay un perfil de agencia activo configurado.' }] };
+        }
+        const text = `🏛️ **IDENTIDAD & ESTRATEGIA DE AGENCIA: ${profile.agency_name || profile.name}** (v${profile.version})\n\n` +
+          `• **Nicho**: ${profile.niche || 'N/A'}\n` +
+          `• **Posicionamiento**: ${profile.positioning || 'N/A'}\n` +
+          `• **🌟 Super Promesa**: ${profile.super_promise || 'N/A'}\n` +
+          `• **Problema Core**: ${profile.core_problem || 'N/A'}\n` +
+          `• **Transformación Deseada**: ${profile.desired_transformation || 'N/A'}\n` +
+          `• **Mecanismo Único**: ${profile.unique_mechanism || 'N/A'}\n` +
+          `• **Tono de Voz**: ${profile.tone_of_voice || 'N/A'}\n` +
+          `• **Filosofía de Ventas**: ${profile.sales_philosophy || 'N/A'}\n` +
+          `• **Diferenciadores**: ${Array.isArray(profile.differentiators) ? profile.differentiators.join(', ') : 'N/A'}\n` +
+          `• **Palabras de Marca**: ${Array.isArray(profile.brand_keywords) ? profile.brand_keywords.join(', ') : 'N/A'}\n` +
+          `• **Lenguaje a Evitar**: ${Array.isArray(profile.avoid_language) ? profile.avoid_language.join(', ') : 'N/A'}\n` +
+          `• **ID**: ${profile.id}`;
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener identidad de agencia: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 2. listar_customer_profiles ---
+  srv.tool(
+    'listar_customer_profiles',
+    'Listar los avatares / ICPs (Ideal Customer Profiles) definidos por la agencia con sus dolores, disparadores y criterios de calificación.',
+    {
+      industry: z.string().optional().describe('Filtrar por industria o sector'),
+    },
+    async (filters) => {
+      try {
+        const profiles = await CustomerProfileService.getActive(filters);
+        if (profiles.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No hay avatares / customer profiles activos registrados.' }] };
+        }
+        const list = profiles.map((p: any) => {
+          const pains = Array.isArray(p.main_problems) ? p.main_problems.slice(0, 2).join('; ') : '';
+          const triggers = Array.isArray(p.buying_triggers) ? p.buying_triggers.slice(0, 2).join('; ') : '';
+          return `👤 **${p.name}** (${p.industry || 'Industria general'})\n` +
+            `  - Decisor: ${p.decision_maker || 'N/A'}\n` +
+            `  - Dolores clave: ${pains || 'N/A'}\n` +
+            `  - Disparadores de compra: ${triggers || 'N/A'}\n` +
+            `  - Urgencia / Presupuesto: ${p.urgency_level || 'N/A'} / ${p.budget_profile || 'N/A'}\n` +
+            `  - ID: ${p.id}`;
+        }).join('\n\n');
+        return { content: [{ type: 'text' as const, text: `🎯 **Avatares / ICPs Activos (${profiles.length})**:\n\n${list}` }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar customer profiles: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 3. obtener_customer_profile ---
+  srv.tool(
+    'obtener_customer_profile',
+    'Obtener el perfil detallado de un avatar / ICP por su ID o nombre.',
+    {
+      id: z.string().describe('ID del customer profile / avatar'),
+    },
+    async ({ id }) => {
+      try {
+        const cp = await CustomerProfileService.getById(id);
+        if (!cp) return { content: [{ type: 'text' as const, text: `No se encontró customer profile con ID "${id}".` }] };
+        return { content: [{ type: 'text' as const, text: JSON.stringify(cp, null, 2) }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener customer profile: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 4. listar_entry_offers ---
+  srv.tool(
+    'listar_entry_offers',
+    'Listar las puertas de entrada comerciales de la agencia (ej: Marketing, Automatización).',
+    {},
+    async () => {
+      try {
+        const offers = await EntryOfferService.getActive();
+        if (offers.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No hay ofertas de entrada comerciales registradas.' }] };
+        }
+        const list = offers.map((o: any) => {
+          return `🚪 **${o.name}** (slug: \`${o.slug}\`)\n` +
+            `  - Propuesta de valor: ${o.value_proposition || o.description || 'N/A'}\n` +
+            `  - Mecanismo único: ${o.unique_mechanism || 'N/A'}\n` +
+            `  - Avatar principal: ${o.customer_profiles?.name || 'General'}\n` +
+            `  - CTA Principal: ${o.primary_cta || 'N/A'}\n` +
+            `  - ID: ${o.id}`;
+        }).join('\n\n');
+        return { content: [{ type: 'text' as const, text: `🚪 **Puertas de Entrada Comerciales (${offers.length})**:\n\n${list}` }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar entry offers: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 5. obtener_entry_offer ---
+  srv.tool(
+    'obtener_entry_offer',
+    'Obtener el detalle completo de una puerta de entrada comercial por ID o slug, incluyendo la Super Promesa resuelta (con fallback automático a la agencia).',
+    {
+      id_or_slug: z.string().describe('ID (UUID) o slug de la puerta de entrada (ej: "marketing", "automatizacion")'),
+    },
+    async ({ id_or_slug }) => {
+      try {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id_or_slug);
+        const offer = isUuid ? await EntryOfferService.getById(id_or_slug) : await EntryOfferService.getBySlug(id_or_slug);
+        if (!offer) {
+          return { content: [{ type: 'text' as const, text: `No se encontró entry offer para "${id_or_slug}".` }] };
+        }
+        const text = `🚪 **PUERTA DE ENTRADA: ${offer.name}** (\`${offer.slug}\`)\n\n` +
+          `• **Propuesta de Valor**: ${offer.value_proposition || 'N/A'}\n` +
+          `• **🌟 Super Promesa**: ${offer.super_promise} ${offer.is_super_promise_inherited ? '(Heredada de la Agencia)' : '(Específica de la oferta)'}\n` +
+          `• **Problema Principal**: ${offer.primary_problem || 'N/A'}\n` +
+          `• **Resultado Deseado**: ${offer.desired_outcome || 'N/A'}\n` +
+          `• **Mecanismo Único**: ${offer.unique_mechanism || 'N/A'}\n` +
+          `• **Mensaje de Calificación**: ${offer.qualification_message || 'N/A'}\n` +
+          `• **CTA Principal**: ${offer.primary_cta || 'N/A'}\n` +
+          `• **Objeciones Principales**: ${Array.isArray(offer.main_objections) ? offer.main_objections.join(', ') : 'N/A'}\n` +
+          `• **ID**: ${offer.id}`;
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener entry offer: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 6. obtener_matriz_valor_servicio ---
+  srv.tool(
+    'obtener_matriz_valor_servicio',
+    'Consultar la matriz de valor de servicios dentro de una puerta de entrada específica (ancla de valor, analogía, problema resuelto, entregable y notas de venta).',
+    {
+      entry_offer_id: z.string().describe('ID de la puerta de entrada (Entry Offer)'),
+      service_id: z.string().optional().describe('ID opcional del servicio específico para ver su matriz'),
+    },
+    async ({ entry_offer_id, service_id }) => {
+      try {
+        if (service_id) {
+          const matrix = await ValueMatrixService.getValueMatrix(entry_offer_id, service_id);
+          if (!matrix) return { content: [{ type: 'text' as const, text: 'No existe matriz de valor para esta combinación de Entry Offer y Servicio.' }] };
+          const text = `💎 **MATRIZ DE VALOR: ${matrix.services?.name} en ${matrix.entry_offers?.name}**\n\n` +
+            `• **Rol del Servicio**: ${matrix.role || 'N/A'}\n` +
+            `• **Posicionamiento**: ${matrix.positioning || 'N/A'}\n` +
+            `• **Entregable**: ${matrix.deliverable || 'N/A'}\n` +
+            `• **Problema Resuelto**: ${matrix.problem_solved || 'N/A'}\n` +
+            `• **Valor Real**: ${matrix.real_value || 'N/A'}\n` +
+            `• **Analogía de Venta**: "${matrix.analogy || 'N/A'}"\n` +
+            `• **Ancla de Valor**: ${matrix.value_anchor_min ? `${matrix.value_anchor_min}x` : ''} – ${matrix.value_anchor_max ? `${matrix.value_anchor_max}x` : ''} (${matrix.value_justification || 'Justificación ROI'})\n` +
+            `• **Resultado Típico**: ${matrix.typical_outcome || 'N/A'}\n` +
+            `• **Notas de Venta**: ${matrix.sales_notes || 'N/A'}`;
+          return { content: [{ type: 'text' as const, text }] };
+        } else {
+          const matrices = await ValueMatrixService.getMatrixForEntryOffer(entry_offer_id);
+          if (matrices.length === 0) return { content: [{ type: 'text' as const, text: 'No hay servicios en la matriz de valor para esta puerta de entrada.' }] };
+          const list = matrices.map((m: any) =>
+            `• **${m.services?.name || 'Servicio'}** (${m.role || 'Core'})\n` +
+            `  - Valor real: ${m.real_value || 'N/A'}\n` +
+            `  - Analogía: "${m.analogy || 'N/A'}"\n` +
+            `  - Ancla ROI: ${m.value_anchor_min ? `${m.value_anchor_min}x` : ''} - ${m.value_anchor_max ? `${m.value_anchor_max}x` : ''}\n` +
+            `  - Service ID: ${m.service_id}`
+          ).join('\n\n');
+          return { content: [{ type: 'text' as const, text: `💎 **Matriz de Valor para Entry Offer (${matrices.length} servicios)**:\n\n${list}` }] };
+        }
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener matriz de valor: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 7. obtener_messaging_framework ---
+  srv.tool(
+    'obtener_messaging_framework',
+    'Obtener los frameworks de mensajería estratégica para Marketing y Ventas (mensajes clave, dolores, beneficios, ángulos de ganchos, reversión de riesgo).',
+    {
+      entry_offer_id: z.string().optional().describe('Filtrar por ID de la puerta de entrada'),
+      customer_profile_id: z.string().optional().describe('Filtrar por ID del avatar/ICP'),
+    },
+    async (filters) => {
+      try {
+        const frameworks = await MessagingFrameworkService.getActive(filters);
+        if (frameworks.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No hay frameworks de mensajería activos con los filtros indicados.' }] };
+        }
+        const text = frameworks.map((f: any) =>
+          `📢 **FRAMEWORK: ${f.name}** (v${f.version})\n` +
+          `• **Mensaje Principal**: "${f.main_message || 'N/A'}"\n` +
+          `• **Declaración del Problema**: ${f.problem_statement || 'N/A'}\n` +
+          `• **Estado Deseado**: ${f.desired_state || 'N/A'}\n` +
+          `• **Mensaje del Mecanismo**: ${f.mechanism_message || 'N/A'}\n` +
+          `• **Reversión de Riesgo**: ${f.risk_reversal || 'N/A'}\n` +
+          `• **Mensaje de Urgencia**: ${f.urgency_message || 'N/A'}\n` +
+          `• **Temas de Ganchos (Hook Themes)**: ${Array.isArray(f.hook_themes) ? f.hook_themes.join(', ') : 'N/A'}\n` +
+          `• **Palabras a Usar**: ${Array.isArray(f.words_to_use) ? f.words_to_use.join(', ') : 'N/A'}\n` +
+          `• **Palabras a Evitar**: ${Array.isArray(f.words_to_avoid) ? f.words_to_avoid.join(', ') : 'N/A'}\n` +
+          `• **ID**: ${f.id}`
+        ).join('\n\n---\n\n');
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener messaging framework: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 8. obtener_sales_playbook ---
+  srv.tool(
+    'obtener_sales_playbook',
+    'Obtener el playbook de ventas estructurado con todos sus pasos (Confianza, Necesidades, Oferta, Cierre, Objeciones, Seguimiento), preguntas clave, señales a detectar y errores a evitar.',
+    {
+      entry_offer_id: z.string().optional().describe('Filtrar por puerta de entrada'),
+      customer_profile_id: z.string().optional().describe('Filtrar por avatar/ICP'),
+      playbook_id: z.string().optional().describe('ID específico del playbook'),
+    },
+    async (params) => {
+      try {
+        let playbook: any = null;
+        if (params.playbook_id) {
+          playbook = await SalesPlaybookService.getById(params.playbook_id);
+        } else {
+          const list = await SalesPlaybookService.getActive(params);
+          playbook = list.length > 0 ? list[0] : null;
+        }
+
+        if (!playbook) {
+          return { content: [{ type: 'text' as const, text: 'No se encontró ningún playbook de ventas activo.' }] };
+        }
+
+        let out = `📖 **PLAYBOOK DE VENTAS: ${playbook.name}** (v${playbook.version})\n`;
+        out += `• Objetivo: ${playbook.objective || 'Proceso comercial estandarizado de la agencia'}\n\n`;
+        out += `**Pasos del Proceso Comercial:**\n`;
+
+        const steps = playbook.sales_playbook_steps || [];
+        if (steps.length === 0) {
+          out += `(Sin pasos configurados aún)\n`;
+        } else {
+          steps.forEach((s: any) => {
+            out += `\n🔹 **Paso ${s.step_order}: ${s.name}** (ID: ${s.id})\n`;
+            if (s.objective) out += `   • Objetivo: ${s.objective}\n`;
+            if (s.description) out += `   • Descripción: ${s.description}\n`;
+            if (Array.isArray(s.questions) && s.questions.length > 0) {
+              out += `   • Preguntas clave:\n` + s.questions.map((q: string) => `     - ${q}`).join('\n') + `\n`;
+            }
+            if (Array.isArray(s.signals_to_detect) && s.signals_to_detect.length > 0) {
+              out += `   • Señales a detectar: ${s.signals_to_detect.join(', ')}\n`;
+            }
+            if (Array.isArray(s.mistakes_to_avoid) && s.mistakes_to_avoid.length > 0) {
+              out += `   • Errores a evitar: ${s.mistakes_to_avoid.join(', ')}\n`;
+            }
+            if (Array.isArray(s.phrases_examples) && s.phrases_examples.length > 0) {
+              out += `   • Frases recomendadas: ${s.phrases_examples.join(' | ')}\n`;
+            }
+          });
+        }
+
+        return { content: [{ type: 'text' as const, text: out }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener sales playbook: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- 9. listar_sales_objections ---
+  srv.tool(
+    'listar_sales_objections',
+    'Consultar la biblioteca estratégica de objeciones y respuestas recomendadas por categoría (precio, tiempo, confianza, autoridad, necesidad, competencia, riesgo, implementación).',
+    {
+      category: z.enum(['price', 'timing', 'trust', 'authority', 'need', 'competition', 'risk', 'implementation', 'other']).optional().describe('Categoría de la objeción'),
+      search: z.string().optional().describe('Búsqueda por texto en objeción o preocupación'),
+      entry_offer_id: z.string().optional().describe('Filtrar por puerta de entrada'),
+    },
+    async (filters) => {
+      try {
+        let objections = [];
+        if (filters.search) {
+          objections = await SalesObjectionService.search(filters.search);
+        } else {
+          objections = await SalesObjectionService.getActive(filters);
+        }
+
+        if (objections.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No se encontraron objeciones en la biblioteca con los criterios indicados.' }] };
+        }
+
+        const list = objections.map((o: any) =>
+          `🛡️ **[${(o.category || 'general').toUpperCase()}] ${o.name}** (ID: ${o.id})\n` +
+          `  • Lo que dice el cliente: "${o.objection_text || o.name}"\n` +
+          `  • Preocupación real oculta: ${o.underlying_concern || 'N/A'}\n` +
+          `  • 💡 Respuesta recomendada: ${o.recommended_response || 'N/A'}\n` +
+          `  • Preguntas de profundización: ${Array.isArray(o.questions_to_ask) ? o.questions_to_ask.join(' | ') : 'N/A'}\n` +
+          `  • ⚠️ Respuestas a evitar: ${Array.isArray(o.responses_to_avoid) ? o.responses_to_avoid.join(' | ') : 'N/A'}`
+        ).join('\n\n');
+
+        return { content: [{ type: 'text' as const, text: `🛡️ **Biblioteca Estratégica de Objeciones (${objections.length})**:\n\n${list}` }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar objeciones: ${err.message}` }] };
       }
     }
   );

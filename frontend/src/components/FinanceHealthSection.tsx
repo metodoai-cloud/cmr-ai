@@ -629,8 +629,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <th style={{ padding: '12px 14px' }}>Cuenta Bancaria & Criterio</th>
-                    <th style={{ padding: '12px 14px' }}>Banco & % Meta</th>
+                    <th style={{ padding: '12px 14px' }}>Cuenta Bancaria, Criterio & Destino</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Real (Saliente / Asignado)</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
@@ -651,14 +650,18 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                     return (
                       <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                         <td style={{ padding: '14px' }}>
-                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{acc.name}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{acc.note}</div>
-                        </td>
-                        <td style={{ padding: '14px' }}>
-                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{acc.bank}</div>
-                          <span className="badge badge-primary" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                            {acc.pctLabel}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{acc.name}</span>
+                            <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                              {acc.pctLabel}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--primary-light)', fontWeight: 600, marginTop: '3px' }}>
+                            {acc.bank}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {acc.note}
+                          </div>
                         </td>
                         <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                           {formatMoney(acc.budget)}
@@ -716,7 +719,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                 </tbody>
                 <tfoot>
                   <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
-                    <td colSpan={2} style={{ padding: '14px', color: 'var(--text-primary)' }}>
+                    <td colSpan={1} style={{ padding: '14px', color: 'var(--text-primary)' }}>
                       TOTALES DE CONTROL DISPERSIÓN
                     </td>
                     <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>

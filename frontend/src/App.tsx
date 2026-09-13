@@ -1876,6 +1876,7 @@ Equipo Método AI`;
               currentCash={dashboardData?.finance?.net_cash || 1426168}
               totalInvoiced={dashboardData?.finance?.total_invoiced || 2647750}
               expenses={expenses}
+              invoices={invoices}
             />
 
             {/* Invoices Table */}

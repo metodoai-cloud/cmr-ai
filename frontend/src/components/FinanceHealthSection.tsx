@@ -14,11 +14,13 @@ import { formatMoney } from '../App';
 
 interface FinanceHealthProps {
   currentCash?: number;
+  totalInvoiced?: number;
   expenses?: any[];
 }
 
 export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
   currentCash = 1426168,
+  totalInvoiced = 2647750,
   expenses = [],
 }) => {
   const [runwayScenario, setRunwayScenario] = useState<'with_salary' | 'without_salary'>('with_salary');
@@ -78,10 +80,10 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       name: 'Cuenta Empresa (Ingresos)',
       bank: 'Banco Estado Empresa',
       pctLabel: 'Base (100%)',
-      budget: budgeted.income,
-      real: dispersionInput,
-      diff: 0,
-      note: 'Recepción del 100% de la facturación',
+      budget: totalInvoiced,
+      real: currentCash,
+      diff: currentCash - totalInvoiced,
+      note: 'Total Facturado vs Caja Neta Disponible en cuenta',
       isSource: true,
     },
     {
@@ -631,7 +633,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                   <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     <th style={{ padding: '12px 14px' }}>Cuenta Bancaria, Criterio & Destino</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Real (Saliente / Asignado)</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Retirado</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
                     <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
                   </tr>
@@ -643,9 +645,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                     const isSource = acc.isSource;
 
                     // Color: Azul si ocupó menos de lo presupuestado (ahorro / favorable), Rojo si ocupó más
-                    const diffColor = isSource ? 'var(--text-muted)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
-                    const diffBg = isSource ? 'transparent' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
-                    const diffBorder = isSource ? 'transparent' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
+                    const diffColor = isSource ? 'var(--text-primary)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
+                    const diffBg = isSource ? 'rgba(255, 255, 255, 0.05)' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
+                    const diffBorder = isSource ? '1px solid var(--border-glass)' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
 
                     return (
                       <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
@@ -670,29 +672,23 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                           {formatMoney(acc.real)}
                         </td>
                         <td style={{ padding: '14px', textAlign: 'right' }}>
-                          {isSource ? (
-                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                              $0 (Base)
-                            </span>
-                          ) : (
-                            <div
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 8px',
-                                borderRadius: '6px',
-                                backgroundColor: diffBg,
-                                border: diffBorder,
-                                color: diffColor,
-                                fontWeight: 700,
-                                fontFamily: "'JetBrains Mono', monospace",
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
-                            </div>
-                          )}
+                          <div
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '4px 8px',
+                              borderRadius: '6px',
+                              backgroundColor: diffBg,
+                              border: diffBorder,
+                              color: diffColor,
+                              fontWeight: 700,
+                              fontFamily: "'JetBrains Mono', monospace",
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
+                          </div>
                         </td>
                         <td style={{ padding: '14px', textAlign: 'center' }}>
                           {isSource ? (

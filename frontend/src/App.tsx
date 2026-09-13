@@ -1872,7 +1872,11 @@ Equipo Método AI`;
             </div>
 
             {/* Submódulo Avanzado de Salud Financiera, Runway, Costos Teóricos vs Reales, Dispersión y VET */}
-            <FinanceHealthSection currentCash={dashboardData?.finance?.net_cash || 1426168} expenses={expenses} />
+            <FinanceHealthSection
+              currentCash={dashboardData?.finance?.net_cash || 1426168}
+              totalInvoiced={dashboardData?.finance?.total_invoiced || 2647750}
+              expenses={expenses}
+            />
 
             {/* Invoices Table */}
             <div className="glass-card" style={{ padding: '24px' }}>

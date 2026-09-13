@@ -693,18 +693,29 @@ export function registerTools(srv: McpServer) {
   // --- registrar_gasto ---
   srv.tool(
     'registrar_gasto',
-    'Registrar un gasto o egreso del negocio.',
+    'Registrar un gasto o egreso operativo del negocio en el CRM.',
     {
-      category: z.string().describe('Categoría del gasto (publicidad, herramientas, servicios, etc.)'),
+      category: z.string().describe('Categoría del gasto (ej: software, advertising, contractor, infrastructure, office, services, etc.)'),
       amount: z.number().describe('Monto del gasto'),
-      description: z.string().optional().describe('Descripción del gasto'),
-      date: z.string().optional().describe('Fecha del gasto (YYYY-MM-DD)'),
+      description: z.string().optional().describe('Descripción o detalle del gasto'),
+      date: z.string().optional().describe('Fecha del gasto (YYYY-MM-DD, por defecto hoy)'),
+      vendor_name: z.string().optional().describe('Nombre del proveedor o plataforma (ej: Meta Ads, Zapier, AWS, Claude, OpenAI)'),
+      vendor_id: z.string().optional().describe('ID del proveedor si ya existe'),
+      project_id: z.string().optional().describe('ID del proyecto si el gasto está asignado a un proyecto'),
+      client_id: z.string().optional().describe('ID del cliente si el gasto es atribuible a un cliente'),
+      payment_account: z.string().optional().describe('Medio o cuenta de pago (ej: tarjeta_empresa, transferencia)'),
+      currency: z.string().optional().describe('Moneda (USD, CLP, etc. Por defecto CLP)'),
+      status: z.enum(['pending', 'paid', 'cancelled']).optional().describe('Estado del gasto (por defecto paid)'),
     },
     async (data) => {
       try {
-        const expense = await ExpenseService.create(data);
+        const expense = await ExpenseService.create(data, 'mcp');
+        const formattedAmount = (Number(expense.total) || Number(data.amount)).toLocaleString('es-CL');
         return {
-          content: [{ type: 'text' as const, text: `✅ Gasto registrado: ${data.category} — $${data.amount} (ID: ${expense.id})` }],
+          content: [{
+            type: 'text' as const,
+            text: `✅ Gasto registrado exitosamente:\n- Categoría: ${expense.category || data.category}\n- Monto: $${formattedAmount}\n- Descripción: ${expense.description || data.description || 'Sin descripción'}\n- Fecha: ${formatDateCL(expense.date)}\n- ID: \`${expense.id}\``,
+          }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al registrar gasto: ${err.message}` }] };
@@ -952,14 +963,19 @@ export function registerTools(srv: McpServer) {
   // --- listar_gastos ---
   srv.tool(
     'listar_gastos',
-    'Ver gastos y egresos del negocio.',
+    'Ver gastos y egresos del negocio con montos, fechas y categorías.',
     {
       category: z.string().optional().describe('Filtrar por categoría de gasto'),
     },
     async (filters) => {
       try {
         const expenses = await ExpenseService.getAll(filters);
-        const list = expenses.map((e: any) => `• ${e.category} | $${e.amount} | ${e.date}`).join('\n');
+        const list = expenses.map((e: any) => {
+          const totalFormatted = (Number(e.total) || Number(e.amount) || 0).toLocaleString('es-CL');
+          const dateFormatted = formatDateCL(e.date);
+          const desc = e.description ? ` (${e.description})` : '';
+          return `• **${e.category || 'General'}** | $${totalFormatted} | Fecha: ${dateFormatted}${desc} | ID: \`${e.id}\``;
+        }).join('\n');
         return {
           content: [{ type: 'text' as const, text: expenses.length > 0 ? `💸 Gastos (${expenses.length}):\n\n${list}` : 'No hay gastos registrados.' }],
         };

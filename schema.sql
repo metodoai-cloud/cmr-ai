@@ -330,6 +330,7 @@ CREATE TABLE IF NOT EXISTS expenses (
   subtotal NUMERIC(12,2) NOT NULL DEFAULT 0,
   tax_amount NUMERIC(12,2) DEFAULT 0,
   total NUMERIC(12,2) NOT NULL DEFAULT 0,
+  amount NUMERIC(12,2) DEFAULT 0,
   currency TEXT DEFAULT 'USD',
   status TEXT DEFAULT 'pending'
     CHECK (status IN ('pending','paid','cancelled')),

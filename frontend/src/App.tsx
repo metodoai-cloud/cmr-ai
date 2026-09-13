@@ -8,6 +8,7 @@ import {
   Bot,
   Settings,
   ArrowUpRight,
+  ArrowDownRight,
   TrendingUp,
   Clock,
   Send,
@@ -48,6 +49,8 @@ import { useAuth } from './context/AuthContext';
 import LoginScreen from './components/LoginScreen';
 import CrmLogo from './components/CrmLogo';
 import { ClientPanelScreen } from './components/ClientPanelScreen';
+import { FinanceHealthSection } from './components/FinanceHealthSection';
+import { AgencyTasksSection } from './components/AgencyTasksSection';
 
 // Chilean currency & number formatter (es-CL: '.' for thousands, e.g. $500.000)
 export const formatMoney = (val: number | string | undefined | null): string => {
@@ -1106,8 +1109,9 @@ Equipo Método AI`;
               </p>
             </div>
 
-            {/* Top Stat Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            {/* Top Stat Cards (2 Filas x 4 Tarjetas) */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              {/* FILA 1: Métricas de Operación Base */}
               <div className="glass-card" style={{ padding: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                   <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>MRR ACTIVO</span>
@@ -1174,6 +1178,63 @@ Equipo Método AI`;
                       </span>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* FILA 2: Salud Financiera & Metas */}
+              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>DÍAS DE FLUJO</span>
+                  <Clock size={18} color="#f59e0b" />
+                </div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '10px' }}>
+                  51,5 <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}>días</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span>Meta: 90 d</span>
+                  <span>·</span>
+                  <span style={{ color: '#10b981' }}>237,6 d sin sueldo</span>
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PUNTO DE EQUILIBRIO</span>
+                  <DollarSign size={18} color="#818cf8" />
+                </div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-light)', marginTop: '10px' }}>
+                  {formatMoney(1444444)}
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  Sueldo ($650k) ÷ 45% (Compensación)
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>BRECHA VS RETAINER</span>
+                  <ArrowDownRight size={18} color="#f59e0b" />
+                </div>
+                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '10px' }}>
+                  -{formatMoney(654444)}
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                  Falta para equilibrio (Retainer $790k)
+                </div>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>ESTADO DISPERSIÓN</span>
+                  <Building size={18} color="#c084fc" />
+                </div>
+                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
+                  Banco Estado
+                </div>
+                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', fontWeight: 600 }}>
+                  ⚠️ Pendiente dispersión 5/45/20/30
                 </div>
               </div>
             </div>
@@ -1802,9 +1863,12 @@ Equipo Método AI`;
             <div>
               <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)' }}>Finanzas & Flujo de Caja</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                Control riguroso de Facturación, Pagos, Gastos operativos e Impuestos.
+                Control riguroso de Facturación, Pagos, Gastos operativos, Cuentas bancarias y Salud Financiera.
               </p>
             </div>
+
+            {/* Submódulo Avanzado de Salud Financiera, Runway, Costos Teóricos vs Reales, Dispersión y VET */}
+            <FinanceHealthSection currentCash={dashboardData?.finance?.net_cash || 1426168} />
 
             {/* Invoices Table */}
             <div className="glass-card" style={{ padding: '24px', overflowX: 'auto' }}>
@@ -2136,9 +2200,12 @@ Equipo Método AI`;
             <div>
               <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)' }}>Operaciones & Proyectos</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                Seguimiento de proyectos de implementación (One-time) y suscripciones activas (MRR recurrente).
+                Tareas operativas de la agencia, seguimiento de proyectos de implementación y suscripciones activas.
               </p>
             </div>
+
+            {/* Módulo de Tareas de la Agencia */}
+            <AgencyTasksSection />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
               {/* Projects */}

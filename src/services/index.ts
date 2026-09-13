@@ -844,30 +844,65 @@ export const PaymentService = {
 // EXPENSE SERVICE
 // ============================================================================
 export const ExpenseService = {
+  async getById(id: string) {
+    return expenseRepo.findById(id);
+  },
+
   async create(data: any, source: 'web' | 'mcp' = 'web') {
+    const payload = { ...data };
+
     // Check idempotency
-    if (data.idempotency_key) {
+    if (payload.idempotency_key) {
       const existing = await expenseRepo.findAll();
-      const dup = existing.find((e: any) => e.idempotency_key === data.idempotency_key);
+      const dup = existing.find((e: any) => e.idempotency_key === payload.idempotency_key);
       if (dup) return dup;
     }
 
     // Auto-find or create vendor
-    if (data.vendor_name && !data.vendor_id) {
-      const vendors = await vendorRepo.searchByName(data.vendor_name);
-      if (vendors.length === 1) {
-        data.vendor_id = vendors[0].id;
-      } else if (vendors.length === 0) {
+    if (payload.vendor_name && !payload.vendor_id) {
+      const vendors = await vendorRepo.searchByName(payload.vendor_name);
+      if (vendors.length >= 1) {
+        payload.vendor_id = vendors[0].id;
+      } else {
         const newVendor = await vendorRepo.create({
-          name: data.vendor_name,
+          name: payload.vendor_name,
           type: 'software',
         });
-        data.vendor_id = newVendor.id;
+        payload.vendor_id = newVendor.id;
       }
-      delete data.vendor_name;
+      delete payload.vendor_name;
     }
 
-    const expense = await expenseRepo.create(data);
+    // Map 'amount' to 'total' & 'subtotal' since DB table expenses uses (subtotal, tax_amount, total)
+    if (payload.amount !== undefined) {
+      const amt = Number(payload.amount);
+      if (payload.total === undefined) payload.total = amt;
+      if (payload.subtotal === undefined) payload.subtotal = amt - (Number(payload.tax_amount) || 0);
+      delete payload.amount;
+    } else if (payload.total !== undefined) {
+      payload.total = Number(payload.total);
+      if (payload.subtotal === undefined) payload.subtotal = payload.total - (Number(payload.tax_amount) || 0);
+    } else if (payload.subtotal !== undefined) {
+      payload.subtotal = Number(payload.subtotal);
+      if (payload.total === undefined) payload.total = payload.subtotal + (Number(payload.tax_amount) || 0);
+    } else {
+      payload.total = 0;
+      payload.subtotal = 0;
+    }
+
+    if (!payload.date) {
+      payload.date = new Date().toISOString().split('T')[0];
+    }
+
+    if (!payload.status) {
+      payload.status = 'paid';
+    }
+
+    if (!payload.currency) {
+      payload.currency = 'CLP';
+    }
+
+    const expense = await expenseRepo.create(payload);
 
     await eventRepo.create({
       event_type: 'expense.created',
@@ -888,6 +923,39 @@ export const ExpenseService = {
     return expense;
   },
 
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+    const payload = { ...data };
+    if (payload.amount !== undefined) {
+      const amt = Number(payload.amount);
+      if (payload.total === undefined) payload.total = amt;
+      if (payload.subtotal === undefined) payload.subtotal = amt - (Number(payload.tax_amount) || 0);
+      delete payload.amount;
+    }
+    const updated = await expenseRepo.update(id, payload);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'expense',
+      entityId: id,
+      action: 'updated',
+      afterData: updated,
+    });
+    return updated;
+  },
+
+  async delete(id: string, source: 'web' | 'mcp' = 'web') {
+    await expenseRepo.softDelete(id);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'expense',
+      entityId: id,
+      action: 'deleted',
+      afterData: { id },
+    });
+    return { success: true, id };
+  },
+
   async getAll(filters: any = {}) {
     return expenseRepo.findAll(filters);
   },
@@ -898,7 +966,12 @@ export const ExpenseService = {
 // ============================================================================
 export const TaxService = {
   async register(data: any, source: 'web' | 'mcp' = 'web') {
-    const tax = await taxRepo.create(data);
+    const payload = { ...data };
+    if (payload.amount !== undefined) {
+      if (payload.actual_amount === undefined) payload.actual_amount = Number(payload.amount);
+      delete payload.amount;
+    }
+    const tax = await taxRepo.create(payload);
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,

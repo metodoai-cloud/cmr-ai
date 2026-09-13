@@ -1,0 +1,781 @@
+import React, { useState } from 'react';
+import {
+  Building,
+  CreditCard,
+  AlertTriangle,
+  Clock,
+  ArrowUpRight,
+  Scale,
+  Wallet,
+} from 'lucide-react';
+import { formatMoney } from '../App';
+
+interface FinanceHealthProps {
+  currentCash?: number;
+}
+
+export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({ currentCash = 1426168 }) => {
+  const [runwayScenario, setRunwayScenario] = useState<'with_salary' | 'without_salary'>('with_salary');
+  const [dispersionInput, setDispersionInput] = useState<number>(currentCash);
+
+  // Constants based on Junta 2026-09-01
+  const ownerSalaryTarget = 650000;
+  const baseCostsWithoutSalary = 180050; // $76.668 + $87.482 + $15.900
+  const baseCostsWithSalary = 830050; // $180.050 + $650.000
+
+  // Daily spend
+  const dailySpendWithSalary = Math.round(baseCostsWithSalary / 30); // $27.668
+  const dailySpendWithoutSalary = Math.round(baseCostsWithoutSalary / 30); // $6.002
+
+  // Runway days
+  const runwayDaysWithSalary = parseFloat((currentCash / (baseCostsWithSalary / 30)).toFixed(1)); // 51.5 days
+  const runwayDaysWithoutSalary = parseFloat((currentCash / (baseCostsWithoutSalary / 30)).toFixed(1)); // 237.6 days
+
+  // Break-even
+  const breakEvenTarget = Math.round(ownerSalaryTarget / 0.45); // $1.444.444
+  const confirmedRetainer = 790000; // Acmotrack retainer
+  const gapVsRetainer = breakEvenTarget - confirmedRetainer; // $654.444
+
+  // Target 90 days runway
+  const targetDays = 90;
+  const progressPercentWithSalary = Math.min(100, Math.round((runwayDaysWithSalary / targetDays) * 100));
+
+  // Dispersion calculations (Profit First Rango A: 5% Profit, 45% Owner, 20% Taxes, 30% OpEx)
+  const calcDispersions = (amount: number) => ({
+    profit5: Math.round(amount * 0.05), // Banco Chile
+    owner45: Math.round(amount * 0.45), // Falabella
+    taxes20: Math.round(amount * 0.20), // Tenpo (6% remunerada)
+    opex30: Math.round(amount * 0.30), // Santander
+  });
+
+  const dispersions = calcDispersions(dispersionInput);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* 1. RUNWAY & DIAS DE FLUJO CARD */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={20} color="var(--primary)" />
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+                Días de Flujo & Runway de Caja
+              </h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Fórmula: Saldo actual ({formatMoney(currentCash)}) ÷ Gasto diario promedio (Gasto mensual ÷ 30)
+            </p>
+          </div>
+
+          {/* Scenario Toggle */}
+          <div style={{ display: 'inline-flex', backgroundColor: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', padding: '3px', border: '1px solid var(--border-glass)' }}>
+            <button
+              type="button"
+              onClick={() => setRunwayScenario('with_salary')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: runwayScenario === 'with_salary' ? 'var(--primary)' : 'transparent',
+                color: runwayScenario === 'with_salary' ? '#ffffff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Con Sueldo Objetivo ($650k)
+            </button>
+            <button
+              type="button"
+              onClick={() => setRunwayScenario('without_salary')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: runwayScenario === 'without_salary' ? 'var(--primary)' : 'transparent',
+                color: runwayScenario === 'without_salary' ? '#ffffff' : 'var(--text-secondary)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Sin Sueldo Actual ($0)
+            </button>
+          </div>
+        </div>
+
+        {/* Runway Metrics Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+          {/* Main Runway Indicator */}
+          <div
+            style={{
+              padding: '18px 20px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              {runwayScenario === 'with_salary' ? 'DÍAS DE FLUJO (SUELDO OBJETIVO)' : 'DÍAS DE FLUJO (ESTADO ACTUAL)'}
+            </div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: runwayScenario === 'with_salary' ? '#f59e0b' : '#10b981', marginTop: '6px' }}>
+              {runwayScenario === 'with_salary' ? runwayDaysWithSalary : runwayDaysWithoutSalary}{' '}
+              <span style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-muted)' }}>días</span>
+            </div>
+            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Meta de seguridad: <b>90 días</b> (3 meses de reserva)
+            </div>
+          </div>
+
+          {/* Daily Spend */}
+          <div
+            style={{
+              padding: '18px 20px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              GASTO DIARIO PROMEDIO
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '6px' }}>
+              {formatMoney(runwayScenario === 'with_salary' ? dailySpendWithSalary : dailySpendWithoutSalary)}
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}> /día</span>
+            </div>
+            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Base mensual: {formatMoney(runwayScenario === 'with_salary' ? baseCostsWithSalary : baseCostsWithoutSalary)}/mes
+            </div>
+          </div>
+
+          {/* Break-Even Point */}
+          <div
+            style={{
+              padding: '18px 20px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              PUNTO DE EQUILIBRIO
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-light)', marginTop: '6px' }}>
+              {formatMoney(breakEvenTarget)}
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}> /mes</span>
+            </div>
+            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Sueldo ($650k) ÷ 45% (Compensación Dueño)
+            </div>
+          </div>
+
+          {/* Gap vs Retainer */}
+          <div
+            style={{
+              padding: '18px 20px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              BRECHA VS RETAINER CERRADO
+            </div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '6px' }}>
+              -{formatMoney(gapVsRetainer)}
+              <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}> /mes</span>
+            </div>
+            <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Faltante para equilibrio con Acmotrack ($790k)
+            </div>
+          </div>
+        </div>
+
+        {/* Progress Bar towards 90 days target */}
+        <div style={{ marginTop: '20px', backgroundColor: 'var(--bg-card-solid)', padding: '16px 20px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', fontSize: '0.825rem' }}>
+            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+              Avance hacia la meta de reserva (90 días de flujo):
+            </span>
+            <span style={{ color: runwayDaysWithSalary >= 90 ? '#10b981' : '#f59e0b', fontWeight: 700 }}>
+              {runwayDaysWithSalary} / 90 días ({progressPercentWithSalary}%)
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.08)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${progressPercentWithSalary}%`,
+                backgroundColor: runwayDaysWithSalary >= 90 ? '#10b981' : '#f59e0b',
+                borderRadius: '4px',
+                transition: 'width 0.4s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
+            💡 Al mantener el sueldo sin retirar ($0), el saldo actual entrega <b>{runwayDaysWithoutSalary} días</b> de autonomía para acelerar ventas y concretar cobros.
+          </div>
+        </div>
+      </div>
+
+      {/* 2. MATRIZ DE COSTOS MENSUALES (TEÓRICO VS CUENTA EMPRESA VS TARJETA PERSONAL) */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CreditCard size={20} color="var(--primary)" />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              Matriz de Costos Mensuales
+            </h3>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+            Diferenciación entre costo total de operación vs. lo que realmente se paga hoy desde la cuenta empresa y lo cubierto por tarjeta personal del dueño.
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '12px 14px' }}>Concepto / Servicio</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Costo Teórico</th>
+                <th style={{ padding: '12px 14px' }}>Método de Pago Actual</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Cuenta Empresa</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Tarjeta Personal</th>
+                <th style={{ padding: '12px 14px', textAlign: 'center' }}>¿Carga al Total?</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Google AI Pro</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$21.700</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Tarjeta Personal
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$21.700</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Anthropic Claude</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$22.768</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Tarjeta Personal
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$22.768</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>ChatGPT Plus</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$20.200</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Tarjeta Personal
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$20.200</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Notion</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$12.000</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Tarjeta Personal
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$12.000</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Google Workspace
+                  <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(1-sep)</span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$15.900</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Cuenta Empresa
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$15.900</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  F29 SII (Impuestos / Provisión)
+                  <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(Variable)</span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$87.482</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Cuenta Empresa (Tenpo 20%)
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$87.482</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                </td>
+              </tr>
+
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  Sueldo Dueño
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>(Objetivo)</span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$650.000</td>
+                <td style={{ padding: '12px 14px' }}>
+                  <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)', backgroundColor: 'rgba(148, 163, 184, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    No retirado (Condicionado)
+                  </span>
+                </td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
+                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
+                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                  <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>No (0 retirado)</span>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
+                <td style={{ padding: '14px', color: 'var(--text-primary)' }}>TOTAL CARGADO / PROYECTADO</td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
+                  $830.050
+                </td>
+                <td style={{ padding: '14px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                  Real cargado: $180.050/mes
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>
+                  $103.382
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>
+                  $76.668
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Total Real: $180.050
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {/* 3. SISTEMA DE CUENTAS BANCARIAS Y DISPERSIÓN PROFIT FIRST (RANGO A) */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building size={20} color="var(--primary)" />
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+                Cuentas Bancarias & Dispersión (Profit First Rango A)
+              </h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Regla de distribución del 100% de los cobros en 5 cuentas independientes.
+            </p>
+          </div>
+
+          {/* Dispersion Alert Status */}
+          <div
+            style={{
+              padding: '6px 14px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.8rem',
+              color: '#f59e0b',
+              fontWeight: 600,
+            }}
+          >
+            <AlertTriangle size={15} />
+            <span>Dispersión Pendiente: 100% concentrado en Banco Estado</span>
+          </div>
+        </div>
+
+        {/* Live Dispersion Simulator Box */}
+        <div
+          style={{
+            padding: '16px 20px',
+            backgroundColor: 'var(--bg-card-solid)',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--border-glass)',
+            marginBottom: '20px',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '14px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Wallet size={18} color="var(--primary-light)" />
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Simular o Aplicar Dispersión de Fondos
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Ingresa el monto disponible a repartir según la matriz 5/45/20/30:
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Monto ($):</span>
+            <input
+              type="number"
+              value={dispersionInput}
+              onChange={(e) => setDispersionInput(Number(e.target.value) || 0)}
+              style={{
+                width: '140px',
+                padding: '6px 10px',
+                backgroundColor: 'var(--bg-glass)',
+                border: '1px solid var(--border-focus)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                outline: 'none',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setDispersionInput(currentCash)}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: '0.75rem' }}
+            >
+              Restablecer Saldo
+            </button>
+          </div>
+        </div>
+
+        {/* 5 Bank Accounts Cards Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          {/* 1. Ingresos */}
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-light)', textTransform: 'uppercase' }}>
+                  Cuenta Puente (100%)
+                </span>
+                <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>ENTRADA</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+                Banco Estado Empresa
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Recepción de todos los pagos</div>
+            </div>
+            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Saldo Disponible:</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatMoney(dispersionInput)}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Ganancias 5% */}
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>
+                  Ganancias (5%)
+                </span>
+                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>5%</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+                Banco Chile
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fondo de utilidades y reservas</div>
+            </div>
+            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatMoney(dispersions.profit5)}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Compensación Dueño 45% */}
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase' }}>
+                  Compensación Dueño (45%)
+                </span>
+                <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>45%</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+                Banco Falabella
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sueldo / Retiro del socio</div>
+            </div>
+            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#818cf8', fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatMoney(dispersions.owner45)}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Impuestos 20% */}
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>
+                  Impuestos (20%)
+                </span>
+                <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>20%</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+                Tenpo (6% Anual)
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Provisión F29 / Remunerada</div>
+            </div>
+            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatMoney(dispersions.taxes20)}
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Gastos de Operación 30% */}
+          <div
+            style={{
+              padding: '16px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-sm)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase' }}>
+                  Gastos Operación (30%)
+                </span>
+                <span className="badge badge-secondary" style={{ fontSize: '0.65rem' }}>30%</span>
+              </div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
+                Banco Santander
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Herramientas SaaS, software y OpEx</div>
+            </div>
+            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#c084fc', fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatMoney(dispersions.opex30)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. TABLA DE VET POR SERVICIO VENDIDO */}
+      <div className="glass-card" style={{ padding: '24px' }}>
+        <div style={{ marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Scale size={20} color="var(--primary)" />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              Tabla de VET por Servicio Vendido (Valor Económico Total)
+            </h3>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+            Auditoría del valor económico generado y justificación de precios para retención y negociación con clientes.
+          </p>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '12px 14px' }}>Cliente / Servicio</th>
+                <th style={{ padding: '12px 14px' }}>Tipo</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Precio Real</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Ref. Mercado</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>VET Defendible</th>
+                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Ratio VET</th>
+                <th style={{ padding: '12px 14px' }}>Palancas de Valor & Justificación</th>
+                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Acmotrack */}
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '14px' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Acmotrack</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>2.1 Diagnóstico + Ventas Fraccional</div>
+                </td>
+                <td style={{ padding: '14px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#c084fc', backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Retainer + Setup
+                  </span>
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                  <div>$790.000<span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>/m</span></div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Setup: $1.059.100</div>
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                  $1.800.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                  $4.145.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#10b981', fontWeight: 800, backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                    <ArrowUpRight size={14} /> 5,25x
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>4,19x s/ref</div>
+                </td>
+                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Ahorro de horas en prospección manual, mitigación de fuga de leads y automatización centralizada de pipeline.
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>DEFENDIDO</span>
+                </td>
+              </tr>
+
+              {/* Protea */}
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '14px' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Protea</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Automatización Comercial & IA</div>
+                </td>
+                <td style={{ padding: '14px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Proyecto One-Time
+                  </span>
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                  $890.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                  $1.500.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                  $3.200.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#818cf8', fontWeight: 800, backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                    <ArrowUpRight size={14} /> 3,60x
+                  </div>
+                </td>
+                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Reducción drástica del tiempo de respuesta a solicitudes entrantes y captura estandarizada de cotizaciones.
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
+                </td>
+              </tr>
+
+              {/* Go Plan Be */}
+              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                <td style={{ padding: '14px' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Go Plan Be</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diagnóstico & Sistema IA</div>
+                </td>
+                <td style={{ padding: '14px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#2dd4bf', backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                    Setup
+                  </span>
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                  $650.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                  $1.200.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                  $2.400.000
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#2dd4bf', fontWeight: 800, backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                    <ArrowUpRight size={14} /> 3,69x
+                  </div>
+                </td>
+                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Estandarización de flujos operativos y eliminación de cuellos de botella en la administración de proyectos.
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center' }}>
+                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FinanceHealthSection;

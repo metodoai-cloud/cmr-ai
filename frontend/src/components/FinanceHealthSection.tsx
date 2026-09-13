@@ -24,7 +24,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
   expenses = [],
 }) => {
   const [runwayScenario, setRunwayScenario] = useState<'with_salary' | 'without_salary'>('with_salary');
-  const [dispersionInput, setDispersionInput] = useState<number>(currentCash);
+  const [dispersionInput, setDispersionInput] = useState<number>(totalInvoiced);
   const [showCostMatrix, setShowCostMatrix] = useState<boolean>(false);
   const [showBankDispersion, setShowBankDispersion] = useState<boolean>(false);
   const [showVetTable, setShowVetTable] = useState<boolean>(false);
@@ -51,14 +51,26 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
   const targetDays = 90;
   const progressPercentWithSalary = Math.min(100, Math.round((runwayDaysWithSalary / targetDays) * 100));
 
-  // Dynamic sums from expenses table
-  const realExpensesTaxes = expenses
-    .filter((e) => e.category === 'tax' || e.category === 'taxes' || e.description?.toLowerCase().includes('f29') || e.description?.toLowerCase().includes('impuesto'))
+  // Dynamic sums from non-deleted expenses table
+  const nonDeletedExpenses = expenses.filter((e) => !e.deleted_at);
+
+  const realExpensesTaxes = nonDeletedExpenses
+    .filter((e) => {
+      const cat = (e.category || '').toLowerCase();
+      const desc = (e.description || '').toLowerCase();
+      return cat.includes('tax') || cat.includes('impuesto') || desc.includes('f29') || desc.includes('impuesto');
+    })
     .reduce((sum, e) => sum + Number(e.total || e.amount || 0), 0);
   const realTaxes = realExpensesTaxes > 0 ? realExpensesTaxes : 87482; // fallback F29 base
 
-  const realExpensesOpEx = expenses
-    .filter((e) => ['software', 'tools', 'operational', 'office', 'services'].includes(e.category) || (!e.category?.includes('tax') && !e.category?.includes('salary') && !e.description?.toLowerCase().includes('f29')))
+  const realExpensesOpEx = nonDeletedExpenses
+    .filter((e) => {
+      const cat = (e.category || '').toLowerCase();
+      const desc = (e.description || '').toLowerCase();
+      const isTax = cat.includes('tax') || cat.includes('impuesto') || desc.includes('f29') || desc.includes('impuesto');
+      const isSalary = cat.includes('salary') || cat.includes('sueldo') || desc.includes('sueldo');
+      return !isTax && !isSalary;
+    })
     .reduce((sum, e) => sum + Number(e.total || e.amount || 0), 0);
   const realOpEx = realExpensesOpEx > 0 ? realExpensesOpEx : 92568; // fallback tools & workspace
 
@@ -68,10 +80,10 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
   // Dispersion calculations (Profit First Rango A: 5% Profit, 45% Owner, 20% Taxes, 30% OpEx)
   const budgeted = {
     income: dispersionInput,
-    profit5: Math.round(dispersionInput * 0.05), // Banco Chile
-    owner45: Math.round(dispersionInput * 0.45), // Falabella
-    taxes20: Math.round(dispersionInput * 0.20), // Tenpo (6% remunerada)
-    opex30: Math.round(dispersionInput * 0.30), // Santander
+    profit5: Math.round(dispersionInput * 0.05), // Banco Chile (5%)
+    owner45: Math.round(dispersionInput * 0.45), // Falabella (45%)
+    taxes20: Math.round(dispersionInput * 0.20), // Tenpo 6% (20%)
+    opex30: Math.round(dispersionInput * 0.30), // Santander (30%)
   };
 
   const accountRows = [
@@ -80,9 +92,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       name: 'Cuenta Empresa (Ingresos)',
       bank: 'Banco Estado Empresa',
       pctLabel: 'Base (100%)',
-      budget: totalInvoiced,
+      budget: dispersionInput,
       real: currentCash,
-      diff: currentCash - totalInvoiced,
+      diff: currentCash - dispersionInput,
       note: 'Total Facturado vs Caja Neta Disponible en cuenta',
       isSource: true,
     },
@@ -93,8 +105,8 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       pctLabel: '5%',
       budget: budgeted.profit5,
       real: realProfit,
-      diff: realProfit - budgeted.profit5,
-      note: 'Fondo de utilidades y reservas',
+      diff: budgeted.profit5 - realProfit,
+      note: 'Fondo de utilidades y reservas (No retirado)',
       isSource: false,
     },
     {
@@ -104,7 +116,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       pctLabel: '45%',
       budget: budgeted.owner45,
       real: realOwnerSalary,
-      diff: realOwnerSalary - budgeted.owner45,
+      diff: budgeted.owner45 - realOwnerSalary,
       note: 'Sueldo / Retiro del socio (No retirado)',
       isSource: false,
     },
@@ -115,8 +127,8 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       pctLabel: '20%',
       budget: budgeted.taxes20,
       real: realTaxes,
-      diff: realTaxes - budgeted.taxes20,
-      note: 'Suma de impuestos y F29 desde tabla de gastos',
+      diff: budgeted.taxes20 - realTaxes,
+      note: 'Suma de impuestos y F29 pagados desde cuenta empresa',
       isSource: false,
     },
     {
@@ -126,8 +138,8 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
       pctLabel: '30%',
       budget: budgeted.opex30,
       real: realOpEx,
-      diff: realOpEx - budgeted.opex30,
-      note: 'Suma de SaaS, software y OpEx desde gastos',
+      diff: budgeted.opex30 - realOpEx,
+      note: 'Suma de SaaS, herramientas y OpEx pagados',
       isSource: false,
     },
   ];
@@ -617,11 +629,11 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                 />
                 <button
                   type="button"
-                  onClick={() => setDispersionInput(currentCash)}
+                  onClick={() => setDispersionInput(totalInvoiced)}
                   className="btn btn-ghost btn-sm"
                   style={{ fontSize: '0.75rem' }}
                 >
-                  Restablecer Saldo
+                  Restablecer Facturado
                 </button>
               </div>
             </div>
@@ -632,7 +644,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     <th style={{ padding: '12px 14px' }}>Cuenta Bancaria, Criterio & Destino</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Retirado</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
                     <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
@@ -640,14 +652,43 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                 </thead>
                 <tbody>
                   {accountRows.map((acc) => {
-                    const isUnderBudget = acc.diff < 0;
-                    const isOverBudget = acc.diff > 0;
                     const isSource = acc.isSource;
+                    const isFavorable = acc.diff > 0;
+                    const isOverBudget = acc.diff < 0;
 
-                    // Color: Azul si ocupó menos de lo presupuestado (ahorro / favorable), Rojo si ocupó más
-                    const diffColor = isSource ? 'var(--text-primary)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
-                    const diffBg = isSource ? 'rgba(255, 255, 255, 0.05)' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
-                    const diffBorder = isSource ? '1px solid var(--border-glass)' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
+                    // Color & badge formatting:
+                    // Si es positivo (saldo a favor / no retirado / ahorro) -> Azul (#3b82f6) sin signo negativo
+                    // Si es negativo (sobregasto o déficit de cuenta) -> Rojo (#ef4444) con signo negativo
+                    const diffColor = isSource
+                      ? (acc.diff < 0 ? '#ef4444' : '#3b82f6')
+                      : isFavorable
+                      ? '#3b82f6'
+                      : isOverBudget
+                      ? '#ef4444'
+                      : 'var(--text-muted)';
+
+                    const diffBg = isSource
+                      ? (acc.diff < 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)')
+                      : isFavorable
+                      ? 'rgba(59, 130, 246, 0.1)'
+                      : isOverBudget
+                      ? 'rgba(239, 68, 68, 0.1)'
+                      : 'transparent';
+
+                    const diffBorder = isSource
+                      ? (acc.diff < 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(59, 130, 246, 0.25)')
+                      : isFavorable
+                      ? '1px solid rgba(59, 130, 246, 0.25)'
+                      : isOverBudget
+                      ? '1px solid rgba(239, 68, 68, 0.25)'
+                      : 'none';
+
+                    // Formato de número en Diferencia:
+                    // Para valores favorables (> 0): SIN signo negativo (ej: $132.388)
+                    // Para valores en contra (< 0): CON signo negativo (ej: -$1.221.582)
+                    const diffFormatted = acc.diff < 0
+                      ? `-${formatMoney(Math.abs(acc.diff))}`
+                      : formatMoney(acc.diff);
 
                     return (
                       <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
@@ -668,7 +709,8 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                         <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                           {formatMoney(acc.budget)}
                         </td>
-                        <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: isSource ? 'var(--text-primary)' : acc.real > 0 ? '#10b981' : 'var(--text-muted)' }}>
+                        {/* Columna Retirado: números en gris (var(--text-muted)) para filas 2 a 5, y blanco/normal para cuenta empresa */}
+                        <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: isSource ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                           {formatMoney(acc.real)}
                         </td>
                         <td style={{ padding: '14px', textAlign: 'right' }}>
@@ -687,7 +729,7 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                               fontSize: '0.85rem',
                             }}
                           >
-                            {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
+                            {diffFormatted}
                           </div>
                         </td>
                         <td style={{ padding: '14px', textAlign: 'center' }}>
@@ -695,9 +737,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                             <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
                               CUENTA MATRIZ
                             </span>
-                          ) : isUnderBudget ? (
+                          ) : isFavorable ? (
                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
-                              🔵 Ahorro / Menor gasto
+                              🔵 Saldo a favor / Ahorro
                             </span>
                           ) : isOverBudget ? (
                             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
@@ -721,14 +763,14 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
                     <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
                       {formatMoney(dispersionInput)}
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontSize: '1rem' }}>
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: '1rem' }}>
                       {formatMoney(realTaxes + realOpEx)}
                     </td>
                     <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#3b82f6', fontSize: '1rem' }}>
-                      {formatMoney((realTaxes + realOpEx) - (budgeted.profit5 + budgeted.owner45 + budgeted.taxes20 + budgeted.opex30))}
+                      {formatMoney(dispersionInput - (realTaxes + realOpEx))}
                     </td>
                     <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                      Saldo Disponible: {formatMoney(dispersionInput - (realTaxes + realOpEx))}
+                      Saldo Remanente: {formatMoney(dispersionInput - (realTaxes + realOpEx))}
                     </td>
                   </tr>
                 </tfoot>

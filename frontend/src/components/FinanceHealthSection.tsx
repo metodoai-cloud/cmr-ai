@@ -7,6 +7,8 @@ import {
   ArrowUpRight,
   Scale,
   Wallet,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatMoney } from '../App';
 
@@ -21,6 +23,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
 }) => {
   const [runwayScenario, setRunwayScenario] = useState<'with_salary' | 'without_salary'>('with_salary');
   const [dispersionInput, setDispersionInput] = useState<number>(currentCash);
+  const [showCostMatrix, setShowCostMatrix] = useState<boolean>(false);
+  const [showBankDispersion, setShowBankDispersion] = useState<boolean>(false);
+  const [showVetTable, setShowVetTable] = useState<boolean>(false);
 
   // Constants based on Junta 2026-09-01
   const ownerSalaryTarget = 650000;
@@ -297,172 +302,208 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
 
       {/* 2. MATRIZ DE COSTOS MENSUALES (TEÓRICO VS CUENTA EMPRESA VS TARJETA PERSONAL) */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ marginBottom: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CreditCard size={20} color="var(--primary)" />
-            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-              Matriz de Costos Mensuales
-            </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showCostMatrix ? '18px' : 0 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CreditCard size={20} color="var(--primary)" />
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+                Matriz de Costos Mensuales
+              </h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Diferenciación entre costo total de operación vs. lo que realmente se paga hoy desde la cuenta empresa y lo cubierto por tarjeta personal del dueño.
+            </p>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-            Diferenciación entre costo total de operación vs. lo que realmente se paga hoy desde la cuenta empresa y lo cubierto por tarjeta personal del dueño.
-          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowCostMatrix(!showCostMatrix)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              backgroundColor: showCostMatrix ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+              color: showCostMatrix ? 'var(--primary-light)' : '#ffffff',
+              border: showCostMatrix ? '1px solid var(--primary)' : '1px solid var(--primary)',
+              boxShadow: showCostMatrix ? 'none' : 'var(--shadow-glow)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {showCostMatrix ? (
+              <>
+                <ChevronUp size={16} />
+                <span>Ocultar Matriz</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                <span>Mostrar Matriz (7 conceptos)</span>
+              </>
+            )}
+          </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <th style={{ padding: '12px 14px' }}>Concepto / Servicio</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Costo Teórico</th>
-                <th style={{ padding: '12px 14px' }}>Método de Pago Actual</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Cuenta Empresa</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Tarjeta Personal</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>¿Carga al Total?</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Google AI Pro</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$21.700</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Tarjeta Personal
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$21.700</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+        {showCostMatrix && (
+          <div className="animate-fade-in" style={{ overflowX: 'auto', marginTop: '16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <th style={{ padding: '12px 14px' }}>Concepto / Servicio</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Costo Teórico</th>
+                  <th style={{ padding: '12px 14px' }}>Método de Pago Actual</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Cuenta Empresa</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Tarjeta Personal</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'center' }}>¿Carga al Total?</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Google AI Pro</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$21.700</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Tarjeta Personal
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$21.700</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Anthropic Claude</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$22.768</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Tarjeta Personal
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$22.768</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Anthropic Claude</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$22.768</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Tarjeta Personal
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$22.768</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>ChatGPT Plus</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$20.200</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Tarjeta Personal
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$20.200</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>ChatGPT Plus</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$20.200</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Tarjeta Personal
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$20.200</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Notion</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$12.000</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Tarjeta Personal
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$12.000</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>Notion</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$12.000</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Tarjeta Personal
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>$12.000</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Google Workspace
-                  <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(1-sep)</span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$15.900</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Cuenta Empresa
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$15.900</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Google Workspace
+                    <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(1-sep)</span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$15.900</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Cuenta Empresa
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$15.900</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  F29 SII (Impuestos / Provisión)
-                  <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(Variable)</span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$87.482</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Cuenta Empresa (Tenpo 20%)
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$87.482</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
-                </td>
-              </tr>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    F29 SII (Impuestos / Provisión)
+                    <span style={{ fontSize: '0.7rem', color: 'var(--primary-light)', marginLeft: '6px' }}>(Variable)</span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$87.482</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Cuenta Empresa (Tenpo 20%)
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>$87.482</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>—</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Sí</span>
+                  </td>
+                </tr>
 
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                  Sueldo Dueño
-                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>(Objetivo)</span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$650.000</td>
-                <td style={{ padding: '12px 14px' }}>
-                  <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)', backgroundColor: 'rgba(148, 163, 184, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    No retirado (Condicionado)
-                  </span>
-                </td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
-                <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
-                <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                  <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>No (0 retirado)</span>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
-                <td style={{ padding: '14px', color: 'var(--text-primary)' }}>TOTAL CARGADO / PROYECTADO</td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
-                  $830.050
-                </td>
-                <td style={{ padding: '14px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                  Real cargado: $180.050/mes
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>
-                  $103.382
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>
-                  $76.668
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Total Real: $180.050
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Sueldo Dueño
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>(Objetivo)</span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace" }}>$650.000</td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)', backgroundColor: 'rgba(148, 163, 184, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      No retirado (Condicionado)
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>$0</td>
+                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                    <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>No (0 retirado)</span>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
+                  <td style={{ padding: '14px', color: 'var(--text-primary)' }}>TOTAL CARGADO / PROYECTADO</td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
+                    $830.050
+                  </td>
+                  <td style={{ padding: '14px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                    Real cargado: $180.050/mes
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981' }}>
+                    $103.382
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#f59e0b' }}>
+                    $76.668
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Total Real: $180.050
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 3. SISTEMA DE CUENTAS BANCARIAS Y DISPERSIÓN PROFIT FIRST (RANGO A) */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showBankDispersion ? '20px' : 0 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Building size={20} color="var(--primary)" />
@@ -475,328 +516,401 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
             </p>
           </div>
 
-          {/* Dispersion Alert Status */}
-          <div
-            style={{
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '0.8rem',
-              color: '#f59e0b',
-              fontWeight: 600,
-            }}
-          >
-            <AlertTriangle size={15} />
-            <span>Dispersión Pendiente: 100% concentrado en Banco Estado</span>
-          </div>
-        </div>
-
-        {/* Live Dispersion Simulator Box */}
-        <div
-          style={{
-            padding: '16px 20px',
-            backgroundColor: 'var(--bg-card-solid)',
-            borderRadius: 'var(--radius-sm)',
-            border: '1px solid var(--border-glass)',
-            marginBottom: '20px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '14px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Wallet size={18} color="var(--primary-light)" />
-            <div>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                Simular o Aplicar Dispersión de Fondos
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Ingresa el monto disponible a repartir según la matriz 5/45/20/30:
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Monto ($):</span>
-            <input
-              type="number"
-              value={dispersionInput}
-              onChange={(e) => setDispersionInput(Number(e.target.value) || 0)}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Dispersion Alert Status */}
+            <div
               style={{
-                width: '140px',
-                padding: '6px 10px',
-                backgroundColor: 'var(--bg-glass)',
-                border: '1px solid var(--border-focus)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontWeight: 700,
-                fontSize: '0.9rem',
-                outline: 'none',
+                padding: '6px 14px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '0.8rem',
+                color: '#f59e0b',
+                fontWeight: 600,
               }}
-            />
+            >
+              <AlertTriangle size={15} />
+              <span>Dispersión Pendiente: 100% en Banco Estado</span>
+            </div>
+
             <button
               type="button"
-              onClick={() => setDispersionInput(currentCash)}
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: '0.75rem' }}
+              onClick={() => setShowBankDispersion(!showBankDispersion)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                backgroundColor: showBankDispersion ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+                color: showBankDispersion ? 'var(--primary-light)' : '#ffffff',
+                border: showBankDispersion ? '1px solid var(--primary)' : '1px solid var(--primary)',
+                boxShadow: showBankDispersion ? 'none' : 'var(--shadow-glow)',
+                transition: 'all 0.15s ease',
+              }}
             >
-              Restablecer Saldo
+              {showBankDispersion ? (
+                <>
+                  <ChevronUp size={16} />
+                  <span>Ocultar Cuentas & Dispersión</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={16} />
+                  <span>Mostrar Cuentas & Dispersión</span>
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        {/* Tabla Comparativa de Cuentas Bancarias & Dispersión (Presupuestado vs Real vs Diferencia) */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <th style={{ padding: '12px 14px' }}>Cuenta Bancaria & Criterio</th>
-                <th style={{ padding: '12px 14px' }}>Banco & % Meta</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Real (Saliente / Asignado)</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {accountRows.map((acc) => {
-                const isUnderBudget = acc.diff < 0;
-                const isOverBudget = acc.diff > 0;
-                const isSource = acc.isSource;
+        {showBankDispersion && (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
+            {/* Live Dispersion Simulator Box */}
+            <div
+              style={{
+                padding: '16px 20px',
+                backgroundColor: 'var(--bg-card-solid)',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px solid var(--border-glass)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '14px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Wallet size={18} color="var(--primary-light)" />
+                <div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Simular o Aplicar Dispersión de Fondos
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Ingresa el monto disponible a repartir según la matriz 5/45/20/30:
+                  </div>
+                </div>
+              </div>
 
-                // Color: Azul si ocupó menos de lo presupuestado (ahorro / favorable), Rojo si ocupó más
-                const diffColor = isSource ? 'var(--text-muted)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
-                const diffBg = isSource ? 'transparent' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
-                const diffBorder = isSource ? 'transparent' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Monto ($):</span>
+                <input
+                  type="number"
+                  value={dispersionInput}
+                  onChange={(e) => setDispersionInput(Number(e.target.value) || 0)}
+                  style={{
+                    width: '140px',
+                    padding: '6px 10px',
+                    backgroundColor: 'var(--bg-glass)',
+                    border: '1px solid var(--border-focus)',
+                    borderRadius: '6px',
+                    color: 'var(--text-primary)',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setDispersionInput(currentCash)}
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: '0.75rem' }}
+                >
+                  Restablecer Saldo
+                </button>
+              </div>
+            </div>
 
-                return (
-                  <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{acc.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{acc.note}</div>
+            {/* Tabla Comparativa de Cuentas Bancarias & Dispersión (Presupuestado vs Real vs Diferencia) */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '12px 14px' }}>Cuenta Bancaria & Criterio</th>
+                    <th style={{ padding: '12px 14px' }}>Banco & % Meta</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Real (Saliente / Asignado)</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accountRows.map((acc) => {
+                    const isUnderBudget = acc.diff < 0;
+                    const isOverBudget = acc.diff > 0;
+                    const isSource = acc.isSource;
+
+                    // Color: Azul si ocupó menos de lo presupuestado (ahorro / favorable), Rojo si ocupó más
+                    const diffColor = isSource ? 'var(--text-muted)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
+                    const diffBg = isSource ? 'transparent' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
+                    const diffBorder = isSource ? 'transparent' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
+
+                    return (
+                      <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                        <td style={{ padding: '14px' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{acc.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{acc.note}</div>
+                        </td>
+                        <td style={{ padding: '14px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{acc.bank}</div>
+                          <span className="badge badge-primary" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                            {acc.pctLabel}
+                          </span>
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                          {formatMoney(acc.budget)}
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: isSource ? 'var(--text-primary)' : acc.real > 0 ? '#10b981' : 'var(--text-muted)' }}>
+                          {formatMoney(acc.real)}
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'right' }}>
+                          {isSource ? (
+                            <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                              $0 (Base)
+                            </span>
+                          ) : (
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                backgroundColor: diffBg,
+                                border: diffBorder,
+                                color: diffColor,
+                                fontWeight: 700,
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '14px', textAlign: 'center' }}>
+                          {isSource ? (
+                            <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
+                              CUENTA MATRIZ
+                            </span>
+                          ) : isUnderBudget ? (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+                              🔵 Ahorro / Menor gasto
+                            </span>
+                          ) : isOverBudget ? (
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                              🔴 Sobregasto / Exceso
+                            </span>
+                          ) : (
+                            <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                              EN META
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
+                    <td colSpan={2} style={{ padding: '14px', color: 'var(--text-primary)' }}>
+                      TOTALES DE CONTROL DISPERSIÓN
                     </td>
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{acc.bank}</div>
-                      <span className="badge badge-primary" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
-                        {acc.pctLabel}
-                      </span>
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
+                      {formatMoney(dispersionInput)}
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                      {formatMoney(acc.budget)}
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontSize: '1rem' }}>
+                      {formatMoney(realTaxes + realOpEx)}
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: isSource ? 'var(--text-primary)' : acc.real > 0 ? '#10b981' : 'var(--text-muted)' }}>
-                      {formatMoney(acc.real)}
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#3b82f6', fontSize: '1rem' }}>
+                      {formatMoney((realTaxes + realOpEx) - (budgeted.profit5 + budgeted.owner45 + budgeted.taxes20 + budgeted.opex30))}
                     </td>
-                    <td style={{ padding: '14px', textAlign: 'right' }}>
-                      {isSource ? (
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                          $0 (Base)
-                        </span>
-                      ) : (
-                        <div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: diffBg,
-                            border: diffBorder,
-                            color: diffColor,
-                            fontWeight: 700,
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: '0.85rem',
-                          }}
-                        >
-                          {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
-                        </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '14px', textAlign: 'center' }}>
-                      {isSource ? (
-                        <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
-                          CUENTA MATRIZ
-                        </span>
-                      ) : isUnderBudget ? (
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
-                          🔵 Ahorro / Menor gasto
-                        </span>
-                      ) : isOverBudget ? (
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
-                          🔴 Sobregasto / Exceso
-                        </span>
-                      ) : (
-                        <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
-                          EN META
-                        </span>
-                      )}
+                    <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                      Saldo Disponible: {formatMoney(dispersionInput - (realTaxes + realOpEx))}
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
-                <td colSpan={2} style={{ padding: '14px', color: 'var(--text-primary)' }}>
-                  TOTALES DE CONTROL DISPERSIÓN
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
-                  {formatMoney(dispersionInput)}
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontSize: '1rem' }}>
-                  {formatMoney(realTaxes + realOpEx)}
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#3b82f6', fontSize: '1rem' }}>
-                  {formatMoney((realTaxes + realOpEx) - (budgeted.profit5 + budgeted.owner45 + budgeted.taxes20 + budgeted.opex30))}
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Saldo Disponible: {formatMoney(dispersionInput - (realTaxes + realOpEx))}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. TABLA DE VET POR SERVICIO VENDIDO */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ marginBottom: '18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Scale size={20} color="var(--primary)" />
-            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-              Tabla de VET por Servicio Vendido (Valor Económico Total)
-            </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showVetTable ? '18px' : 0 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Scale size={20} color="var(--primary)" />
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+                Tabla de VET por Servicio Vendido (Valor Económico Total)
+              </h3>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Auditoría del valor económico generado y justificación de precios para retención y negociación con clientes.
+            </p>
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-            Auditoría del valor económico generado y justificación de precios para retención y negociación con clientes.
-          </p>
+
+          <button
+            type="button"
+            onClick={() => setShowVetTable(!showVetTable)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              backgroundColor: showVetTable ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+              color: showVetTable ? 'var(--primary-light)' : '#ffffff',
+              border: showVetTable ? '1px solid var(--primary)' : '1px solid var(--primary)',
+              boxShadow: showVetTable ? 'none' : 'var(--shadow-glow)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {showVetTable ? (
+              <>
+                <ChevronUp size={16} />
+                <span>Ocultar VET</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                <span>Mostrar VET (3 servicios)</span>
+              </>
+            )}
+          </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                <th style={{ padding: '12px 14px' }}>Cliente / Servicio</th>
-                <th style={{ padding: '12px 14px' }}>Tipo</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Precio Real</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Ref. Mercado</th>
-                <th style={{ padding: '12px 14px', textAlign: 'right' }}>VET Defendible</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Ratio VET</th>
-                <th style={{ padding: '12px 14px' }}>Palancas de Valor & Justificación</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Acmotrack */}
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '14px' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Acmotrack</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>2.1 Diagnóstico + Ventas Fraccional</div>
-                </td>
-                <td style={{ padding: '14px' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#c084fc', backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Retainer + Setup
-                  </span>
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
-                  <div>$790.000<span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>/m</span></div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Setup: $1.059.100</div>
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
-                  $1.800.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
-                  $4.145.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#10b981', fontWeight: 800, backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
-                    <ArrowUpRight size={14} /> 5,25x
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>4,19x s/ref</div>
-                </td>
-                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Ahorro de horas en prospección manual, mitigación de fuga de leads y automatización centralizada de pipeline.
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>DEFENDIDO</span>
-                </td>
-              </tr>
+        {showVetTable && (
+          <div className="animate-fade-in" style={{ overflowX: 'auto', marginTop: '16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <th style={{ padding: '12px 14px' }}>Cliente / Servicio</th>
+                  <th style={{ padding: '12px 14px' }}>Tipo</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Precio Real</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>Ref. Mercado</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right' }}>VET Defendible</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'center' }}>Ratio VET</th>
+                  <th style={{ padding: '12px 14px' }}>Palancas de Valor & Justificación</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Acmotrack */}
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '14px' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Acmotrack</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>2.1 Diagnóstico + Ventas Fraccional</div>
+                  </td>
+                  <td style={{ padding: '14px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#c084fc', backgroundColor: 'rgba(168, 85, 247, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Retainer + Setup
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                    <div>$790.000<span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>/m</span></div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Setup: $1.059.100</div>
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                    $1.800.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                    $4.145.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#10b981', fontWeight: 800, backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                      <ArrowUpRight size={14} /> 5,25x
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '2px' }}>4,19x s/ref</div>
+                  </td>
+                  <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Ahorro de horas en prospección manual, mitigación de fuga de leads y automatización centralizada de pipeline.
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>DEFENDIDO</span>
+                  </td>
+                </tr>
 
-              {/* Protea */}
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '14px' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Protea</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Automatización Comercial & IA</div>
-                </td>
-                <td style={{ padding: '14px' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Proyecto One-Time
-                  </span>
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
-                  $890.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
-                  $1.500.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
-                  $3.200.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#818cf8', fontWeight: 800, backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
-                    <ArrowUpRight size={14} /> 3,60x
-                  </div>
-                </td>
-                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Reducción drástica del tiempo de respuesta a solicitudes entrantes y captura estandarizada de cotizaciones.
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
-                </td>
-              </tr>
+                {/* Protea */}
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '14px' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Protea</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Automatización Comercial & IA</div>
+                  </td>
+                  <td style={{ padding: '14px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#818cf8', backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Proyecto One-Time
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                    $890.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                    $1.500.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                    $3.200.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#818cf8', fontWeight: 800, backgroundColor: 'rgba(99, 102, 241, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                      <ArrowUpRight size={14} /> 3,60x
+                    </div>
+                  </td>
+                  <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Reducción drástica del tiempo de respuesta a solicitudes entrantes y captura estandarizada de cotizaciones.
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
+                  </td>
+                </tr>
 
-              {/* Go Plan Be */}
-              <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                <td style={{ padding: '14px' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Go Plan Be</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diagnóstico & Sistema IA</div>
-                </td>
-                <td style={{ padding: '14px' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#2dd4bf', backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                    Setup
-                  </span>
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
-                  $650.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
-                  $1.200.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
-                  $2.400.000
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#2dd4bf', fontWeight: 800, backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
-                    <ArrowUpRight size={14} /> 3,69x
-                  </div>
-                </td>
-                <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                  Estandarización de flujos operativos y eliminación de cuellos de botella en la administración de proyectos.
-                </td>
-                <td style={{ padding: '14px', textAlign: 'center' }}>
-                  <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                {/* Go Plan Be */}
+                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                  <td style={{ padding: '14px' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Go Plan Be</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diagnóstico & Sistema IA</div>
+                  </td>
+                  <td style={{ padding: '14px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#2dd4bf', backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                      Setup
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>
+                    $650.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)' }}>
+                    $1.200.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontWeight: 800, fontSize: '0.95rem' }}>
+                    $2.400.000
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#2dd4bf', fontWeight: 800, backgroundColor: 'rgba(13, 148, 136, 0.1)', padding: '3px 8px', borderRadius: '6px' }}>
+                      <ArrowUpRight size={14} /> 3,69x
+                    </div>
+                  </td>
+                  <td style={{ padding: '14px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    Estandarización de flujos operativos y eliminación de cuellos de botella en la administración de proyectos.
+                  </td>
+                  <td style={{ padding: '14px', textAlign: 'center' }}>
+                    <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>EN ANÁLISIS</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -41,6 +41,8 @@ import {
   LogOut,
   User as UserIcon,
   UserCheck,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { crmApi } from './api';
 import { processNaturalLanguageInput } from './aiSimulator';
@@ -151,6 +153,8 @@ export default function App() {
   // Invoice Edit Modal State
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
+  const [showInvoicesTable, setShowInvoicesTable] = useState(false);
+  const [showExpensesList, setShowExpensesList] = useState(false);
   const [invoiceForm, setInvoiceForm] = useState({
     invoice_number: '',
     status: 'draft',
@@ -1871,325 +1875,409 @@ Equipo Método AI`;
             <FinanceHealthSection currentCash={dashboardData?.finance?.net_cash || 1426168} expenses={expenses} />
 
             {/* Invoices Table */}
-            <div className="glass-card" style={{ padding: '24px', overflowX: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div className="glass-card" style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: showInvoicesTable ? '18px' : 0 }}>
                 <div>
                   <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0 }}>Facturas Emitidas</h3>
                   <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
                     {invoices.length} {invoices.length === 1 ? 'factura registrada' : 'facturas registradas'}
                   </span>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowInvoicesTable(!showInvoicesTable)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    backgroundColor: showInvoicesTable ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+                    color: showInvoicesTable ? 'var(--primary-light)' : '#ffffff',
+                    border: showInvoicesTable ? '1px solid var(--primary)' : '1px solid var(--primary)',
+                    boxShadow: showInvoicesTable ? 'none' : 'var(--shadow-glow)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {showInvoicesTable ? (
+                    <>
+                      <ChevronUp size={16} />
+                      <span>Ocultar Facturas</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={16} />
+                      <span>Mostrar Facturas ({invoices.length})</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              {invoices.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                  No hay facturas emitidas registradas en el sistema.
-                </div>
-              ) : (
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      <th style={{ padding: '12px 14px', width: '10%', whiteSpace: 'nowrap' }}>N° Factura</th>
-                      <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
-                      <th style={{ padding: '12px 14px', width: '14%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
-                      <th style={{ padding: '12px 14px', width: '16%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Monto</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Total & Estado</th>
-                      <th style={{ padding: '12px 14px', textAlign: 'center', width: '12%', whiteSpace: 'nowrap' }}>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const sortedInvoices = [...invoices].sort((a, b) => {
-                        const getNum = (inv: any) => {
-                          if (!inv.invoice_number) return -1;
-                          const match = String(inv.invoice_number).replace(/[^0-9]/g, '');
-                          return match ? parseInt(match, 10) : -1;
-                        };
-                        const numA = getNum(a);
-                        const numB = getNum(b);
-                        if (numA !== -1 && numB !== -1) {
-                          if (numB !== numA) return numB - numA; // Mayor a menor (DESC)
-                        }
-                        if (numA !== -1 && numB === -1) return -1;
-                        if (numA === -1 && numB !== -1) return 1;
-                        return new Date(b.created_at || b.issue_date || 0).getTime() - new Date(a.created_at || a.issue_date || 0).getTime();
-                      });
+              {showInvoicesTable && (
+                <div className="animate-fade-in" style={{ overflowX: 'auto', marginTop: '14px' }}>
+                  {invoices.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                      No hay facturas emitidas registradas en el sistema.
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          <th style={{ padding: '12px 14px', width: '10%', whiteSpace: 'nowrap' }}>N° Factura</th>
+                          <th style={{ padding: '12px 14px', width: '22%', whiteSpace: 'nowrap' }}>Cliente / Empresa</th>
+                          <th style={{ padding: '12px 14px', width: '14%', whiteSpace: 'nowrap' }}>Fecha Emisión</th>
+                          <th style={{ padding: '12px 14px', width: '16%', whiteSpace: 'nowrap' }}>Fecha Pago / Vence</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Monto</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'right', width: '13%', whiteSpace: 'nowrap' }}>Total & Estado</th>
+                          <th style={{ padding: '12px 14px', textAlign: 'center', width: '12%', whiteSpace: 'nowrap' }}>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const sortedInvoices = [...invoices].sort((a, b) => {
+                            const getNum = (inv: any) => {
+                              if (!inv.invoice_number) return -1;
+                              const match = String(inv.invoice_number).replace(/[^0-9]/g, '');
+                              return match ? parseInt(match, 10) : -1;
+                            };
+                            const numA = getNum(a);
+                            const numB = getNum(b);
+                            if (numA !== -1 && numB !== -1) {
+                              if (numB !== numA) return numB - numA; // Mayor a menor (DESC)
+                            }
+                            if (numA !== -1 && numB === -1) return -1;
+                            if (numA === -1 && numB !== -1) return 1;
+                            return new Date(b.created_at || b.issue_date || 0).getTime() - new Date(a.created_at || a.issue_date || 0).getTime();
+                          });
 
-                      return sortedInvoices.map((inv) => {
-                        // 1. Direct joined relations
-                        const clientObj = Array.isArray(inv.clients) ? inv.clients[0] : inv.clients;
-                        const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
-                        const contactObj = clientObj?.contacts ? (Array.isArray(clientObj.contacts) ? clientObj.contacts[0] : clientObj.contacts) : null;
+                          return sortedInvoices.map((inv) => {
+                            // 1. Direct joined relations
+                            const clientObj = Array.isArray(inv.clients) ? inv.clients[0] : inv.clients;
+                            const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+                            const contactObj = clientObj?.contacts ? (Array.isArray(clientObj.contacts) ? clientObj.contacts[0] : clientObj.contacts) : null;
 
-                        // 2. State-level fallback lookups
-                        const fallbackProject = projects.find((p) => p.id === inv.project_id);
-                        const fallbackSub = subscriptions.find((s) => s.id === inv.subscription_id);
-                        const fallbackOpp = allOpps.find((o) => o.id === inv.opportunity_id || o.id === fallbackProject?.opportunity_id || o.id === fallbackSub?.opportunity_id);
-                        const fallbackComp = companies.find((c) => c.id === companyObj?.id || c.id === fallbackOpp?.company_id || (inv.total === 1059100 && c.name?.includes('Acmotrack')));
-                        const fallbackCont = contacts.find((c) => c.id === contactObj?.id || c.id === fallbackOpp?.contact_id || (inv.total === 1059100 && c.first_name?.includes('Felipe')));
+                            // 2. State-level fallback lookups
+                            const fallbackProject = projects.find((p) => p.id === inv.project_id);
+                            const fallbackSub = subscriptions.find((s) => s.id === inv.subscription_id);
+                            const fallbackOpp = allOpps.find((o) => o.id === inv.opportunity_id || o.id === fallbackProject?.opportunity_id || o.id === fallbackSub?.opportunity_id);
+                            const fallbackComp = companies.find((c) => c.id === companyObj?.id || c.id === fallbackOpp?.company_id || (inv.total === 1059100 && c.name?.includes('Acmotrack')));
+                            const fallbackCont = contacts.find((c) => c.id === contactObj?.id || c.id === fallbackOpp?.contact_id || (inv.total === 1059100 && c.first_name?.includes('Felipe')));
 
-                        // Associated Opportunity Total with IVA
-                        const oppObj = fallbackOpp || (inv.total === 1059100 || inv.total === 529550 ? allOpps.find((o) => o.name?.includes('Acmotrack')) : null);
-                        const oppNet = oppObj ? ((Number(oppObj.setup_value) || 0) + (Number(oppObj.recurring_value) || 0)) : 0;
-                        const oppGrossWithTax = oppNet > 0 ? Math.round(oppNet * 1.19) : (Number(inv.total) || 0);
+                            // Associated Opportunity Total with IVA
+                            const oppObj = fallbackOpp || (inv.total === 1059100 || inv.total === 529550 ? allOpps.find((o) => o.name?.includes('Acmotrack')) : null);
+                            const oppNet = oppObj ? ((Number(oppObj.setup_value) || 0) + (Number(oppObj.recurring_value) || 0)) : 0;
+                            const oppGrossWithTax = oppNet > 0 ? Math.round(oppNet * 1.19) : (Number(inv.total) || 0);
 
-                        const clientName = companyObj?.name ||
-                          fallbackComp?.name ||
-                          fallbackOpp?.name?.split('—')[0]?.trim() ||
-                          (contactObj ? `${contactObj.first_name || ''} ${contactObj.last_name || ''}`.trim() : '') ||
-                          (fallbackCont ? `${fallbackCont.first_name || ''} ${fallbackCont.last_name || ''}`.trim() : '') ||
-                          inv.client_name ||
-                          'Cliente Particular';
+                            const clientName = companyObj?.name ||
+                              fallbackComp?.name ||
+                              fallbackOpp?.name?.split('—')[0]?.trim() ||
+                              (contactObj ? `${contactObj.first_name || ''} ${contactObj.last_name || ''}`.trim() : '') ||
+                              (fallbackCont ? `${fallbackCont.first_name || ''} ${fallbackCont.last_name || ''}`.trim() : '') ||
+                              inv.client_name ||
+                              'Cliente Particular';
 
-                        const contactSubtitle = (companyObj?.name || fallbackComp?.name) && (contactObj || fallbackCont)
-                          ? `${(contactObj || fallbackCont)?.first_name || ''} ${(contactObj || fallbackCont)?.last_name || ''}`.trim()
-                          : null;
+                            const contactSubtitle = (companyObj?.name || fallbackComp?.name) && (contactObj || fallbackCont)
+                              ? `${(contactObj || fallbackCont)?.first_name || ''} ${(contactObj || fallbackCont)?.last_name || ''}`.trim()
+                              : null;
 
-                        // Custom or assigned invoice number
-                        const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
-                        const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
+                            // Custom or assigned invoice number
+                            const rawNum = inv.invoice_number ? String(inv.invoice_number).trim() : '';
+                            const displayNum = rawNum ? (rawNum.startsWith('#') ? rawNum : `#${rawNum}`) : '#--';
 
-                        // Payment date logic
-                        const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
-                        const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
+                            // Payment date logic
+                            const paymentObj = inv.payments && inv.payments.length > 0 ? (Array.isArray(inv.payments) ? inv.payments[0] : inv.payments) : null;
+                            const paymentDate = paymentObj?.payment_date || inv.paid_at || (inv.total === 1059100 ? '2026-07-09' : null);
 
-                        return (
-                          <tr
-                            key={inv.id}
-                            style={{
-                              borderBottom: '1px solid var(--border-glass)',
-                              transition: 'background-color 0.15s ease',
-                            }}
-                          >
-                            {/* Col 1: N° Factura */}
-                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div
+                            return (
+                              <tr
+                                key={inv.id}
                                 style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '4px 10px',
-                                  borderRadius: '8px',
-                                  backgroundColor: rawNum ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.1)',
-                                  border: rawNum ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
-                                  color: rawNum ? 'var(--primary-light)' : 'var(--text-muted)',
-                                  fontWeight: 700,
-                                  fontFamily: "'JetBrains Mono', monospace",
-                                  fontSize: '0.85rem',
+                                  borderBottom: '1px solid var(--border-glass)',
+                                  transition: 'background-color 0.15s ease',
                                 }}
                               >
-                                <FileText size={13} />
-                                <span>{displayNum}</span>
-                              </div>
-                            </td>
-
-                            {/* Col 2: Cliente / Empresa */}
-                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
-                                {clientName}
-                              </div>
-                              {contactSubtitle && (
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                  {contactSubtitle}
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Col 3: Fecha Emisión */}
-                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
-                                <Calendar size={14} color="var(--primary-light)" />
-                                <span>{formatDate(inv.issue_date)}</span>
-                              </div>
-                            </td>
-
-                            {/* Col 4: Fecha de Pago / Vence */}
-                            <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              {inv.status === 'paid' ? (
-                                <div
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    color: '#10b981',
-                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                    border: '1px solid rgba(16, 185, 129, 0.25)',
-                                    padding: '3px 9px',
-                                    borderRadius: '6px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  <Check size={13} />
-                                  <span>Pagado: {formatDate(paymentDate || inv.issue_date)}</span>
-                                </div>
-                              ) : inv.status === 'partial' ? (
-                                <div
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    color: '#f59e0b',
-                                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                                    border: '1px solid rgba(245, 158, 11, 0.25)',
-                                    padding: '3px 9px',
-                                    borderRadius: '6px',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 500,
-                                  }}
-                                >
-                                  <Clock size={13} />
-                                  <span>Abono: {formatDate(paymentDate || inv.issue_date)}</span>
-                                </div>
-                              ) : (
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                                  <Clock size={13} />
-                                  <span>{inv.due_date ? `Vence: ${formatDate(inv.due_date)}` : 'Pendiente'}</span>
-                                </div>
-                              )}
-                            </td>
-
-                            {/* Col 5: Monto (Monto de la Factura con IVA incluido) */}
-                            <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-                                {formatMoney(Number(inv.total) || 0)}
-                              </div>
-                            </td>
-
-                            {/* Col 6: Total & Estado (Total con IVA de la Oportunidad) */}
-                            <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
-                                {formatMoney(oppGrossWithTax)}
-                              </div>
-                              <span
-                                className={`badge ${
-                                  inv.status === 'paid'
-                                    ? 'badge-success'
-                                    : inv.status === 'partial'
-                                    ? 'badge-warning'
-                                    : inv.status === 'issued'
-                                    ? 'badge-info'
-                                    : 'badge-secondary'
-                                }`}
-                              >
-                                {inv.status === 'paid'
-                                  ? 'PAGADO'
-                                  : inv.status === 'partial'
-                                  ? 'PARCIAL'
-                                  : inv.status === 'issued'
-                                  ? 'EMITIDA'
-                                  : inv.status === 'sent'
-                                  ? 'ENVIADA'
-                                  : inv.status === 'overdue'
-                                  ? 'VENCIDA'
-                                  : inv.status === 'cancelled'
-                                  ? 'ANULADA'
-                                  : 'BORRADOR'}
-                              </span>
-                            </td>
-
-                            {/* Col 7: Acciones */}
-                            <td style={{ padding: '14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                                <button
-                                  onClick={() => openEditInvoiceModal(inv)}
-                                  title="Editar Factura"
-                                  style={{
-                                    padding: '6px 8px',
-                                    borderRadius: '6px',
-                                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                    border: '1px solid rgba(99, 102, 241, 0.25)',
-                                    color: 'var(--primary-light)',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                >
-                                  <Edit size={14} />
-                                </button>
-
-                                {inv.status !== 'cancelled' && (
-                                  <button
-                                    onClick={() => handleCancelInvoice(inv.id, rawNum)}
-                                    title="Anular Factura"
+                                {/* Col 1: N° Factura */}
+                                <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div
                                     style={{
-                                      padding: '6px 8px',
-                                      borderRadius: '6px',
-                                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                      border: '1px solid rgba(245, 158, 11, 0.25)',
-                                      color: '#f59e0b',
-                                      cursor: 'pointer',
-                                      display: 'flex',
+                                      display: 'inline-flex',
                                       alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease',
+                                      gap: '4px',
+                                      padding: '4px 10px',
+                                      borderRadius: '8px',
+                                      backgroundColor: rawNum ? 'rgba(99, 102, 241, 0.12)' : 'rgba(148, 163, 184, 0.1)',
+                                      border: rawNum ? '1px solid rgba(99, 102, 241, 0.25)' : '1px solid rgba(148, 163, 184, 0.2)',
+                                      color: rawNum ? 'var(--primary-light)' : 'var(--text-muted)',
+                                      fontWeight: 700,
+                                      fontFamily: "'JetBrains Mono', monospace",
+                                      fontSize: '0.85rem',
                                     }}
                                   >
-                                    <Ban size={14} />
-                                  </button>
-                                )}
+                                    <FileText size={13} />
+                                    <span>{displayNum}</span>
+                                  </div>
+                                </td>
 
-                                <button
-                                  onClick={() => handleDeleteInvoice(inv.id, rawNum)}
-                                  title="Eliminar Factura"
-                                  style={{
-                                    padding: '6px 8px',
-                                    borderRadius: '6px',
-                                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                                    color: '#ef4444',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      });
-                    })()}
-                  </tbody>
-                </table>
+                                {/* Col 2: Cliente / Empresa */}
+                                <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                                    {clientName}
+                                  </div>
+                                  {contactSubtitle && (
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                      {contactSubtitle}
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Col 3: Fecha Emisión */}
+                                <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                                    <Calendar size={14} color="var(--primary-light)" />
+                                    <span>{formatDate(inv.issue_date)}</span>
+                                  </div>
+                                </td>
+
+                                {/* Col 4: Fecha de Pago / Vence */}
+                                <td style={{ padding: '14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  {inv.status === 'paid' ? (
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        color: '#10b981',
+                                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                                        padding: '3px 9px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      <Check size={13} />
+                                      <span>Pagado: {formatDate(paymentDate || inv.issue_date)}</span>
+                                    </div>
+                                  ) : inv.status === 'partial' ? (
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        color: '#f59e0b',
+                                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                                        padding: '3px 9px',
+                                        borderRadius: '6px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      <Clock size={13} />
+                                      <span>Abono: {formatDate(paymentDate || inv.issue_date)}</span>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                                      <Clock size={13} />
+                                      <span>{inv.due_date ? `Vence: ${formatDate(inv.due_date)}` : 'Pendiente'}</span>
+                                    </div>
+                                  )}
+                                </td>
+
+                                {/* Col 5: Monto (Monto de la Factura con IVA incluido) */}
+                                <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                    {formatMoney(Number(inv.total) || 0)}
+                                  </div>
+                                </td>
+
+                                {/* Col 6: Total & Estado (Total con IVA de la Oportunidad) */}
+                                <td style={{ padding: '14px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem', marginBottom: '4px' }}>
+                                    {formatMoney(oppGrossWithTax)}
+                                  </div>
+                                  <span
+                                    className={`badge ${
+                                      inv.status === 'paid'
+                                        ? 'badge-success'
+                                        : inv.status === 'partial'
+                                        ? 'badge-warning'
+                                        : inv.status === 'issued'
+                                        ? 'badge-info'
+                                        : 'badge-secondary'
+                                    }`}
+                                  >
+                                    {inv.status === 'paid'
+                                      ? 'PAGADO'
+                                      : inv.status === 'partial'
+                                      ? 'PARCIAL'
+                                      : inv.status === 'issued'
+                                      ? 'EMITIDA'
+                                      : inv.status === 'sent'
+                                      ? 'ENVIADA'
+                                      : inv.status === 'overdue'
+                                      ? 'VENCIDA'
+                                      : inv.status === 'cancelled'
+                                      ? 'ANULADA'
+                                      : 'BORRADOR'}
+                                  </span>
+                                </td>
+
+                                {/* Col 7: Acciones */}
+                                <td style={{ padding: '14px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                                    <button
+                                      onClick={() => openEditInvoiceModal(inv)}
+                                      title="Editar Factura"
+                                      style={{
+                                        padding: '6px 8px',
+                                        borderRadius: '6px',
+                                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                        border: '1px solid rgba(99, 102, 241, 0.25)',
+                                        color: 'var(--primary-light)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                    >
+                                      <Edit size={14} />
+                                    </button>
+
+                                    {inv.status !== 'cancelled' && (
+                                      <button
+                                        onClick={() => handleCancelInvoice(inv.id, rawNum)}
+                                        title="Anular Factura"
+                                        style={{
+                                          padding: '6px 8px',
+                                          borderRadius: '6px',
+                                          backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                          border: '1px solid rgba(245, 158, 11, 0.25)',
+                                          color: '#f59e0b',
+                                          cursor: 'pointer',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          transition: 'all 0.15s ease',
+                                        }}
+                                      >
+                                        <Ban size={14} />
+                                      </button>
+                                    )}
+
+                                    <button
+                                      onClick={() => handleDeleteInvoice(inv.id, rawNum)}
+                                      title="Eliminar Factura"
+                                      style={{
+                                        padding: '6px 8px',
+                                        borderRadius: '6px',
+                                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                                        color: '#ef4444',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
               )}
             </div>
 
             {/* Expenses List */}
             <div className="glass-card" style={{ padding: '24px' }}>
-              <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '16px' }}>Gastos Operativos</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {expenses.map((exp) => (
-                  <div
-                    key={exp.id}
-                    style={{
-                      padding: '12px 16px',
-                      backgroundColor: 'var(--bg-glass)',
-                      border: '1px solid var(--border-glass)',
-                      borderRadius: 'var(--radius-sm)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.description}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                      -{formatMoney(exp.total)}
-                    </div>
-                  </div>
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: showExpensesList ? '16px' : 0 }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>Gastos Operativos</h3>
+                  <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                    {expenses.length} {expenses.length === 1 ? 'gasto registrado' : 'gastos registrados'}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowExpensesList(!showExpensesList)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    backgroundColor: showExpensesList ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+                    color: showExpensesList ? 'var(--primary-light)' : '#ffffff',
+                    border: showExpensesList ? '1px solid var(--primary)' : '1px solid var(--primary)',
+                    boxShadow: showExpensesList ? 'none' : 'var(--shadow-glow)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {showExpensesList ? (
+                    <>
+                      <ChevronUp size={16} />
+                      <span>Ocultar Gastos</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown size={16} />
+                      <span>Mostrar Gastos ({expenses.length})</span>
+                    </>
+                  )}
+                </button>
               </div>
+
+              {showExpensesList && (
+                <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+                  {expenses.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                      No hay gastos operativos registrados en el sistema.
+                    </div>
+                  ) : (
+                    expenses.map((exp) => (
+                      <div
+                        key={exp.id}
+                        style={{
+                          padding: '12px 16px',
+                          backgroundColor: 'var(--bg-glass)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 'var(--radius-sm)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.description}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
+                          -{formatMoney(exp.total)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

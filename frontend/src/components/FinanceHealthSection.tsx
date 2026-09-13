@@ -302,17 +302,12 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
 
       {/* 2. MATRIZ DE COSTOS MENSUALES (TEÓRICO VS CUENTA EMPRESA VS TARJETA PERSONAL) */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showCostMatrix ? '18px' : 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CreditCard size={20} color="var(--primary)" />
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-                Matriz de Costos Mensuales
-              </h3>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Diferenciación entre costo total de operación vs. lo que realmente se paga hoy desde la cuenta empresa y lo cubierto por tarjeta personal del dueño.
-            </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CreditCard size={20} color="var(--primary)" />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              Matriz de Costos Mensuales
+            </h3>
           </div>
 
           <button
@@ -347,6 +342,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
             )}
           </button>
         </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '6px', marginBottom: showCostMatrix ? '18px' : 0 }}>
+          Diferenciación entre costo total de operación vs. lo que realmente se paga hoy desde la cuenta empresa y lo cubierto por tarjeta personal del dueño.
+        </p>
 
         {showCostMatrix && (
           <div className="animate-fade-in" style={{ overflowX: 'auto', marginTop: '16px' }}>
@@ -503,17 +501,12 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
 
       {/* 3. SISTEMA DE CUENTAS BANCARIAS Y DISPERSIÓN PROFIT FIRST (RANGO A) */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showBankDispersion ? '20px' : 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Building size={20} color="var(--primary)" />
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-                Cuentas Bancarias & Dispersión (Profit First Rango A)
-              </h3>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Regla de distribución del 100% de los cobros en 5 cuentas independientes.
-            </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Building size={20} color="var(--primary)" />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              Cuentas Bancarias & Dispersión (Profit First Rango A)
+            </h3>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -569,6 +562,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
             </button>
           </div>
         </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '6px', marginBottom: showBankDispersion ? '20px' : 0 }}>
+          Regla de distribución del 100% de los cobros en 5 cuentas independientes.
+        </p>
 
         {showBankDispersion && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '16px' }}>
@@ -745,17 +741,12 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
 
       {/* 4. TABLA DE VET POR SERVICIO VENDIDO */}
       <div className="glass-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px', marginBottom: showVetTable ? '18px' : 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Scale size={20} color="var(--primary)" />
-              <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
-                Tabla de VET por Servicio Vendido (Valor Económico Total)
-              </h3>
-            </div>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Auditoría del valor económico generado y justificación de precios para retención y negociación con clientes.
-            </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Scale size={20} color="var(--primary)" />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              Tabla de VET por Servicio Vendido (Valor Económico Total)
+            </h3>
           </div>
 
           <button
@@ -790,6 +781,9 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
             )}
           </button>
         </div>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '6px', marginBottom: showVetTable ? '18px' : 0 }}>
+          Auditoría del valor económico generado y justificación de precios para retención y negociación con clientes.
+        </p>
 
         {showVetTable && (
           <div className="animate-fade-in" style={{ overflowX: 'auto', marginTop: '16px' }}>

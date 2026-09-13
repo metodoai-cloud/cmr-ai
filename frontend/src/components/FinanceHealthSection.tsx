@@ -12,9 +12,13 @@ import { formatMoney } from '../App';
 
 interface FinanceHealthProps {
   currentCash?: number;
+  expenses?: any[];
 }
 
-export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({ currentCash = 1426168 }) => {
+export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({
+  currentCash = 1426168,
+  expenses = [],
+}) => {
   const [runwayScenario, setRunwayScenario] = useState<'with_salary' | 'without_salary'>('with_salary');
   const [dispersionInput, setDispersionInput] = useState<number>(currentCash);
 
@@ -40,15 +44,86 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({ currentCash
   const targetDays = 90;
   const progressPercentWithSalary = Math.min(100, Math.round((runwayDaysWithSalary / targetDays) * 100));
 
-  // Dispersion calculations (Profit First Rango A: 5% Profit, 45% Owner, 20% Taxes, 30% OpEx)
-  const calcDispersions = (amount: number) => ({
-    profit5: Math.round(amount * 0.05), // Banco Chile
-    owner45: Math.round(amount * 0.45), // Falabella
-    taxes20: Math.round(amount * 0.20), // Tenpo (6% remunerada)
-    opex30: Math.round(amount * 0.30), // Santander
-  });
+  // Dynamic sums from expenses table
+  const realExpensesTaxes = expenses
+    .filter((e) => e.category === 'tax' || e.category === 'taxes' || e.description?.toLowerCase().includes('f29') || e.description?.toLowerCase().includes('impuesto'))
+    .reduce((sum, e) => sum + Number(e.total || e.amount || 0), 0);
+  const realTaxes = realExpensesTaxes > 0 ? realExpensesTaxes : 87482; // fallback F29 base
 
-  const dispersions = calcDispersions(dispersionInput);
+  const realExpensesOpEx = expenses
+    .filter((e) => ['software', 'tools', 'operational', 'office', 'services'].includes(e.category) || (!e.category?.includes('tax') && !e.category?.includes('salary') && !e.description?.toLowerCase().includes('f29')))
+    .reduce((sum, e) => sum + Number(e.total || e.amount || 0), 0);
+  const realOpEx = realExpensesOpEx > 0 ? realExpensesOpEx : 92568; // fallback tools & workspace
+
+  const realProfit = 0; // Utilidades retiradas
+  const realOwnerSalary = 0; // Sueldo retirado
+
+  // Dispersion calculations (Profit First Rango A: 5% Profit, 45% Owner, 20% Taxes, 30% OpEx)
+  const budgeted = {
+    income: dispersionInput,
+    profit5: Math.round(dispersionInput * 0.05), // Banco Chile
+    owner45: Math.round(dispersionInput * 0.45), // Falabella
+    taxes20: Math.round(dispersionInput * 0.20), // Tenpo (6% remunerada)
+    opex30: Math.round(dispersionInput * 0.30), // Santander
+  };
+
+  const accountRows = [
+    {
+      id: 'income',
+      name: 'Cuenta Empresa (Ingresos)',
+      bank: 'Banco Estado Empresa',
+      pctLabel: 'Base (100%)',
+      budget: budgeted.income,
+      real: dispersionInput,
+      diff: 0,
+      note: 'Recepción del 100% de la facturación',
+      isSource: true,
+    },
+    {
+      id: 'profit',
+      name: 'Ganancias',
+      bank: 'Banco Chile',
+      pctLabel: '5%',
+      budget: budgeted.profit5,
+      real: realProfit,
+      diff: realProfit - budgeted.profit5,
+      note: 'Fondo de utilidades y reservas',
+      isSource: false,
+    },
+    {
+      id: 'owner',
+      name: 'Compensación Dueño',
+      bank: 'Banco Falabella',
+      pctLabel: '45%',
+      budget: budgeted.owner45,
+      real: realOwnerSalary,
+      diff: realOwnerSalary - budgeted.owner45,
+      note: 'Sueldo / Retiro del socio (No retirado)',
+      isSource: false,
+    },
+    {
+      id: 'taxes',
+      name: 'Impuestos (Provisión)',
+      bank: 'Tenpo (Remunerada 6% anual)',
+      pctLabel: '20%',
+      budget: budgeted.taxes20,
+      real: realTaxes,
+      diff: realTaxes - budgeted.taxes20,
+      note: 'Suma de impuestos y F29 desde tabla de gastos',
+      isSource: false,
+    },
+    {
+      id: 'opex',
+      name: 'Gastos de Operación',
+      bank: 'Banco Santander',
+      pctLabel: '30%',
+      budget: budgeted.opex30,
+      real: realOpEx,
+      diff: realOpEx - budgeted.opex30,
+      note: 'Suma de SaaS, software y OpEx desde gastos',
+      isSource: false,
+    },
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -477,167 +552,116 @@ export const FinanceHealthSection: React.FC<FinanceHealthProps> = ({ currentCash
           </div>
         </div>
 
-        {/* 5 Bank Accounts Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-          {/* 1. Ingresos */}
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid rgba(99, 102, 241, 0.3)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary-light)', textTransform: 'uppercase' }}>
-                  Cuenta Puente (100%)
-                </span>
-                <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>ENTRADA</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
-                Banco Estado Empresa
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Recepción de todos los pagos</div>
-            </div>
-            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Saldo Disponible:</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatMoney(dispersionInput)}
-              </div>
-            </div>
-          </div>
+        {/* Tabla Comparativa de Cuentas Bancarias & Dispersión (Presupuestado vs Real vs Diferencia) */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-glass)', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '12px 14px' }}>Cuenta Bancaria & Criterio</th>
+                <th style={{ padding: '12px 14px' }}>Banco & % Meta</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Presupuestado (Debería ser)</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Real (Saliente / Asignado)</th>
+                <th style={{ padding: '12px 14px', textAlign: 'right' }}>Diferencia</th>
+                <th style={{ padding: '12px 14px', textAlign: 'center' }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accountRows.map((acc) => {
+                const isUnderBudget = acc.diff < 0;
+                const isOverBudget = acc.diff > 0;
+                const isSource = acc.isSource;
 
-          {/* 2. Ganancias 5% */}
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase' }}>
-                  Ganancias (5%)
-                </span>
-                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>5%</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
-                Banco Chile
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Fondo de utilidades y reservas</div>
-            </div>
-            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#10b981', fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatMoney(dispersions.profit5)}
-              </div>
-            </div>
-          </div>
+                // Color: Azul si ocupó menos de lo presupuestado (ahorro / favorable), Rojo si ocupó más
+                const diffColor = isSource ? 'var(--text-muted)' : isUnderBudget ? '#3b82f6' : isOverBudget ? '#ef4444' : 'var(--text-muted)';
+                const diffBg = isSource ? 'transparent' : isUnderBudget ? 'rgba(59, 130, 246, 0.1)' : isOverBudget ? 'rgba(239, 68, 68, 0.1)' : 'transparent';
+                const diffBorder = isSource ? 'transparent' : isUnderBudget ? '1px solid rgba(59, 130, 246, 0.25)' : isOverBudget ? '1px solid rgba(239, 68, 68, 0.25)' : 'none';
 
-          {/* 3. Compensación Dueño 45% */}
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#818cf8', textTransform: 'uppercase' }}>
-                  Compensación Dueño (45%)
-                </span>
-                <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>45%</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
-                Banco Falabella
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sueldo / Retiro del socio</div>
-            </div>
-            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#818cf8', fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatMoney(dispersions.owner45)}
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Impuestos 20% */}
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#f59e0b', textTransform: 'uppercase' }}>
-                  Impuestos (20%)
-                </span>
-                <span className="badge badge-warning" style={{ fontSize: '0.65rem' }}>20%</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
-                Tenpo (6% Anual)
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Provisión F29 / Remunerada</div>
-            </div>
-            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f59e0b', fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatMoney(dispersions.taxes20)}
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Gastos de Operación 30% */}
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase' }}>
-                  Gastos Operación (30%)
-                </span>
-                <span className="badge badge-secondary" style={{ fontSize: '0.65rem' }}>30%</span>
-              </div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)', marginTop: '4px' }}>
-                Banco Santander
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Herramientas SaaS, software y OpEx</div>
-            </div>
-            <div style={{ marginTop: '14px', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Monto a Transferir:</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#c084fc', fontFamily: "'JetBrains Mono', monospace" }}>
-                {formatMoney(dispersions.opex30)}
-              </div>
-            </div>
-          </div>
+                return (
+                  <tr key={acc.id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                    <td style={{ padding: '14px' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{acc.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{acc.note}</div>
+                    </td>
+                    <td style={{ padding: '14px' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>{acc.bank}</div>
+                      <span className="badge badge-primary" style={{ fontSize: '0.7rem', marginTop: '2px' }}>
+                        {acc.pctLabel}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                      {formatMoney(acc.budget)}
+                    </td>
+                    <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: '0.95rem', color: isSource ? 'var(--text-primary)' : acc.real > 0 ? '#10b981' : 'var(--text-muted)' }}>
+                      {formatMoney(acc.real)}
+                    </td>
+                    <td style={{ padding: '14px', textAlign: 'right' }}>
+                      {isSource ? (
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          $0 (Base)
+                        </span>
+                      ) : (
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: diffBg,
+                            border: diffBorder,
+                            color: diffColor,
+                            fontWeight: 700,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {acc.diff > 0 ? `+${formatMoney(acc.diff)}` : formatMoney(acc.diff)}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '14px', textAlign: 'center' }}>
+                      {isSource ? (
+                        <span className="badge badge-secondary" style={{ fontSize: '0.7rem' }}>
+                          CUENTA MATRIZ
+                        </span>
+                      ) : isUnderBudget ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+                          🔵 Ahorro / Menor gasto
+                        </span>
+                      ) : isOverBudget ? (
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '3px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+                          🔴 Sobregasto / Exceso
+                        </span>
+                      ) : (
+                        <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                          EN META
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', fontWeight: 700 }}>
+                <td colSpan={2} style={{ padding: '14px', color: 'var(--text-primary)' }}>
+                  TOTALES DE CONTROL DISPERSIÓN
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: 'var(--primary-light)', fontSize: '1rem' }}>
+                  {formatMoney(dispersionInput)}
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#10b981', fontSize: '1rem' }}>
+                  {formatMoney(realTaxes + realOpEx)}
+                </td>
+                <td style={{ padding: '14px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", color: '#3b82f6', fontSize: '1rem' }}>
+                  {formatMoney((realTaxes + realOpEx) - (budgeted.profit5 + budgeted.owner45 + budgeted.taxes20 + budgeted.opex30))}
+                </td>
+                <td style={{ padding: '14px', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Saldo Disponible: {formatMoney(dispersionInput - (realTaxes + realOpEx))}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 

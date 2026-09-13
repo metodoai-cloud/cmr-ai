@@ -1230,8 +1230,8 @@ Equipo Método AI`;
                   <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>ESTADO DISPERSIÓN</span>
                   <Building size={18} color="#c084fc" />
                 </div>
-                <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
-                  Banco Estado
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
+                  Cuenta Empresa (Ingresos)
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', fontWeight: 600 }}>
                   ⚠️ Pendiente dispersión 5/45/20/30
@@ -1868,7 +1868,7 @@ Equipo Método AI`;
             </div>
 
             {/* Submódulo Avanzado de Salud Financiera, Runway, Costos Teóricos vs Reales, Dispersión y VET */}
-            <FinanceHealthSection currentCash={dashboardData?.finance?.net_cash || 1426168} />
+            <FinanceHealthSection currentCash={dashboardData?.finance?.net_cash || 1426168} expenses={expenses} />
 
             {/* Invoices Table */}
             <div className="glass-card" style={{ padding: '24px', overflowX: 'auto' }}>

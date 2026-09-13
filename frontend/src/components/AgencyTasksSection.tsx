@@ -4,6 +4,8 @@ import {
   Clock3,
   Circle,
   FileCode2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 export interface AgencyTask {
@@ -240,6 +242,7 @@ const INITIAL_TASKS: AgencyTask[] = [
 export const AgencyTasksSection: React.FC = () => {
   const [tasks, setTasks] = useState<AgencyTask[]>(INITIAL_TASKS);
   const [selectedEntity, setSelectedEntity] = useState<'all' | 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack'>('all');
+  const [showTasksList, setShowTasksList] = useState<boolean>(false); // Oculto por defecto al ingresar
 
   const handleToggleStatus = (taskId: number) => {
     setTasks((prev) =>
@@ -418,17 +421,49 @@ export const AgencyTasksSection: React.FC = () => {
     <div className="glass-card" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Header */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-          <h3 style={{ fontSize: '1.45rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            Tareas de la agencia
-          </h3>
-          <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
-            Haz clic en cualquier tarea para cambiar su estado
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.45rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700, letterSpacing: '-0.02em' }}>
+              Tareas de la agencia
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
+              Fotografía al 13 sep 2026 · {totalCount} tareas registradas
+            </p>
+          </div>
+
+          {/* Botón Mostrar/Ocultar Tareas */}
+          <button
+            type="button"
+            onClick={() => setShowTasksList(!showTasksList)}
+            style={{
+              padding: '8px 18px',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+              color: showTasksList ? 'var(--primary-light)' : '#ffffff',
+              border: showTasksList ? '1px solid var(--primary)' : '1px solid var(--primary)',
+              boxShadow: showTasksList ? 'none' : 'var(--shadow-glow)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            {showTasksList ? (
+              <>
+                <ChevronUp size={16} />
+                <span>Ocultar Tareas</span>
+              </>
+            ) : (
+              <>
+                <ChevronDown size={16} />
+                <span>Mostrar Tareas ({filteredTasks.length})</span>
+              </>
+            )}
+          </button>
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-          Fotografía al 13 sep 2026 · {totalCount} tareas registradas
-        </p>
       </div>
 
       {/* Top 4 KPI Cards */}
@@ -622,95 +657,97 @@ export const AgencyTasksSection: React.FC = () => {
         </button>
       </div>
 
-      {/* Task Sections Grouped by Status */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '26px', marginTop: '6px' }}>
-        {/* 1. Pendiente */}
-        {pendingTasks.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#94a3b8' }} />
-                <span>Pendiente</span>
+      {/* Task Sections Grouped by Status (Colapsable / Oculto por defecto) */}
+      {showTasksList && (
+        <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '26px', marginTop: '6px' }}>
+          {/* 1. Pendiente */}
+          {pendingTasks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#94a3b8' }} />
+                  <span>Pendiente</span>
+                </div>
+                <span
+                  style={{
+                    padding: '2px 9px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(148, 163, 184, 0.15)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {pendingTasks.length}
+                </span>
               </div>
-              <span
-                style={{
-                  padding: '2px 9px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(148, 163, 184, 0.15)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {pendingTasks.length}
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {pendingTasks.map(renderTaskCard)}
-            </div>
-          </div>
-        )}
-
-        {/* 2. En proceso */}
-        {inProgressTasks.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
-                <span>En proceso</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {pendingTasks.map(renderTaskCard)}
               </div>
-              <span
-                style={{
-                  padding: '2px 9px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: '#f59e0b',
-                }}
-              >
-                {inProgressTasks.length}
-              </span>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {inProgressTasks.map(renderTaskCard)}
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* 3. Hechas */}
-        {completedTasks.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                <span>Hechas</span>
+          {/* 2. En proceso */}
+          {inProgressTasks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                  <span>En proceso</span>
+                </div>
+                <span
+                  style={{
+                    padding: '2px 9px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: '#f59e0b',
+                  }}
+                >
+                  {inProgressTasks.length}
+                </span>
               </div>
-              <span
-                style={{
-                  padding: '2px 9px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  color: '#10b981',
-                }}
-              >
-                {completedTasks.length}
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {inProgressTasks.map(renderTaskCard)}
+              </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {completedTasks.map(renderTaskCard)}
-            </div>
-          </div>
-        )}
+          )}
 
-        {filteredTasks.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            No hay tareas en este filtro.
-          </div>
-        )}
-      </div>
+          {/* 3. Hechas */}
+          {completedTasks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  <span>Hechas</span>
+                </div>
+                <span
+                  style={{
+                    padding: '2px 9px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: '#10b981',
+                  }}
+                >
+                  {completedTasks.length}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {completedTasks.map(renderTaskCard)}
+              </div>
+            </div>
+          )}
+
+          {filteredTasks.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+              No hay tareas en este filtro.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

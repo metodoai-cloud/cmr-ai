@@ -538,6 +538,35 @@ export const ActivityService = {
   async getAll(filters: any = {}) {
     return activityRepo.findAll(filters);
   },
+
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+    const before = await activityRepo.findById(id);
+    const updated = await activityRepo.update(id, data);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'activity',
+      entityId: id,
+      action: 'updated',
+      beforeData: before,
+      afterData: updated,
+    });
+    return updated;
+  },
+
+  async delete(id: string, source: 'web' | 'mcp' = 'web') {
+    const before = await activityRepo.findById(id);
+    await activityRepo.delete(id);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'activity',
+      entityId: id,
+      action: 'deleted',
+      beforeData: before,
+    });
+    return { success: true, id };
+  },
 };
 
 // ============================================================================

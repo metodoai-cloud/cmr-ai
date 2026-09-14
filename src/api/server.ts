@@ -161,6 +161,16 @@ app.post('/api/activities', async (req, res) => {
   catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+app.put('/api/activities/:id', async (req, res) => {
+  try { res.json(await ActivityService.update(req.params.id, req.body)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/activities/:id', async (req, res) => {
+  try { res.json(await ActivityService.delete(req.params.id)); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // === Clients ===
 app.get('/api/clients', async (_req, res) => {
   try { res.json(await ClientService.getAll()); }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   Clock3,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 export interface AgencyTask {
-  id: number;
+  id: number | string;
   title: string;
   entity: 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack';
   entityDisplay?: string;
@@ -244,7 +244,107 @@ export const AgencyTasksSection: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState<'all' | 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack'>('all');
   const [showTasksList, setShowTasksList] = useState<boolean>(false); // Oculto por defecto al ingresar
 
-  const handleToggleStatus = (taskId: number) => {
+  useEffect(() => {
+    const loadDbTasks = async () => {
+      try {
+        const [resAct, resCo] = await Promise.all([
+          fetch('/api/activities').then((r) => (r.ok ? r.json() : [])),
+          fetch('/api/companies').then((r) => (r.ok ? r.json() : [])),
+        ]);
+
+        const coMap: Record<string, string> = {};
+        if (Array.isArray(resCo)) {
+          resCo.forEach((c: any) => {
+            coMap[c.id] = c.name;
+          });
+        }
+
+        if (Array.isArray(resAct)) {
+          const dbTasks: AgencyTask[] = resAct
+            .filter(
+              (a: any) =>
+                a.type === 'task' ||
+                (a.notes &&
+                  (a.notes.includes('landing') ||
+                    a.notes.includes('LinkedIn') ||
+                    a.notes.includes('Instagram') ||
+                    a.notes.includes('hosting') ||
+                    a.notes.includes('email') ||
+                    a.notes.includes('analítica') ||
+                    a.notes.includes('agendamiento')))
+            )
+            .map((a: any, idx: number) => {
+              const notesParts = (a.notes || '').split(' — ');
+              const title = notesParts[0] || a.notes || 'Tarea sin título';
+              const companyName = a.company_id ? coMap[a.company_id] || 'Cliente' : 'Agencia';
+
+              let entity: 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack' = 'Agencia';
+              if (companyName.toLowerCase().includes('ascendra')) entity = 'Ascendra';
+              else if (
+                companyName.toLowerCase().includes('gafexterna') ||
+                companyName.toLowerCase().includes('paola')
+              )
+                entity = 'Gafexterna';
+              else if (companyName.toLowerCase().includes('acmotrack')) entity = 'Acmotrack';
+
+              let status: 'pending' | 'in_progress' | 'completed' = 'pending';
+              if (
+                a.result?.toLowerCase().includes('complet') ||
+                a.result?.toLowerCase().includes('done')
+              )
+                status = 'completed';
+              else if (
+                a.result?.toLowerCase().includes('proceso') ||
+                a.result?.toLowerCase().includes('progress')
+              )
+                status = 'in_progress';
+
+              const borderColor =
+                status === 'completed'
+                  ? '#10b981'
+                  : status === 'in_progress'
+                  ? '#f59e0b'
+                  : entity === 'Gafexterna'
+                  ? '#f97316'
+                  : entity === 'Ascendra'
+                  ? '#0d9488'
+                  : entity === 'Acmotrack'
+                  ? '#a855f7'
+                  : '#6366f1';
+
+              return {
+                id: a.id || `db-${idx}`,
+                title,
+                entity,
+                entityDisplay: companyName === 'Agencia' ? 'Agencia-IA' : companyName,
+                typeTag: entity === 'Agencia' ? 'Agencia' : 'Cliente',
+                source: a.next_action
+                  ? `Siguiente acción: ${a.next_action}`
+                  : 'CRM DB (Claude Cowork / MCP)',
+                status,
+                borderColor,
+              };
+            });
+
+          if (dbTasks.length > 0) {
+            setTasks((prev) => {
+              const titles = new Set(dbTasks.map((d) => d.title.toLowerCase().trim()));
+              const remainingInit = prev.filter(
+                (p) => !titles.has(p.title.toLowerCase().trim())
+              );
+              return [...dbTasks, ...remainingInit];
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Error cargando tareas dinámicas de la agencia:', err);
+      }
+    };
+
+    loadDbTasks();
+  }, []);
+
+  const handleToggleStatus = (taskId: number | string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
@@ -266,6 +366,23 @@ export const AgencyTasksSection: React.FC = () => {
               : t.entity === 'Acmotrack'
               ? '#a855f7'
               : '#6366f1';
+
+          // Sync to backend if it's a DB record (UUID)
+          if (typeof taskId === 'string' && taskId.length > 10) {
+            fetch(`/api/activities/${taskId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                result:
+                  nextStatus === 'completed'
+                    ? 'completada'
+                    : nextStatus === 'in_progress'
+                    ? 'en proceso'
+                    : 'pendiente',
+              }),
+            }).catch(console.warn);
+          }
+
           return { ...t, status: nextStatus, borderColor: newBorderColor };
         }
         return t;

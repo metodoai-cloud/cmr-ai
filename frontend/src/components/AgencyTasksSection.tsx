@@ -286,6 +286,7 @@ const INITIAL_TASKS: AgencyTask[] = [
 export const AgencyTasksSection: React.FC = () => {
   const [tasks, setTasks] = useState<AgencyTask[]>(INITIAL_TASKS);
   const [selectedEntity, setSelectedEntity] = useState<string>('all');
+  const [companies, setCompanies] = useState<string[]>([]);
   const [showTasksList, setShowTasksList] = useState<boolean>(false); // Oculto por defecto al ingresar
 
   useEffect(() => {
@@ -298,9 +299,14 @@ export const AgencyTasksSection: React.FC = () => {
 
         const coMap: Record<string, string> = {};
         if (Array.isArray(resCo)) {
+          const names: string[] = [];
           resCo.forEach((c: any) => {
-            coMap[c.id] = c.name;
+            if (c.id && c.name) {
+              coMap[c.id] = c.name;
+              names.push(c.name);
+            }
           });
+          setCompanies(names);
         }
 
         if (Array.isArray(resAct)) {
@@ -460,13 +466,16 @@ export const AgencyTasksSection: React.FC = () => {
     standardClients.forEach((c) => {
       if (!list.includes(c)) list.push(c);
     });
+    companies.forEach((c) => {
+      if (!list.includes(c)) list.push(c);
+    });
     tasks.forEach((t) => {
       if (t.entity && !list.includes(t.entity)) {
         list.push(t.entity);
       }
     });
     return list;
-  }, [tasks]);
+  }, [companies, tasks]);
 
   const renderTaskCard = (task: AgencyTask) => {
     const badgeStyle = getEntityBadgeStyle(task.entity);

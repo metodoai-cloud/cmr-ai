@@ -11,13 +11,57 @@ import {
 export interface AgencyTask {
   id: number | string;
   title: string;
-  entity: 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack';
+  entity: string;
   entityDisplay?: string;
   typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial';
   source?: string;
   status: 'pending' | 'in_progress' | 'completed';
   borderColor?: string;
 }
+
+const ENTITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
+  Agencia: {
+    color: '#818cf8',
+    bg: 'rgba(99, 102, 241, 0.15)',
+    border: '1px solid rgba(99, 102, 241, 0.35)',
+  },
+  Ascendra: {
+    color: '#2dd4bf',
+    bg: 'rgba(13, 148, 136, 0.15)',
+    border: '1px solid rgba(13, 148, 136, 0.35)',
+  },
+  Gafexterna: {
+    color: '#fb923c',
+    bg: 'rgba(249, 115, 22, 0.15)',
+    border: '1px solid rgba(249, 115, 22, 0.35)',
+  },
+  Acmotrack: {
+    color: '#c084fc',
+    bg: 'rgba(168, 85, 247, 0.15)',
+    border: '1px solid rgba(168, 85, 247, 0.35)',
+  },
+  'Agrícola Protea': {
+    color: '#34d399',
+    bg: 'rgba(16, 185, 129, 0.15)',
+    border: '1px solid rgba(16, 185, 129, 0.35)',
+  },
+};
+
+const DYNAMIC_PALETTE = [
+  { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.35)' }, // sky
+  { color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.35)' }, // rose
+  { color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.35)' }, // amber
+  { color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)', border: '1px solid rgba(236, 72, 153, 0.35)' }, // pink
+  { color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.35)' }, // cyan
+];
+
+const getEntityBadgeStyle = (entity: string) => {
+  if (ENTITY_STYLES[entity]) return ENTITY_STYLES[entity];
+  let hash = 0;
+  for (let i = 0; i < entity.length; i++) hash = entity.charCodeAt(i) + ((hash << 5) - hash);
+  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  return DYNAMIC_PALETTE[index];
+};
 
 const INITIAL_TASKS: AgencyTask[] = [
   // --- Gafexterna (4) ---
@@ -241,7 +285,7 @@ const INITIAL_TASKS: AgencyTask[] = [
 
 export const AgencyTasksSection: React.FC = () => {
   const [tasks, setTasks] = useState<AgencyTask[]>(INITIAL_TASKS);
-  const [selectedEntity, setSelectedEntity] = useState<'all' | 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack'>('all');
+  const [selectedEntity, setSelectedEntity] = useState<string>('all');
   const [showTasksList, setShowTasksList] = useState<boolean>(false); // Oculto por defecto al ingresar
 
   useEffect(() => {
@@ -276,16 +320,33 @@ export const AgencyTasksSection: React.FC = () => {
             .map((a: any, idx: number) => {
               const notesParts = (a.notes || '').split(' — ');
               const title = notesParts[0] || a.notes || 'Tarea sin título';
-              const companyName = a.company_id ? coMap[a.company_id] || 'Cliente' : 'Agencia';
+              const rawCompanyName = a.company_id ? (coMap[a.company_id] || '').trim() : '';
 
-              let entity: 'Agencia' | 'Ascendra' | 'Gafexterna' | 'Acmotrack' = 'Agencia';
-              if (companyName.toLowerCase().includes('ascendra')) entity = 'Ascendra';
-              else if (
-                companyName.toLowerCase().includes('gafexterna') ||
-                companyName.toLowerCase().includes('paola')
-              )
+              let entity = 'Agencia';
+              let entityDisplay = 'Agencia-IA';
+              let typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial' = 'Agencia';
+
+              if (rawCompanyName && rawCompanyName.toLowerCase() !== 'agencia') {
+                entity = rawCompanyName;
+                entityDisplay = rawCompanyName;
+                typeTag = 'Cliente';
+              } else if (title.toLowerCase().includes('protea') || (a.notes && a.notes.toLowerCase().includes('protea'))) {
+                entity = 'Agrícola Protea';
+                entityDisplay = 'Agrícola Protea';
+                typeTag = 'Cliente';
+              } else if (title.toLowerCase().includes('ascendra') || (a.notes && a.notes.toLowerCase().includes('ascendra'))) {
+                entity = 'Ascendra';
+                entityDisplay = 'Ascendra Gestión Inmobiliaria';
+                typeTag = 'Cliente';
+              } else if (title.toLowerCase().includes('gafexterna') || (a.notes && (a.notes.toLowerCase().includes('gafexterna') || a.notes.toLowerCase().includes('paola')))) {
                 entity = 'Gafexterna';
-              else if (companyName.toLowerCase().includes('acmotrack')) entity = 'Acmotrack';
+                entityDisplay = 'Gafexterna';
+                typeTag = 'Cliente';
+              } else if (title.toLowerCase().includes('acmotrack') || (a.notes && a.notes.toLowerCase().includes('acmotrack'))) {
+                entity = 'Acmotrack';
+                entityDisplay = 'Acmotrack';
+                typeTag = 'Cliente';
+              }
 
               let status: 'pending' | 'in_progress' | 'completed' = 'pending';
               if (
@@ -299,25 +360,20 @@ export const AgencyTasksSection: React.FC = () => {
               )
                 status = 'in_progress';
 
+              const badgeStyle = getEntityBadgeStyle(entity);
               const borderColor =
                 status === 'completed'
                   ? '#10b981'
                   : status === 'in_progress'
                   ? '#f59e0b'
-                  : entity === 'Gafexterna'
-                  ? '#f97316'
-                  : entity === 'Ascendra'
-                  ? '#0d9488'
-                  : entity === 'Acmotrack'
-                  ? '#a855f7'
-                  : '#6366f1';
+                  : badgeStyle.color;
 
               return {
                 id: a.id || `db-${idx}`,
                 title,
                 entity,
-                entityDisplay: companyName === 'Agencia' ? 'Agencia-IA' : companyName,
-                typeTag: entity === 'Agencia' ? 'Agencia' : 'Cliente',
+                entityDisplay,
+                typeTag,
                 source: a.next_action
                   ? `Siguiente acción: ${a.next_action}`
                   : 'CRM DB (Claude Cowork / MCP)',
@@ -359,13 +415,7 @@ export const AgencyTasksSection: React.FC = () => {
               ? '#10b981'
               : nextStatus === 'in_progress'
               ? '#f59e0b'
-              : t.entity === 'Gafexterna'
-              ? '#f97316'
-              : t.entity === 'Ascendra'
-              ? '#0d9488'
-              : t.entity === 'Acmotrack'
-              ? '#a855f7'
-              : '#6366f1';
+              : getEntityBadgeStyle(t.entity).color;
 
           // Sync to backend if it's a DB record (UUID)
           if (typeof taskId === 'string' && taskId.length > 10) {
@@ -404,42 +454,19 @@ export const AgencyTasksSection: React.FC = () => {
   const inProgressCountAll = tasks.filter((t) => t.status === 'in_progress').length;
   const completedCountAll = tasks.filter((t) => t.status === 'completed').length;
 
-  const countByEntity = {
-    all: tasks.length,
-    Agencia: tasks.filter((t) => t.entity === 'Agencia').length,
-    Ascendra: tasks.filter((t) => t.entity === 'Ascendra').length,
-    Gafexterna: tasks.filter((t) => t.entity === 'Gafexterna').length,
-    Acmotrack: tasks.filter((t) => t.entity === 'Acmotrack').length,
-  };
-
-  const getEntityBadgeStyle = (entity: string) => {
-    switch (entity) {
-      case 'Gafexterna':
-        return {
-          bg: 'rgba(249, 115, 22, 0.12)',
-          border: '1px solid rgba(249, 115, 22, 0.3)',
-          color: '#fb923c',
-        };
-      case 'Ascendra':
-        return {
-          bg: 'rgba(13, 148, 136, 0.12)',
-          border: '1px solid rgba(13, 148, 136, 0.3)',
-          color: '#2dd4bf',
-        };
-      case 'Acmotrack':
-        return {
-          bg: 'rgba(168, 85, 247, 0.12)',
-          border: '1px solid rgba(168, 85, 247, 0.3)',
-          color: '#c084fc',
-        };
-      default:
-        return {
-          bg: 'rgba(99, 102, 241, 0.12)',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
-          color: '#818cf8',
-        };
-    }
-  };
+  const entityList = React.useMemo(() => {
+    const list: string[] = ['Agencia'];
+    const standardClients = ['Ascendra', 'Agrícola Protea', 'Gafexterna', 'Acmotrack'];
+    standardClients.forEach((c) => {
+      if (!list.includes(c)) list.push(c);
+    });
+    tasks.forEach((t) => {
+      if (t.entity && !list.includes(t.entity)) {
+        list.push(t.entity);
+      }
+    });
+    return list;
+  }, [tasks]);
 
   const renderTaskCard = (task: AgencyTask) => {
     const badgeStyle = getEntityBadgeStyle(task.entity);
@@ -453,7 +480,7 @@ export const AgencyTasksSection: React.FC = () => {
           padding: '16px 20px',
           backgroundColor: 'var(--bg-card-solid)',
           border: '1px solid var(--border-glass)',
-          borderLeft: `4px solid ${task.borderColor || '#6366f1'}`,
+          borderLeft: `4px solid ${task.borderColor || badgeStyle.color}`,
           borderRadius: 'var(--radius-sm)',
           display: 'flex',
           flexDirection: 'column',
@@ -657,8 +684,8 @@ export const AgencyTasksSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Pills */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+      {/* Filter Tabs (Entity Pills) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
         <button
           type="button"
           onClick={() => setSelectedEntity('all')}
@@ -678,100 +705,39 @@ export const AgencyTasksSection: React.FC = () => {
           }}
         >
           <span>Todas</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{countByEntity.all}</span>
+          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{tasks.length}</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setSelectedEntity('Agencia')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: '24px',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: selectedEntity === 'Agencia' ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-card-solid)',
-            color: selectedEntity === 'Agencia' ? 'var(--primary-light)' : 'var(--text-secondary)',
-            border: selectedEntity === 'Agencia' ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#6366f1' }} />
-          <span>Agencia</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{countByEntity.Agencia}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSelectedEntity('Ascendra')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: '24px',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: selectedEntity === 'Ascendra' ? 'rgba(13, 148, 136, 0.2)' : 'var(--bg-card-solid)',
-            color: selectedEntity === 'Ascendra' ? '#2dd4bf' : 'var(--text-secondary)',
-            border: selectedEntity === 'Ascendra' ? '1px solid #0d9488' : '1px solid var(--border-glass)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0d9488' }} />
-          <span>Ascendra</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{countByEntity.Ascendra}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSelectedEntity('Gafexterna')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: '24px',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: selectedEntity === 'Gafexterna' ? 'rgba(249, 115, 22, 0.2)' : 'var(--bg-card-solid)',
-            color: selectedEntity === 'Gafexterna' ? '#fb923c' : 'var(--text-secondary)',
-            border: selectedEntity === 'Gafexterna' ? '1px solid #f97316' : '1px solid var(--border-glass)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f97316' }} />
-          <span>Gafexterna</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{countByEntity.Gafexterna}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSelectedEntity('Acmotrack')}
-          style={{
-            padding: '8px 18px',
-            borderRadius: '24px',
-            fontSize: '0.85rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            backgroundColor: selectedEntity === 'Acmotrack' ? 'rgba(168, 85, 247, 0.2)' : 'var(--bg-card-solid)',
-            color: selectedEntity === 'Acmotrack' ? '#c084fc' : 'var(--text-secondary)',
-            border: selectedEntity === 'Acmotrack' ? '1px solid #a855f7' : '1px solid var(--border-glass)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#a855f7' }} />
-          <span>Acmotrack</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{countByEntity.Acmotrack}</span>
-        </button>
+        {entityList.map((ent) => {
+          const style = getEntityBadgeStyle(ent);
+          const isSelected = selectedEntity === ent;
+          const count = tasks.filter((t) => t.entity === ent).length;
+          return (
+            <button
+              key={ent}
+              type="button"
+              onClick={() => setSelectedEntity(ent)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: '24px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                backgroundColor: isSelected ? style.bg : 'var(--bg-card-solid)',
+                color: isSelected ? style.color : 'var(--text-secondary)',
+                border: isSelected ? style.border : '1px solid var(--border-glass)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: style.color }} />
+              <span>{ent}</span>
+              <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{count}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Task Sections Grouped by Status (Colapsable / Oculto por defecto) */}

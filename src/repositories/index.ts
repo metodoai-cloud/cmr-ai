@@ -566,3 +566,48 @@ export class SalesObjectionRepository extends BaseRepository<any> {
     return data || [];
   }
 }
+
+// --- Client Surveys (CSAT & NPS) ---
+export class ClientSurveyRepository extends BaseRepository<any> {
+  constructor() { super('client_surveys'); }
+
+  async findByCompany(companyId: string) {
+    const { data, error } = await this.db
+      .from('client_surveys')
+      .select('*, projects(name), clients(*, companies(name))')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async findByClient(clientId: string) {
+    const { data, error } = await this.db
+      .from('client_surveys')
+      .select('*, projects(name), companies(name)')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getLatestSurvey(companyId: string, surveyType?: 'csat' | 'nps') {
+    let query = this.db
+      .from('client_surveys')
+      .select('*')
+      .eq('company_id', companyId);
+    
+    if (surveyType) {
+      query = query.eq('survey_type', surveyType);
+    }
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data;
+  }
+}
+

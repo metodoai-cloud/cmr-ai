@@ -10,7 +10,7 @@ import {
   ActivityService, ClientService, InvoiceService, PaymentService,
   ExpenseService, TaxService, WithdrawalService, CampaignService,
   HookService, ServiceCatalog, SubscriptionService, ProjectService,
-  AnalyticsService, VendorService,
+  AnalyticsService, VendorService, SurveyService,
 } from '../services/index.js';
 
 const app = express();
@@ -338,6 +338,28 @@ app.get('/api/subscriptions', async (req, res) => {
 app.post('/api/subscriptions/:id/cancel', async (req, res) => {
   try { res.json(await SubscriptionService.cancel(req.params.id)); }
   catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// === Client Surveys (CSAT & NPS) ===
+app.post('/api/surveys', async (req, res) => {
+  try {
+    const survey = await SurveyService.recordSurvey(req.body, 'api');
+    res.status(201).json(survey);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/surveys/company/:companyId', async (req, res) => {
+  try {
+    const surveys = await SurveyService.getByCompany(req.params.companyId);
+    res.json(surveys);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/surveys/client/:clientId', async (req, res) => {
+  try {
+    const surveys = await SurveyService.getByClient(req.params.clientId);
+    res.json(surveys);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 // === Static Frontend Production Serving ===

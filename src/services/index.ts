@@ -14,7 +14,8 @@ import {
   AgencyProfileRepository, CustomerProfileRepository,
   EntryOfferRepository, EntryOfferServiceRepository,
   MessagingFrameworkRepository, SalesPlaybookRepository,
-  SalesPlaybookStepRepository, SalesObjectionRepository
+  SalesPlaybookStepRepository, SalesObjectionRepository,
+  ClientSurveyRepository
 } from '../repositories/index.js';
 
 // Instantiate all repositories
@@ -37,6 +38,7 @@ const taxRepo = new TaxRepository();
 const withdrawalRepo = new WithdrawalRepository();
 const eventRepo = new BusinessEventRepository();
 const auditRepo = new AuditLogRepository();
+const surveyRepo = new ClientSurveyRepository();
 
 // Strategy Layer repositories
 const agencyProfileRepo = new AgencyProfileRepository();
@@ -1224,298 +1226,248 @@ export const AnalyticsService = {
   },
 
   async getClientPanel() {
-    const [companies, clients, projects, opps, invoices, payments, finance] = await Promise.all([
+    const [companies, clients, projects, opps, invoices, payments, subscriptions, activities, surveys, finance] = await Promise.all([
       companyRepo.findAll(),
       clientRepo.findWithCompany(),
       projectRepo.findAll(),
       oppRepo.findAll(),
       invoiceRepo.findAll(),
       paymentRepo.findAll(),
+      subscriptionRepo.findAll(),
+      activityRepo.findAll(),
+      surveyRepo.findAll(),
       this.getFinanceSummary(),
     ]);
 
-    // Known metadata mappings for operational stage & services matching the Cowork matrix
-    const knownProfiles: Record<string, {
-      displayName: string;
-      services: string;
-      category: 'empresa_cero' | 'diagnostico' | 'automatizacion' | 'marketing' | 'producto' | 'fuera_catalogo';
-      categoryLabel: string;
-      stage: string;
-      defaultBilling: string;
-      status: 'active' | 'prospect' | 'closed' | 'inactive';
-      statusLabel: string;
-      isNew?: boolean;
-    }> = {
-      acmotrack: {
-        displayName: 'Acmotrack',
-        services: '2.1 Diagnóstico de procesos; Ventas Fraccional*',
-        category: 'diagnostico',
-        categoryLabel: 'Diagnóstico de procesos',
-        stage: 'Diagnóstico 5/5 en curso (falta entrega final); Ventas Fraccional en borrador',
-        defaultBilling: 'Diagnóstico: parcial (50% cobrado); Retainer $790.000/mes: pendiente de facturar',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      ascendra: {
-        displayName: 'Ascendra Gestión Inmobiliaria',
-        services: 'Creación de empresa',
-        category: 'empresa_cero',
-        categoryLabel: 'Creación de empresa desde cero',
-        stage: 'Fases del proceso: 0/10 validadas · 6 en borrador · 2 sin marcador · 2 no iniciadas',
-        defaultBilling: 'Sin registro de cobro',
-        status: 'active',
-        statusLabel: 'Activo',
-        isNew: true,
-      },
-      'abc consultora': {
-        displayName: 'Consultora RRHH',
-        services: 'Creación de empresa',
-        category: 'empresa_cero',
-        categoryLabel: 'Creación de empresa desde cero',
-        stage: 'Fases del proceso: 0/10 validadas · 8 en borrador · 1 sin marcador · 1 no iniciada',
-        defaultBilling: 'Sin registro de cobro',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      'consultora rrhh': {
-        displayName: 'Consultora RRHH',
-        services: 'Creación de empresa',
-        category: 'empresa_cero',
-        categoryLabel: 'Creación de empresa desde cero',
-        stage: 'Fases del proceso: 0/10 validadas · 8 en borrador · 1 sin marcador · 1 no iniciada',
-        defaultBilling: 'Sin registro de cobro',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      'agrícola protea': {
-        displayName: 'Agrícola Protea (Empresa Lechera Curacaví)',
-        services: 'Proyecto puntual — Google Workspace',
-        category: 'fuera_catalogo',
-        categoryLabel: 'Fuera del catálogo de 4 servicios',
-        stage: 'Implementación Google Workspace (correo corporativo + Drive) en curso',
-        defaultBilling: 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      'empresa lechera': {
-        displayName: 'Agrícola Protea (Empresa Lechera Curacaví)',
-        services: 'Proyecto puntual — Google Workspace',
-        category: 'fuera_catalogo',
-        categoryLabel: 'Fuera del catálogo de 4 servicios',
-        stage: 'Implementación Google Workspace (correo corporativo + Drive) en curso',
-        defaultBilling: 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      'gaf externa': {
-        displayName: 'Gafexterna',
-        services: 'Creación de empresa',
-        category: 'empresa_cero',
-        categoryLabel: 'Creación de empresa desde cero',
-        stage: 'Fases del proceso: 0/10 validadas · 8 en borrador · 2 sin marcador',
-        defaultBilling: 'Sin registro de cobro',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      gafexterna: {
-        displayName: 'Gafexterna',
-        services: 'Creación de empresa',
-        category: 'empresa_cero',
-        categoryLabel: 'Creación de empresa desde cero',
-        stage: 'Fases del proceso: 0/10 validadas · 8 en borrador · 2 sin marcador',
-        defaultBilling: 'Sin registro de cobro',
-        status: 'active',
-        statusLabel: 'Activo',
-      },
-      'go plan be': {
-        displayName: 'Go Plan Be',
-        services: 'Desarrollo de producto',
-        category: 'producto',
-        categoryLabel: 'Desarrollo de producto',
-        stage: 'Proyecto entregado, sin pendientes',
-        defaultBilling: 'Cobrado $1.000.000 (total)',
-        status: 'closed',
-        statusLabel: 'Cerrado',
-      },
-      arcamusweb: {
-        displayName: 'Arcamusweb',
-        services: 'Marketing / campaña',
-        category: 'marketing',
-        categoryLabel: 'Marketing / campaña',
-        stage: 'Fuera del embudo — sin seguimiento',
-        defaultBilling: 'Sin monto definido',
-        status: 'inactive',
-        statusLabel: 'Inactivo',
-      },
-    };
-
     const clientRows: any[] = [];
-    for (const co of companies) {
-      const coNameNorm = (co.name || '').toLowerCase().trim();
-      let profileKey = Object.keys(knownProfiles).find(k => coNameNorm.includes(k));
-      const profile = profileKey ? knownProfiles[profileKey] : null;
 
+    for (const co of companies) {
       const coClient = clients.find((c: any) => c.company_id === co.id);
-      const coProjects = projects.filter((p: any) => p.clients?.company_id === co.id || p.client_id === coClient?.id);
+      const coProjects = projects.filter((p: any) => p.client_id === coClient?.id || p.company_id === co.id || p.clients?.company_id === co.id);
+      const coSubs = subscriptions.filter((s: any) => s.client_id === coClient?.id || s.clients?.company_id === co.id);
       const coOpps = opps.filter((o: any) => o.company_id === co.id);
       const coInvoices = invoices.filter((i: any) => i.client_id === coClient?.id || i.clients?.company_id === co.id);
-      const paidTotal = coInvoices.reduce((s: number, i: any) => s + (Number(i.paid_amount) || 0), 0);
-      const invoicedTotal = coInvoices.reduce((s: number, i: any) => s + (Number(i.total) || 0), 0);
+      const coPayments = payments.filter((p: any) => coInvoices.some((i: any) => i.id === p.invoice_id) || p.client_id === coClient?.id);
+      const coActivities = activities.filter((a: any) => a.company_id === co.id || a.contact_id && coClient?.primary_contact_id === a.contact_id);
+      const coSurveys = surveys.filter((s: any) => s.company_id === co.id || s.client_id === coClient?.id);
+
+      // Financials
+      const invoicedTotal = coInvoices.reduce((s: number, i: any) => s + Number(i.total || 0), 0);
+      const paidTotal = coInvoices.reduce((s: number, i: any) => s + (i.status === 'paid' ? Number(i.total || 0) : Number(i.paid_amount || 0)), 0);
+      const pendingInvoices = coInvoices.filter((i: any) => ['issued', 'partial', 'overdue'].includes(i.status));
+      const hasOverdueInvoices = coInvoices.some((i: any) => i.status === 'overdue');
+      const hasPendingInvoices = pendingInvoices.length > 0;
+      const isFullyPaid = invoicedTotal > 0 && paidTotal >= invoicedTotal;
+
+      // Projects and Deliverables
+      const activeProjects = coProjects.filter((p: any) => ['onboarding', 'in_progress', 'review'].includes(p.status));
+      const completedProjects = coProjects.filter((p: any) => p.status === 'completed');
+      const now = new Date();
+      const hasDelayedProjects = activeProjects.some((p: any) => p.due_date && new Date(p.due_date) < now);
 
       // Status determination
-      let status: 'active' | 'prospect' | 'closed' | 'inactive' = profile?.status || 'active';
-      let statusLabel = profile?.statusLabel || 'Activo';
+      let status: 'active' | 'prospect' | 'closed' | 'inactive' = 'active';
+      let statusLabel = 'Activo';
 
-      if (!profile) {
-        if (!co.is_active_client && coOpps.every((o: any) => o.stage === 'lost')) {
-          status = 'inactive';
-          statusLabel = 'Inactivo';
-        } else if (coProjects.some((p: any) => p.status === 'completed')) {
-          status = 'closed';
-          statusLabel = 'Cerrado';
-        } else if (coClient || co.is_active_client) {
-          status = 'active';
-          statusLabel = 'Activo';
+      if (!co.is_active_client && coProjects.length === 0 && coSubs.length === 0 && coOpps.every((o: any) => o.stage === 'lost')) {
+        status = 'inactive';
+        statusLabel = 'Inactivo';
+      } else if (completedProjects.length > 0 && activeProjects.length === 0 && coSubs.length === 0) {
+        status = 'closed';
+        statusLabel = 'Cerrado';
+      } else if (coClient || co.is_active_client || activeProjects.length > 0 || coSubs.length > 0) {
+        status = 'active';
+        statusLabel = 'Activo';
+      } else {
+        status = 'prospect';
+        statusLabel = 'Prospecto';
+      }
+
+      // 1. SERVICES (Servicios Dinámicos de BD)
+      const serviceNames: string[] = [];
+      coProjects.forEach((p: any) => {
+        if (p.name && !serviceNames.includes(p.name)) serviceNames.push(p.name);
+      });
+      coSubs.forEach((s: any) => {
+        const subName = s.services?.name || s.name || 'Retainer Mensual';
+        if (!serviceNames.includes(subName)) serviceNames.push(subName);
+      });
+      if (serviceNames.length === 0 && coOpps.length > 0) {
+        coOpps.forEach((o: any) => {
+          if (o.name && !serviceNames.includes(o.name)) serviceNames.push(o.name);
+        });
+      }
+      const servicesText = serviceNames.length > 0 ? serviceNames.join('; ') : 'Servicios Generales';
+
+      // Determine Category
+      const sNorm = servicesText.toLowerCase();
+      let category: 'empresa_cero' | 'diagnostico' | 'automatizacion' | 'marketing' | 'producto' | 'fuera_catalogo' = 'fuera_catalogo';
+      let categoryLabel = 'Fuera del catálogo de 4 servicios';
+
+      if (sNorm.includes('creaci') || sNorm.includes('sociedad') || sNorm.includes('empresa desde cero') || sNorm.includes('starter') || sNorm.includes('estatuto')) {
+        category = 'empresa_cero';
+        categoryLabel = 'Creación de empresa desde cero';
+      } else if (sNorm.includes('diagnóstic') || sNorm.includes('diagnostico') || sNorm.includes('proceso') || sNorm.includes('fraccional')) {
+        category = 'diagnostico';
+        categoryLabel = 'Diagnóstico de procesos';
+      } else if (sNorm.includes('automatiz') || sNorm.includes('ia') || sNorm.includes('bot') || sNorm.includes('workflow')) {
+        category = 'automatizacion';
+        categoryLabel = 'Automatización comercial & IA';
+      } else if (sNorm.includes('marketing') || sNorm.includes('campaña') || sNorm.includes('campana') || sNorm.includes('prospecc')) {
+        category = 'marketing';
+        categoryLabel = 'Marketing / campaña';
+      } else if (sNorm.includes('producto') || sNorm.includes('web') || sNorm.includes('app') || sNorm.includes('software')) {
+        category = 'producto';
+        categoryLabel = 'Desarrollo de producto';
+      }
+
+      // 2. OPERATIONAL STAGE (Etapa Operativa Dinámica)
+      let stageText = '';
+      if (activeProjects.length > 0) {
+        const p = activeProjects[0];
+        const statusMap: Record<string, string> = {
+          onboarding: 'En configuración inicial (Kick-off)',
+          in_progress: 'En ejecución',
+          review: 'En revisión final con cliente',
+        };
+        const dateNote = p.due_date ? ` · Plazo: ${p.due_date}` : '';
+        stageText = `${p.name}: ${statusMap[p.status] || p.status}${dateNote}`;
+      } else if (completedProjects.length > 0) {
+        stageText = 'Proyecto entregado 100% · Sin pendientes operativos';
+      } else if (coSubs.some((s: any) => s.status === 'active')) {
+        const s = coSubs.find((sub: any) => sub.status === 'active');
+        stageText = `Retainer mensual activo · Próx. corte: ${s.next_billing_date || 'Fin de mes'}`;
+      } else if (coOpps.length > 0) {
+        stageText = `Etapa comercial: ${coOpps[0].stage}`;
+      } else {
+        stageText = 'Sin actividad operativa reciente';
+      }
+
+      // 3. BILLING STATUS (Cobro y Pago Dinámico)
+      let billingText = '';
+      if (hasOverdueInvoices) {
+        const overdueNums = coInvoices.filter((i: any) => i.status === 'overdue').map((i: any) => i.invoice_number ? `#${i.invoice_number}` : '').filter(Boolean).join(', ');
+        billingText = `Vencido: $${(invoicedTotal - paidTotal).toLocaleString('es-CL')} (Factura ${overdueNums || 'vencida'})`;
+      } else if (hasPendingInvoices) {
+        const pendingNums = pendingInvoices.map((i: any) => i.invoice_number ? `#${i.invoice_number}` : '').filter(Boolean).join(', ');
+        const pendingAmt = invoicedTotal - paidTotal;
+        if (paidTotal > 0) {
+          billingText = `Cobro parcial: $${paidTotal.toLocaleString('es-CL')} cobrado / $${pendingAmt.toLocaleString('es-CL')} pendiente (Factura ${pendingNums})`;
         } else {
-          status = 'prospect';
-          statusLabel = 'Prospecto';
+          billingText = `Cobro pendiente: $${pendingAmt.toLocaleString('es-CL')} (Factura ${pendingNums || 'emitida'})`;
+        }
+      } else if (paidTotal > 0 && paidTotal >= invoicedTotal) {
+        billingText = `Al día: Cobrado $${paidTotal.toLocaleString('es-CL')} (100% total)`;
+      } else if (coSubs.some((s: any) => s.status === 'active')) {
+        const s = coSubs.find((sub: any) => sub.status === 'active');
+        billingText = `Retainer al día: $${Number(s.amount).toLocaleString('es-CL')}/mes`;
+      } else {
+        billingText = 'Sin registro de cobro';
+      }
+
+      // 4. CUSTOMER HEALTH SCORE MATEMÁTICO (0 a 100 pts)
+      const isRecurring = coSubs.some((s: any) => s.status === 'active') || (coClient?.service_type === 'recurring');
+      const latestCsat = coSurveys.find((s: any) => s.survey_type === 'csat')?.score || coClient?.current_csat || 5.0;
+      const latestNps = coSurveys.find((s: any) => s.survey_type === 'nps')?.score || coClient?.current_nps || 10;
+
+      // Puntos Sentiment CSAT (0 a 100)
+      let ptsCsat = 100;
+      if (latestCsat >= 4.8) ptsCsat = 100;
+      else if (latestCsat >= 3.8) ptsCsat = 75;
+      else if (latestCsat >= 2.8) ptsCsat = 50;
+      else ptsCsat = 0;
+
+      // Puntos Sentiment NPS (0 a 100)
+      let ptsNps = 100;
+      if (latestNps >= 9) ptsNps = 100;
+      else if (latestNps >= 7) ptsNps = 60;
+      else ptsNps = 0;
+
+      // Puntos Cumplimiento Hitos / KPIs (0 a 100)
+      let ptsKpi = 100;
+      if (hasDelayedProjects) ptsKpi = 20;
+      else if (activeProjects.some((p: any) => p.status === 'review')) ptsKpi = 70;
+      else ptsKpi = 100;
+
+      // Puntos Engagement & Comunicación (0 a 100)
+      let ptsComms = 100;
+      if (status === 'inactive') ptsComms = 30;
+      else if (coActivities.length === 0 && !coClient?.is_active_client) ptsComms = 70;
+      else ptsComms = 100;
+
+      // Puntos Salud Financiera (Pagos) (0 a 100)
+      let ptsPagos = 100;
+      if (hasOverdueInvoices) ptsPagos = 0;
+      else if (hasPendingInvoices) ptsPagos = 50;
+      else ptsPagos = 100;
+
+      // Cálculo según modelo
+      let totalHealthScore = 100;
+      if (!isRecurring) {
+        // Modelo A: Pago Único -> CSAT 35% + Hitos 35% + Comms 15% + Pagos 15%
+        totalHealthScore = Math.round((ptsCsat * 0.35) + (ptsKpi * 0.35) + (ptsComms * 0.15) + (ptsPagos * 0.15));
+      } else {
+        // Modelo B: Recurrente -> KPIs 30% + NPS 25% + CSAT 15% + Comms 15% + Pagos 15%
+        totalHealthScore = Math.round((ptsKpi * 0.30) + (ptsNps * 0.25) + (ptsCsat * 0.15) + (ptsComms * 0.15) + (ptsPagos * 0.15));
+      }
+
+      // Determinar Semáforo
+      let healthScoreLevel: 'green' | 'yellow' | 'red' = 'green';
+      let healthScoreLabel = 'Óptimo';
+
+      if (totalHealthScore >= 80) {
+        healthScoreLevel = 'green';
+        healthScoreLabel = isFullyPaid && completedProjects.length > 0 && activeProjects.length === 0 ? 'Exitoso' : 'Óptimo';
+      } else if (totalHealthScore >= 50) {
+        healthScoreLevel = 'yellow';
+        healthScoreLabel = 'Atención';
+      } else {
+        healthScoreLevel = 'red';
+        healthScoreLabel = 'Riesgo';
+      }
+
+      // Diagnóstico del motivo
+      let healthReasonText = 'Avance normal y sin fricciones operativas';
+      let playbookActionText = 'Solicitar testimonio, caso de estudio o referidos';
+
+      if (healthScoreLevel === 'red') {
+        if (hasOverdueInvoices) {
+          healthReasonText = 'Factura vencida impaga · Riesgo de corte de servicio';
+        } else if (status === 'inactive') {
+          healthReasonText = 'Cuenta inactiva sin proyectos en ejecución';
+        } else {
+          healthReasonText = 'Retraso crítico en entregables y baja satisfacción';
+        }
+        playbookActionText = 'Intervención directa del Founder con plan de choque a 15-30 días';
+      } else if (healthScoreLevel === 'yellow') {
+        if (hasPendingInvoices) {
+          healthReasonText = 'Cobro emitido pendiente de confirmación de pago';
+        } else if (hasDelayedProjects) {
+          healthReasonText = 'Proyecto en revisión pendiente de entrega';
+        } else {
+          healthReasonText = 'Puntaje de salud en seguimiento preventivo';
+        }
+        playbookActionText = 'Agendar llamada de alineación técnica/estratégica antes de fin de mes';
+      } else {
+        if (isFullyPaid && completedProjects.length > 0 && activeProjects.length === 0) {
+          healthReasonText = 'Proyecto entregado 100% conforme y 100% cobrado';
+          playbookActionText = 'Presentar propuesta de Retainer mensual o nuevo desarrollo Q4';
+        } else {
+          healthReasonText = 'Hitos al día · Relación comercial activa y pagos al día';
+          playbookActionText = 'Solicitar testimonio, caso de estudio o explorar upsell';
         }
       }
 
-      // Services text & Category
-      let servicesText = profile?.services || coProjects.map((p: any) => p.name).join('; ') || coOpps.map((o: any) => o.name).join('; ') || 'Servicios Varios';
-      let category: 'empresa_cero' | 'diagnostico' | 'automatizacion' | 'marketing' | 'producto' | 'fuera_catalogo' = profile?.category || 'fuera_catalogo';
-      let categoryLabel = profile?.categoryLabel || 'Fuera del catálogo de 4 servicios';
-
-      // Stage text
-      let stageText = profile?.stage;
-      if (!stageText) {
-        if (coProjects.length > 0) {
-          const p = coProjects[0];
-          stageText = `Proyecto en estado ${p.status} (Inicio: ${p.start_date || 'N/A'})`;
-        } else if (coOpps.length > 0) {
-          const o = coOpps[0];
-          stageText = `Etapa comercial: ${o.stage}`;
-        } else {
-          stageText = 'Sin actividad operativa reciente';
-        }
-      }
-
-      // Billing status text
-      let billingText = profile?.defaultBilling;
-
-      // Make Agrícola Protea dynamic according to Factura 84 payment status
-      if (coNameNorm.includes('protea') || coNameNorm.includes('lechera')) {
-        const inv84 = coInvoices.find((i: any) => String(i.invoice_number).includes('84'));
-        const is84Paid = inv84 && (inv84.status === 'paid' || (Number(inv84.paid_amount) || 0) > 0);
-        if (is84Paid) {
-          billingText = 'Total $1.000.000: 50% inicial cobrado ($500.000 neto / Factura N°84 pagada)';
-        } else {
-          billingText = 'Total $1.000.000: Factura N°84 inicial emitida ($500.000 / 50%)';
-        }
-      }
-
-      if (!billingText) {
-        if (paidTotal > 0 && paidTotal >= invoicedTotal && invoicedTotal > 0) {
-          billingText = `Cobrado $${paidTotal.toLocaleString('es-CL')} (100% total)`;
-        } else if (paidTotal > 0) {
-          billingText = `Cobro parcial: $${paidTotal.toLocaleString('es-CL')} de $${invoicedTotal.toLocaleString('es-CL')}`;
-        } else if (invoicedTotal > 0) {
-          billingText = `Facturado $${invoicedTotal.toLocaleString('es-CL')} (pendiente de pago)`;
-        } else {
-          billingText = 'Sin registro de cobro';
-        }
-      }
-
-      // Customer Success & Account Health Metrics
-      let healthScore: 'green' | 'yellow' | 'red' = 'green';
-      let healthLabel = 'Óptimo';
-      let healthReason = 'Avance normal y sin fricciones operativas';
-      let ltv = Math.max(invoicedTotal, paidTotal);
-      let ltvFormatted = `$${ltv.toLocaleString('es-CL')}`;
-      let ttvDays: number | null = 10;
-      let ttvText = '~10 días';
-      let retentionDiagnosis = 'Relación comercial activa y saludable';
-      let nextAction = 'Seguimiento de hitos según cronograma';
-
-      if (coNameNorm.includes('acmotrack')) {
-        healthScore = 'yellow';
-        healthLabel = 'Atención';
-        healthReason = 'Diagnóstico entregado · Retainer pausado pendiente de ajustes finales';
-        ltv = 1059100;
-        ltvFormatted = '$1.059.100 (+ $790K/mes)';
-        ttvDays = 18;
-        ttvText = '18 días (diagnóstico)';
-        retentionDiagnosis = 'Retainer mensual de $790K frenado hasta liberar ajustes finales';
-        nextAction = 'Coordinar reunión para aprobar entrega final y activar retainer';
-      } else if (coNameNorm.includes('protea') || coNameNorm.includes('lechera')) {
-        healthScore = 'green';
-        healthLabel = 'Óptimo';
-        healthReason = 'Workspace activo en tiempo récord · 50% anticipo pagado';
-        ltv = 1000000;
-        ltvFormatted = '$1.000.000';
-        ttvDays = 5;
-        ttvText = '5 días (Workspace activo)';
-        retentionDiagnosis = 'Adopción fluida de cuentas y correos; alta satisfacción';
-        nextAction = 'Migración de Drive y emitir factura por el 50% saldo ($500K)';
-      } else if (coNameNorm.includes('go plan be') || coNameNorm.includes('goplanbe')) {
-        healthScore = 'green';
-        healthLabel = 'Exitoso';
-        healthReason = 'Proyecto entregado 100% conforme y 100% cobrado';
-        ltv = 1000000;
-        ltvFormatted = '$1.000.000';
-        ttvDays = 14;
-        ttvText = '14 días (WebApp v1)';
-        retentionDiagnosis = 'Relación de confianza consolidada; proyecto cerrado sin quejas';
-        nextAction = 'Presentar propuesta de soporte evolutivo o nuevo desarrollo Q4';
-      } else if (coNameNorm.includes('abc') || coNameNorm.includes('rrhh')) {
-        healthScore = 'green';
-        healthLabel = 'Óptimo';
-        healthReason = 'En proceso normal de tramitación legal VIP';
-        ltv = 780000;
-        ltvFormatted = '$780.000';
-        ttvDays = 8;
-        ttvText = '~8 días (en trámite)';
-        retentionDiagnosis = 'Redacción de estatutos y poderes societarios en curso';
-        nextAction = 'Validar estatutos con los socios para firma notarial';
-      } else if (coNameNorm.includes('ascendra')) {
-        healthScore = 'green';
-        healthLabel = 'Óptimo';
-        healthReason = 'Trámite societario Starter sin observaciones';
-        ltv = 390000;
-        ltvFormatted = '$390.000';
-        ttvDays = 7;
-        ttvText = '~7 días (en trámite)';
-        retentionDiagnosis = 'Fase inicial Tu Empresa en un Día regular';
-        nextAction = 'Apertura de cuenta bancaria y emisión de certificado estatutario';
-      } else if (coNameNorm.includes('gaf')) {
-        healthScore = 'green';
-        healthLabel = 'Óptimo';
-        healthReason = 'Recolección de datos societarios Starter en curso';
-        ltv = 390000;
-        ltvFormatted = '$390.000';
-        ttvDays = 7;
-        ttvText = '~7 días (en trámite)';
-        retentionDiagnosis = 'Proceso regular en avance conforme a cronograma';
-        nextAction = 'Formalización ante el SII y solicitud de RUT definitivo';
-      } else if (coNameNorm.includes('arcamus') || status === 'inactive') {
-        healthScore = 'red';
-        healthLabel = 'Riesgo';
-        healthReason = 'Cuenta inactiva sin proyectos en ejecución';
-        ltv = 0;
-        ltvFormatted = '$0';
-        ttvDays = null;
-        ttvText = 'N/A';
-        retentionDiagnosis = 'Sin contacto activo ni propuesta vigente';
-        nextAction = 'Enviar mensaje de reactivación comercial o archivar cuenta';
-      }
+      const ltv = Math.max(invoicedTotal, paidTotal) || 0;
+      const ttvDays = completedProjects.length > 0 ? 14 : 7;
+      const ttvText = completedProjects.length > 0 ? `${ttvDays} días (entregado)` : `~${ttvDays} días (en trámite)`;
 
       clientRows.push({
         id: co.id,
         company_id: co.id,
         client_id: coClient?.id || null,
-        name: profile?.displayName || co.name,
-        is_new: Boolean(profile?.isNew),
+        name: co.name,
+        is_new: Boolean(coClient?.created_at && (Date.now() - new Date(coClient.created_at).getTime()) < 30 * 24 * 3600 * 1000),
         status,
         status_label: statusLabel,
         services: servicesText,
@@ -1525,22 +1477,24 @@ export const AnalyticsService = {
         billing_status: billingText,
         total_invoiced: invoicedTotal,
         total_paid: paidTotal,
-        health_score: healthScore,
-        health_label: healthLabel,
-        health_reason: healthReason,
+        health_score: healthScoreLevel,
+        health_points: totalHealthScore,
+        health_label: `${healthScoreLabel} (${totalHealthScore} pts)`,
+        health_reason: healthReasonText,
+        playbook_action: playbookActionText,
         ltv,
-        ltv_formatted: ltvFormatted,
+        ltv_formatted: `$${ltv.toLocaleString('es-CL')}`,
         ttv_days: ttvDays,
         ttv_text: ttvText,
-        retention_diagnosis: retentionDiagnosis,
-        next_action: nextAction,
+        retention_diagnosis: healthReasonText,
+        next_action: playbookActionText,
       });
     }
 
     // Sort: Alphabetically ascending A-Z
     clientRows.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
 
-    // Calculate exact metrics matching the Cowork panel
+    // Metrics summary
     const activeCount = clientRows.filter(r => r.status === 'active').length;
     const closedCount = clientRows.filter(r => r.status === 'closed').length;
     const inactiveCount = clientRows.filter(r => r.status === 'inactive').length;
@@ -1549,11 +1503,6 @@ export const AnalyticsService = {
     const totalCollected = finance.total_collected || 2124550;
     const additionalCollected = Math.max(0, totalCollected - 1529550);
     const currentCash = 1426168 + additionalCollected;
-
-    const inv84Paid = invoices.some((i: any) => String(i.invoice_number).includes('84') && (i.status === 'paid' || (Number(i.paid_amount) || 0) > 0));
-    const collectedNote = inv84Paid
-      ? 'Go Plan Be $1.000.000 + Acmotrack $529.550 + Agrícola Protea $595.000'
-      : 'Go Plan Be $1.000.000 + Acmotrack (50% diagnóstico) $529.550';
 
     const outstanding = finance.outstanding || 529550;
     const retainerMonthly = 790000;
@@ -1600,15 +1549,14 @@ export const AnalyticsService = {
         pending_collection: {
           amount: outstanding,
           formatted: `$${outstanding.toLocaleString('es-CL')}`,
-          note: 'Factura N° 68 Acmotrack (pendiente de pago)',
+          note: 'Cobro pendiente registrado en facturación',
         },
-        // Compatibility properties
         current_cash: currentCash,
         current_cash_formatted: `$${currentCash.toLocaleString('es-CL')}`,
         current_cash_note: 'Corte al día · sin dispersar (5/45/20/30)',
         historical_collected: totalCollected,
         historical_collected_formatted: `$${totalCollected.toLocaleString('es-CL')}`,
-        historical_collected_note: collectedNote,
+        historical_collected_note: `Total cobrado registrado en pagos ($${totalCollected.toLocaleString('es-CL')})`,
         unbilled_retainer: retainerMonthly,
         unbilled_retainer_formatted: `$${retainerMonthly.toLocaleString('es-CL')}/mes`,
         unbilled_retainer_note: 'Cartera mensual recurrente contratada',
@@ -1919,5 +1867,52 @@ export const SalesObjectionService = {
     });
     return updated;
   },
+};
+
+// 8. CLIENT SURVEY SERVICE (CSAT & NPS)
+export const SurveyService = {
+  async recordSurvey(data: any, source: any = 'api') {
+    const survey = await surveyRepo.create(data);
+
+    if (data.client_id) {
+      const updatePayload: any = {};
+      if (data.survey_type === 'csat') {
+        updatePayload.csat_score = data.score;
+        updatePayload.last_survey_date = new Date().toISOString();
+      } else if (data.survey_type === 'nps') {
+        updatePayload.nps_score = data.score;
+        updatePayload.last_survey_date = new Date().toISOString();
+      }
+      try {
+        await clientRepo.update(data.client_id, updatePayload);
+      } catch (err) {
+        console.warn('Could not auto-update client survey fields:', err);
+      }
+    }
+
+    await auditRepo.logAction({
+      actorType: source === 'web' ? 'human' : 'ai',
+      source,
+      toolName: 'registrar_encuesta_cliente',
+      entityType: 'client_surveys',
+      entityId: survey.id,
+      action: 'create',
+      afterData: survey,
+    });
+
+    return survey;
+  },
+
+  async getByCompany(companyId: string) {
+    return surveyRepo.findByCompany(companyId);
+  },
+
+  async getByClient(clientId: string) {
+    return surveyRepo.findByClient(clientId);
+  },
+
+  async getLatest(companyId: string, surveyType?: 'csat' | 'nps') {
+    return surveyRepo.getLatestSurvey(companyId, surveyType);
+  }
 };
 

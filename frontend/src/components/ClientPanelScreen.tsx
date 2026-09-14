@@ -31,8 +31,10 @@ interface ClientPanelItem {
   total_invoiced: number;
   total_paid: number;
   health_score?: 'green' | 'yellow' | 'red';
+  health_points?: number;
   health_label?: string;
   health_reason?: string;
+  playbook_action?: string;
   ltv?: number;
   ltv_formatted?: string;
   ttv_days?: number | null;

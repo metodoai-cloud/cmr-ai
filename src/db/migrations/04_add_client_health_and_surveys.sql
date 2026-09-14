@@ -31,6 +31,10 @@ CREATE INDEX IF NOT EXISTS idx_client_surveys_company ON client_surveys(company_
 CREATE INDEX IF NOT EXISTS idx_client_surveys_client ON client_surveys(client_id);
 CREATE INDEX IF NOT EXISTS idx_client_surveys_type ON client_surveys(survey_type);
 
+-- RLS (Habilitar y permitir acceso a la API del CRM)
+ALTER TABLE client_surveys ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow full access to client_surveys" ON client_surveys FOR ALL USING (true) WITH CHECK (true);
+
 -- 2. Columnas de Health Score consolidado en la tabla clients
 ALTER TABLE clients 
   ADD COLUMN IF NOT EXISTS service_type TEXT DEFAULT 'one_time' CHECK (service_type IN ('one_time', 'recurring')),

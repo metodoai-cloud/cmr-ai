@@ -1227,16 +1227,16 @@ export const AnalyticsService = {
 
   async getClientPanel() {
     const [companies, clients, projects, opps, invoices, payments, subscriptions, activities, surveys, finance] = await Promise.all([
-      companyRepo.findAll(),
-      clientRepo.findWithCompany(),
-      projectRepo.findAll(),
-      oppRepo.findAll(),
-      invoiceRepo.findAll(),
-      paymentRepo.findAll(),
-      subscriptionRepo.findAll(),
-      activityRepo.findAll(),
-      surveyRepo.findAll(),
-      this.getFinanceSummary(),
+      companyRepo.findAll().catch(() => []),
+      clientRepo.findWithCompany().catch(() => clientRepo.findAll().catch(() => [])),
+      projectRepo.findAll().catch(() => []),
+      oppRepo.findAll().catch(() => []),
+      invoiceRepo.findAll().catch(() => []),
+      paymentRepo.findAll().catch(() => []),
+      subscriptionRepo.findAll().catch(() => []),
+      activityRepo.findAll().catch(() => []),
+      surveyRepo.findAll().catch(() => []),
+      this.getFinanceSummary().catch(() => ({} as any)),
     ]);
 
     const clientRows: any[] = [];

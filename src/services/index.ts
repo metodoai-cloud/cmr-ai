@@ -1084,6 +1084,18 @@ export const SubscriptionService = {
 export const ProjectService = {
   async getAll(filters: any = {}) { return projectRepo.findAll(filters); },
   async getById(id: string) { return projectRepo.findById(id); },
+  async create(data: any, source: 'web' | 'mcp' = 'web') {
+    const project = await projectRepo.create(data);
+    await auditRepo.logAction({
+      actorType: source === 'mcp' ? 'ai' : 'human',
+      source,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'created',
+      afterData: project,
+    });
+    return project;
+  },
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
     const before = await projectRepo.findById(id);
     if (!before) throw new Error(`Proyecto no encontrado con ID: ${id}`);

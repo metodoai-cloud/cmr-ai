@@ -13,7 +13,7 @@ import {
   SubscriptionService, ProjectService,
   AgencyProfileService, CustomerProfileService, EntryOfferService,
   ValueMatrixService, MessagingFrameworkService, SalesPlaybookService,
-  SalesObjectionService
+  SalesObjectionService, SurveyService
 } from '../services/index.js';
 
 // Map stage aliases to database enum values
@@ -1376,5 +1376,155 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- crear_tarea ---
+  srv.tool(
+    'crear_tarea',
+    'Crear o programar una tarea operativa o comercial con fecha de vencimiento y asignación.',
+    {
+      title: z.string().describe('Título o resumen de la tarea'),
+      description: z.string().optional().describe('Descripción detallada de la tarea a realizar'),
+      due_date: z.string().optional().describe('Fecha límite o de ejecución (YYYY-MM-DD)'),
+      company_id: z.string().optional().describe('ID de la empresa asociada'),
+      contact_id: z.string().optional().describe('ID del contacto asociado'),
+      opportunity_id: z.string().optional().describe('ID de la oportunidad asociada'),
+      result: z.string().optional().describe('Resultado esperado o notas de seguimiento'),
+    },
+    async (data) => {
+      try {
+        const payload = {
+          type: 'task',
+          notes: [data.title, data.description].filter(Boolean).join(' — '),
+          next_action: data.title,
+          next_action_date: data.due_date || null,
+          occurred_at: data.due_date ? `${data.due_date}T12:00:00Z` : new Date().toISOString(),
+          company_id: data.company_id || null,
+          contact_id: data.contact_id || null,
+          opportunity_id: data.opportunity_id || null,
+          result: data.result || null,
+        };
+        const task = await ActivityService.create(payload);
+        return {
+          content: [{ type: 'text' as const, text: `✅ Tarea guardada con éxito en el CRM (ID: ${task.id})\n• Título: ${data.title}\n• Fecha límite: ${data.due_date || 'Sin fecha'}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al guardar tarea: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- crear_proyecto ---
+  srv.tool(
+    'crear_proyecto',
+    'Crear un nuevo proyecto de entrega técnica u operativa para un cliente en el CRM.',
+    {
+      name: z.string().describe('Nombre del proyecto (ej: Creación de Empresa, Automatización de Procesos)'),
+      company_id: z.string().optional().describe('ID de la empresa'),
+      client_id: z.string().optional().describe('ID del cliente'),
+      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Estado operativo inicial'),
+      sold_price: z.number().optional().describe('Precio vendido del proyecto'),
+      due_date: z.string().optional().describe('Fecha límite de entrega (YYYY-MM-DD)'),
+      start_date: z.string().optional().describe('Fecha de inicio (YYYY-MM-DD)'),
+    },
+    async (data) => {
+      try {
+        const project = await ProjectService.create(data, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `🚀 Proyecto creado exitosamente:\n• Nombre: ${project.name}\n• Estado: ${project.status}\n• ID: ${project.id}\n• Plazo: ${project.due_date || 'Sin definir'}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al crear proyecto: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- actualizar_proyecto ---
+  srv.tool(
+    'actualizar_proyecto',
+    'Actualizar el estado operativo, etapa o fecha de entrega de un proyecto.',
+    {
+      id: z.string().describe('ID del proyecto a actualizar'),
+      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Nuevo estado operativo'),
+      due_date: z.string().optional().describe('Nueva fecha de entrega (YYYY-MM-DD)'),
+      name: z.string().optional().describe('Nombre actualizado del proyecto'),
+      completed_at: z.string().optional().describe('Fecha de finalización (ISO 8601 o YYYY-MM-DD)'),
+    },
+    async ({ id, ...data }) => {
+      try {
+        const updated = await ProjectService.update(id, data, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `✅ Proyecto actualizado (ID: ${id}):\n• Estado: ${updated.status}\n• Plazo: ${updated.due_date || 'N/A'}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar proyecto: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- listar_proyectos ---
+  srv.tool(
+    'listar_proyectos',
+    'Listar los proyectos operativos en ejecución, revisión o completados con sus plazos.',
+    {
+      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Filtrar por estado'),
+    },
+    async (filters) => {
+      try {
+        const projects = await ProjectService.getAll(filters);
+        const list = projects.map((p: any) =>
+          `• [${(p.status || 'in_progress').toUpperCase()}] ${p.name} | Plazo: ${p.due_date || 'Sin fecha'} | Empresa ID: ${p.company_id || 'N/A'} (ID: ${p.id})`
+        ).join('\n');
+        return {
+          content: [{ type: 'text' as const, text: projects.length > 0 ? `📂 Proyectos Operativos (${projects.length}):\n\n${list}` : 'No hay proyectos registrados.' }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar proyectos: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- registrar_encuesta_cliente ---
+  srv.tool(
+    'registrar_encuesta_cliente',
+    'Registrar una encuesta de satisfacción CSAT (1-5) o NPS (0-10) de un cliente para recalcular automáticamente su Customer Health Score.',
+    {
+      company_id: z.string().describe('ID de la empresa'),
+      client_id: z.string().optional().describe('ID del cliente'),
+      survey_type: z.enum(['csat', 'nps']).describe('Tipo de encuesta (csat para entregables/pago único, nps para retainers recurrentes)'),
+      score: z.number().describe('Puntuación: 1 a 5 para CSAT; 0 a 10 para NPS'),
+      q1_delivery_quality: z.number().min(1).max(5).optional().describe('CSAT: Calidad de entrega (1-5)'),
+      q2_communication: z.number().min(1).max(5).optional().describe('CSAT: Fluidez de comunicación (1-5)'),
+      q3_expectations: z.number().min(1).max(5).optional().describe('CSAT: Cumplimiento de expectativas (1-5)'),
+      qualitative_feedback: z.string().optional().describe('Comentario u opinión abierta del cliente'),
+    },
+    async (data) => {
+      try {
+        const survey = await SurveyService.recordSurvey(data, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `🌟 Encuesta de satisfacción registrada exitosamente:\n• Tipo: ${data.survey_type.toUpperCase()}\n• Puntuación: ${data.score}\n• ID: ${survey.id}\nEl Health Score del cliente ha sido recalculado.` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al registrar encuesta: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- obtener_panel_clientes ---
+  srv.tool(
+    'obtener_panel_clientes',
+    'Consultar la matriz consolidada de clientes con su servicio contratado, etapa operativa, estado de cobro, Customer Health Score (0-100 pts), LTV y Time to Value.',
+    {},
+    async () => {
+      try {
+        const panel = await AnalyticsService.getClientPanel();
+        return {
+          content: [{ type: 'text' as const, text: `📋 PANEL DE CLIENTES:\n\n${JSON.stringify(panel, null, 2)}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener panel de clientes: ${err.message}` }] };
+      }
+    }
+  );
+
 }
+
 

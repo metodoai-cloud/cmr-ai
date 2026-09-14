@@ -1420,7 +1420,7 @@ export function registerTools(srv: McpServer) {
       name: z.string().describe('Nombre del proyecto (ej: Creación de Empresa, Automatización de Procesos)'),
       company_id: z.string().optional().describe('ID de la empresa'),
       client_id: z.string().optional().describe('ID del cliente'),
-      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Estado operativo inicial'),
+      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'cancelled']).optional().describe('Estado operativo inicial'),
       sold_price: z.number().optional().describe('Precio vendido del proyecto'),
       due_date: z.string().optional().describe('Fecha límite de entrega (YYYY-MM-DD)'),
       start_date: z.string().optional().describe('Fecha de inicio (YYYY-MM-DD)'),
@@ -1433,51 +1433,6 @@ export function registerTools(srv: McpServer) {
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al crear proyecto: ${err.message}` }] };
-      }
-    }
-  );
-
-  // --- actualizar_proyecto ---
-  srv.tool(
-    'actualizar_proyecto',
-    'Actualizar el estado operativo, etapa o fecha de entrega de un proyecto.',
-    {
-      id: z.string().describe('ID del proyecto a actualizar'),
-      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Nuevo estado operativo'),
-      due_date: z.string().optional().describe('Nueva fecha de entrega (YYYY-MM-DD)'),
-      name: z.string().optional().describe('Nombre actualizado del proyecto'),
-      completed_at: z.string().optional().describe('Fecha de finalización (ISO 8601 o YYYY-MM-DD)'),
-    },
-    async ({ id, ...data }) => {
-      try {
-        const updated = await ProjectService.update(id, data, 'mcp');
-        return {
-          content: [{ type: 'text' as const, text: `✅ Proyecto actualizado (ID: ${id}):\n• Estado: ${updated.status}\n• Plazo: ${updated.due_date || 'N/A'}` }],
-        };
-      } catch (err: any) {
-        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar proyecto: ${err.message}` }] };
-      }
-    }
-  );
-
-  // --- listar_proyectos ---
-  srv.tool(
-    'listar_proyectos',
-    'Listar los proyectos operativos en ejecución, revisión o completados con sus plazos.',
-    {
-      status: z.enum(['onboarding', 'in_progress', 'review', 'completed', 'blocked']).optional().describe('Filtrar por estado'),
-    },
-    async (filters) => {
-      try {
-        const projects = await ProjectService.getAll(filters);
-        const list = projects.map((p: any) =>
-          `• [${(p.status || 'in_progress').toUpperCase()}] ${p.name} | Plazo: ${p.due_date || 'Sin fecha'} | Empresa ID: ${p.company_id || 'N/A'} (ID: ${p.id})`
-        ).join('\n');
-        return {
-          content: [{ type: 'text' as const, text: projects.length > 0 ? `📂 Proyectos Operativos (${projects.length}):\n\n${list}` : 'No hay proyectos registrados.' }],
-        };
-      } catch (err: any) {
-        return { content: [{ type: 'text' as const, text: `❌ Error al listar proyectos: ${err.message}` }] };
       }
     }
   );
@@ -1508,9 +1463,9 @@ export function registerTools(srv: McpServer) {
     }
   );
 
-  // --- obtener_panel_clientes ---
+  // --- consultar_panel_completo ---
   srv.tool(
-    'obtener_panel_clientes',
+    'consultar_panel_completo',
     'Consultar la matriz consolidada de clientes con su servicio contratado, etapa operativa, estado de cobro, Customer Health Score (0-100 pts), LTV y Time to Value.',
     {},
     async () => {
@@ -1526,5 +1481,6 @@ export function registerTools(srv: McpServer) {
   );
 
 }
+
 
 

@@ -6,6 +6,13 @@ import {
   FileCode2,
   ChevronDown,
   ChevronUp,
+  Edit3,
+  Plus,
+  X,
+  Check,
+  Save,
+  Target,
+  ArrowRight,
 } from 'lucide-react';
 
 export interface AgencyTask {
@@ -14,6 +21,8 @@ export interface AgencyTask {
   entity: string;
   entityDisplay?: string;
   typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial';
+  expectedOutcome?: string; // Resultado esperado o entregable concreto
+  nextAction?: string;      // Siguiente paso posterior (distinto al título)
   source?: string;
   status: 'pending' | 'in_progress' | 'completed';
   borderColor?: string;
@@ -71,6 +80,8 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Gafexterna',
     entityDisplay: 'Gafexterna',
     typeTag: 'Cliente',
+    expectedOutcome: 'Documento con 5 entrevistas analizadas y 2 clientes piloto pre-acordados.',
+    nextAction: 'Sintetizar matriz de dolores y validar propuesta comercial.',
     source: 'landing-page.md / preguntas-pendientes-paola.md',
     status: 'pending',
     borderColor: '#f97316',
@@ -81,6 +92,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Gafexterna',
     entityDisplay: 'Gafexterna',
     typeTag: 'Cliente',
+    expectedOutcome: 'Checklist de fases del pipeline 1 a 6 con confirmación de Paola.',
     source: 'estado-cliente',
     status: 'pending',
     borderColor: '#f97316',
@@ -91,6 +103,8 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Gafexterna',
     entityDisplay: 'Gafexterna',
     typeTag: 'Cliente',
+    expectedOutcome: 'Figma interactivo con pantallas de onboarding y panel principal.',
+    nextAction: 'Agendar sesión de feedback de 30 minutos.',
     source: 'landing-page.md',
     status: 'pending',
     borderColor: '#f97316',
@@ -101,6 +115,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Gafexterna',
     entityDisplay: 'Gafexterna',
     typeTag: 'Cliente',
+    expectedOutcome: 'PDF de entregables aprobado por el cliente.',
     source: 'preguntas-pendientes-paola.md',
     status: 'pending',
     borderColor: '#f97316',
@@ -109,10 +124,12 @@ const INITIAL_TASKS: AgencyTask[] = [
   // --- Ascendra (5) ---
   {
     id: 5,
-    title: 'Construir fases 9 y 10 del pipeline de Ascendra (Redes sociales y Lanzamiento/Go-to-market)',
+    title: 'Construir fases 9 y 10 del pipeline de Ascendra (Redes sociales y Go-to-market)',
     entity: 'Ascendra',
     entityDisplay: 'Ascendra Gestión Inmobiliaria',
     typeTag: 'Cliente',
+    expectedOutcome: 'Estructura de embudo de captación de inversionistas en CRM.',
+    nextAction: 'Validar con los socios en reunión semanal.',
     source: 'estado-general.md',
     status: 'pending',
     borderColor: '#0d9488',
@@ -123,6 +140,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Ascendra',
     entityDisplay: 'Ascendra Gestión Inmobiliaria',
     typeTag: 'Cliente',
+    expectedOutcome: 'Reunión fijada en Google Calendar con acta de acuerdos lista.',
     source: 'estado-general.md',
     status: 'pending',
     borderColor: '#0d9488',
@@ -133,6 +151,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Ascendra',
     entityDisplay: 'Ascendra Gestión Inmobiliaria',
     typeTag: 'Cliente',
+    expectedOutcome: 'Diagrama de integraciones Supabase + WhatsApp validado.',
     source: 'estado-general.md',
     status: 'pending',
     borderColor: '#0d9488',
@@ -143,6 +162,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Ascendra',
     entityDisplay: 'Ascendra Gestión Inmobiliaria',
     typeTag: 'Cliente',
+    expectedOutcome: 'Documento de SLAs con tiempos de respuesta < 5 min por lead.',
     source: 'estado-general.md',
     status: 'pending',
     borderColor: '#0d9488',
@@ -153,6 +173,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Ascendra',
     entityDisplay: 'Ascendra Gestión Inmobiliaria',
     typeTag: 'Cliente',
+    expectedOutcome: 'Pipeline base configurado con etapas y criterios de pase.',
     source: 'estado-general.md',
     status: 'completed',
     borderColor: '#10b981',
@@ -165,6 +186,8 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Acmotrack',
     entityDisplay: 'Acmotrack',
     typeTag: 'Cliente',
+    expectedOutcome: 'Comprobante de transferencia bancaria por $529.550 recibido.',
+    nextAction: 'Registrar pago en el CRM y emitir recibo.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#a855f7',
@@ -177,6 +200,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Planilla de saldos bancarios conciliada al 100%.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -187,6 +211,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Verificación de transferencias ejecutadas a cuentas de reserva.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -197,6 +222,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Fondos distribuidos en subcuentas de Ganancia, Impuestos y Operaciones.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -207,6 +233,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Fórmulas del libro actualizadas sin errores de referencia.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -217,6 +244,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Columna agregada que suma únicamente facturas pagadas.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -227,6 +255,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Provisión del F29 depositada generando intereses mensuales.',
     source: 'finanzas-data.json',
     status: 'pending',
     borderColor: '#6366f1',
@@ -237,6 +266,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Comercial',
+    expectedOutcome: 'Contrato firmado por retainer de automatización mensual.',
     source: 'pipeline-crm',
     status: 'in_progress',
     borderColor: '#f59e0b',
@@ -247,6 +277,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Métrica VET recalculada con margen operativo > 60%.',
     source: 'finanzas-data.json',
     status: 'in_progress',
     borderColor: '#f59e0b',
@@ -257,6 +288,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Las 5 cuentas operativas y vinculadas a la plataforma contable.',
     source: 'finanzas-data.json',
     status: 'completed',
     borderColor: '#10b981',
@@ -267,6 +299,7 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Regla documentada y acordada formalmente.',
     source: 'finanzas-data.json',
     status: 'completed',
     borderColor: '#10b981',
@@ -277,17 +310,45 @@ const INITIAL_TASKS: AgencyTask[] = [
     entity: 'Agencia',
     entityDisplay: 'Agencia-IA',
     typeTag: 'Finanzas',
+    expectedOutcome: 'Costos fijos actualizados en el modelo financiero.',
     source: 'finanzas-data.json',
     status: 'completed',
     borderColor: '#10b981',
   },
 ];
 
+const LOCAL_STORAGE_KEY = 'crm_agency_tasks_custom_v2';
+
 export const AgencyTasksSection: React.FC = () => {
-  const [tasks, setTasks] = useState<AgencyTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<AgencyTask[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // fallback
+    }
+    return INITIAL_TASKS;
+  });
+
   const [selectedEntity, setSelectedEntity] = useState<string>('all');
   const [companies, setCompanies] = useState<string[]>([]);
-  const [showTasksList, setShowTasksList] = useState<boolean>(false); // Oculto por defecto al ingresar
+  const [showTasksList, setShowTasksList] = useState<boolean>(true);
+
+  // Edit / Create Modal State
+  const [editingTask, setEditingTask] = useState<AgencyTask | null>(null);
+  const [isNewTask, setIsNewTask] = useState<boolean>(false);
+
+  // Sync to local storage whenever tasks change
+  useEffect(() => {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks));
+    } catch (e) {
+      console.warn('Error saving tasks to localStorage:', e);
+    }
+  }, [tasks]);
 
   useEffect(() => {
     const loadDbTasks = async () => {
@@ -374,15 +435,22 @@ export const AgencyTasksSection: React.FC = () => {
                   ? '#f59e0b'
                   : badgeStyle.color;
 
+              // Check if next_action is distinct from title / notes (prevent duplicate)
+              const rawNext = a.next_action ? a.next_action.trim() : '';
+              const isDuplicateNext =
+                rawNext.toLowerCase() === title.toLowerCase().trim() ||
+                (a.notes && rawNext.toLowerCase() === a.notes.toLowerCase().trim());
+              const cleanNextAction = isDuplicateNext || !rawNext ? undefined : rawNext;
+
               return {
                 id: a.id || `db-${idx}`,
                 title,
                 entity,
                 entityDisplay,
                 typeTag,
-                source: a.next_action
-                  ? `Siguiente acción: ${a.next_action}`
-                  : 'CRM DB (Claude Cowork / MCP)',
+                expectedOutcome: a.desired_outcome || undefined,
+                nextAction: cleanNextAction,
+                source: 'CRM DB (Claude Cowork / MCP)',
                 status,
                 borderColor,
               };
@@ -390,11 +458,9 @@ export const AgencyTasksSection: React.FC = () => {
 
           if (dbTasks.length > 0) {
             setTasks((prev) => {
-              const titles = new Set(dbTasks.map((d) => d.title.toLowerCase().trim()));
-              const remainingInit = prev.filter(
-                (p) => !titles.has(p.title.toLowerCase().trim())
-              );
-              return [...dbTasks, ...remainingInit];
+              const existingIds = new Set(prev.map((p) => String(p.id)));
+              const newFromDb = dbTasks.filter((d) => !existingIds.has(String(d.id)));
+              return [...prev, ...newFromDb];
             });
           }
         }
@@ -424,7 +490,7 @@ export const AgencyTasksSection: React.FC = () => {
               : getEntityBadgeStyle(t.entity).color;
 
           // Sync to backend if it's a DB record (UUID)
-          if (typeof taskId === 'string' && taskId.length > 10) {
+          if (typeof taskId === 'string' && taskId.length > 10 && !taskId.startsWith('custom-')) {
             fetch(`/api/activities/${taskId}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -444,6 +510,85 @@ export const AgencyTasksSection: React.FC = () => {
         return t;
       })
     );
+  };
+
+  const handleOpenEdit = (task: AgencyTask, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTask({ ...task });
+    setIsNewTask(false);
+  };
+
+  const handleOpenNewTask = () => {
+    setEditingTask({
+      id: `custom-${Date.now()}`,
+      title: '',
+      entity: selectedEntity !== 'all' ? selectedEntity : 'Agencia',
+      entityDisplay: selectedEntity !== 'all' ? selectedEntity : 'Agencia-IA',
+      typeTag: 'Agencia',
+      expectedOutcome: '',
+      nextAction: '',
+      source: 'Manual / Interfaz Web',
+      status: 'pending',
+    });
+    setIsNewTask(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTask || !editingTask.title.trim()) return;
+
+    const badgeStyle = getEntityBadgeStyle(editingTask.entity);
+    const updatedBorder =
+      editingTask.status === 'completed'
+        ? '#10b981'
+        : editingTask.status === 'in_progress'
+        ? '#f59e0b'
+        : badgeStyle.color;
+
+    const taskToSave: AgencyTask = {
+      ...editingTask,
+      title: editingTask.title.trim(),
+      entityDisplay:
+        editingTask.entity === 'Agencia'
+          ? 'Agencia-IA'
+          : editingTask.entity,
+      expectedOutcome: editingTask.expectedOutcome?.trim() || undefined,
+      nextAction: editingTask.nextAction?.trim() || undefined,
+      borderColor: updatedBorder,
+    };
+
+    if (isNewTask) {
+      setTasks((prev) => [taskToSave, ...prev]);
+    } else {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskToSave.id ? taskToSave : t))
+      );
+
+      // Sync to backend if it's a DB record
+      if (typeof taskToSave.id === 'string' && taskToSave.id.length > 10 && !taskToSave.id.startsWith('custom-')) {
+        fetch(`/api/activities/${taskToSave.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            notes: taskToSave.title,
+            desired_outcome: taskToSave.expectedOutcome || null,
+            next_action: taskToSave.nextAction || null,
+            result:
+              taskToSave.status === 'completed'
+                ? 'completada'
+                : taskToSave.status === 'in_progress'
+                ? 'en proceso'
+                : 'pendiente',
+          }),
+        }).catch(console.warn);
+      }
+    }
+
+    setEditingTask(null);
+  };
+
+  const handleMarkAsCompletedDirect = () => {
+    if (!editingTask) return;
+    setEditingTask({ ...editingTask, status: 'completed' });
   };
 
   const filteredTasks = tasks.filter((t) => {
@@ -493,30 +638,89 @@ export const AgencyTasksSection: React.FC = () => {
           borderRadius: 'var(--radius-sm)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '12px',
           cursor: 'pointer',
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          opacity: isDone ? 0.8 : 1,
+          opacity: isDone ? 0.82 : 1,
+          position: 'relative',
         }}
-        className="glass-card-interactive"
-        title="Haz clic para cambiar de estado (Pendiente → En proceso → Hecha)"
+        className="glass-card-interactive group-card"
+        title="Haz clic para alternar estado (Pendiente → En proceso → Hecha)"
       >
+        {/* Top Header: Title + Edit Button + Status Icon */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px' }}>
-          <div style={{ fontWeight: 600, fontSize: '0.975rem', color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)', lineHeight: 1.4, textDecoration: isDone ? 'line-through' : 'none' }}>
+          <div
+            style={{
+              fontWeight: 650,
+              fontSize: '1rem',
+              color: isDone ? 'var(--text-secondary)' : 'var(--text-primary)',
+              lineHeight: 1.45,
+              textDecoration: isDone ? 'line-through' : 'none',
+              flex: 1,
+            }}
+          >
             {task.title}
           </div>
-          <div style={{ flexShrink: 0, marginTop: '2px' }}>
-            {task.status === 'completed' ? (
-              <CheckCircle2 size={18} color="#10b981" />
-            ) : task.status === 'in_progress' ? (
-              <Clock3 size={18} color="#f59e0b" />
-            ) : (
-              <Circle size={18} color="var(--text-muted)" />
-            )}
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginTop: '2px' }}>
+            {/* Edit Button */}
+            <button
+              type="button"
+              onClick={(e) => handleOpenEdit(task, e)}
+              style={{
+                background: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: '6px',
+                padding: '5px 8px',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontSize: '0.75rem',
+                transition: 'all 0.15s ease',
+              }}
+              title="Editar tarea"
+            >
+              <Edit3 size={13} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 500 }}>Editar</span>
+            </button>
+
+            {/* Status Icon */}
+            <div>
+              {task.status === 'completed' ? (
+                <CheckCircle2 size={19} color="#10b981" />
+              ) : task.status === 'in_progress' ? (
+                <Clock3 size={19} color="#f59e0b" />
+              ) : (
+                <Circle size={19} color="var(--text-muted)" />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Tags */}
+        {/* 🎯 Resultado Esperado (Entregable) Callout Box */}
+        {task.expectedOutcome && (
+          <div
+            style={{
+              backgroundColor: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.22)',
+              borderRadius: '6px',
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+            }}
+          >
+            <Target size={15} color="#818cf8" style={{ marginTop: '2px', flexShrink: 0 }} />
+            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, color: '#e0e7ff' }}>
+              <span style={{ fontWeight: 650, color: '#a5b4fc', marginRight: '5px' }}>Resultado esperado:</span>
+              <span>{task.expectedOutcome}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tags Row */}
         <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           {/* Entity Tag */}
           <span
@@ -547,25 +751,81 @@ export const AgencyTasksSection: React.FC = () => {
           >
             {task.typeTag}
           </span>
-        </div>
 
-        {/* Source File */}
-        {task.source && (
-          <div
+          {/* Status Label Badge */}
+          <span
             style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '0.75rem',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginTop: '2px',
+              padding: '2px 8px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              backgroundColor:
+                task.status === 'completed'
+                  ? 'rgba(16, 185, 129, 0.12)'
+                  : task.status === 'in_progress'
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : 'rgba(148, 163, 184, 0.1)',
+              color:
+                task.status === 'completed'
+                  ? '#10b981'
+                  : task.status === 'in_progress'
+                  ? '#f59e0b'
+                  : 'var(--text-muted)',
+              border: `1px solid ${
+                task.status === 'completed'
+                  ? 'rgba(16, 185, 129, 0.25)'
+                  : task.status === 'in_progress'
+                  ? 'rgba(245, 158, 11, 0.25)'
+                  : 'rgba(148, 163, 184, 0.2)'
+              }`,
             }}
           >
-            <FileCode2 size={13} style={{ opacity: 0.7 }} />
-            <span>{task.source}</span>
-          </div>
-        )}
+            {task.status === 'completed'
+              ? '✓ Hecha'
+              : task.status === 'in_progress'
+              ? '⏳ En proceso'
+              : '○ Pendiente'}
+          </span>
+        </div>
+
+        {/* Next Action & Source Footer */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '2px' }}>
+          {/* Siguiente Paso Posterior (si es diferente al título) */}
+          {task.nextAction && (
+            <div
+              style={{
+                fontSize: '0.78rem',
+                color: '#38bdf8',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontWeight: 500,
+              }}
+            >
+              <ArrowRight size={13} color="#38bdf8" />
+              <span>
+                <strong style={{ color: '#7dd3fc' }}>Siguiente paso:</strong> {task.nextAction}
+              </span>
+            </div>
+          )}
+
+          {/* Source File */}
+          {task.source && (
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '0.72rem',
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <FileCode2 size={12} style={{ opacity: 0.7 }} />
+              <span>{task.source}</span>
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -580,42 +840,67 @@ export const AgencyTasksSection: React.FC = () => {
               Tareas de la agencia
             </h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '4px' }}>
-              Fotografía al 13 sep 2026 · {totalCount} tareas registradas
+              {totalCount} tareas registradas · Haz clic para cambiar estado o pulsa <b>Editar</b>
             </p>
           </div>
 
-          {/* Botón Mostrar/Ocultar Tareas */}
-          <button
-            type="button"
-            onClick={() => setShowTasksList(!showTasksList)}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 'var(--radius-sm)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
-              color: showTasksList ? 'var(--primary-light)' : '#ffffff',
-              border: showTasksList ? '1px solid var(--primary)' : '1px solid var(--primary)',
-              boxShadow: showTasksList ? 'none' : 'var(--shadow-glow)',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {showTasksList ? (
-              <>
-                <ChevronUp size={16} />
-                <span>Ocultar Tareas</span>
-              </>
-            ) : (
-              <>
-                <ChevronDown size={16} />
-                <span>Mostrar Tareas ({filteredTasks.length})</span>
-              </>
-            )}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Botón Nueva Tarea */}
+            <button
+              type="button"
+              onClick={handleOpenNewTask}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                color: '#818cf8',
+                border: '1px solid rgba(99, 102, 241, 0.4)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Plus size={16} />
+              <span>Nueva Tarea</span>
+            </button>
+
+            {/* Botón Mostrar/Ocultar Tareas */}
+            <button
+              type="button"
+              onClick={() => setShowTasksList(!showTasksList)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 'var(--radius-sm)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+                color: showTasksList ? 'var(--primary-light)' : '#ffffff',
+                border: '1px solid var(--primary)',
+                boxShadow: showTasksList ? 'none' : 'var(--shadow-glow)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {showTasksList ? (
+                <>
+                  <ChevronUp size={16} />
+                  <span>Ocultar Tareas</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={16} />
+                  <span>Mostrar Tareas ({filteredTasks.length})</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -688,7 +973,7 @@ export const AgencyTasksSection: React.FC = () => {
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-            Hechas
+            Hechas (Histórico)
           </div>
         </div>
       </div>
@@ -749,7 +1034,7 @@ export const AgencyTasksSection: React.FC = () => {
         })}
       </div>
 
-      {/* Task Sections Grouped by Status (Colapsable / Oculto por defecto) */}
+      {/* Task Sections Grouped by Status (Colapsable) */}
       {showTasksList && (
         <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '26px', marginTop: '6px' }}>
           {/* 1. Pendiente */}
@@ -812,7 +1097,7 @@ export const AgencyTasksSection: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
                   <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#10b981' }} />
-                  <span>Hechas</span>
+                  <span>Hechas (Guardadas en histórico)</span>
                 </div>
                 <span
                   style={{
@@ -840,8 +1125,389 @@ export const AgencyTasksSection: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal / Panel para Editar o Crear Tarea */}
+      {editingTask && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(10, 15, 29, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+          onClick={() => setEditingTask(null)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              width: '100%',
+              maxWidth: '560px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid var(--border-glass)',
+              borderRadius: 'var(--radius-md, 12px)',
+              padding: '28px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    color: 'var(--primary)',
+                  }}
+                >
+                  {isNewTask ? <Plus size={20} /> : <Edit3 size={20} />}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                    {isNewTask ? 'Crear Nueva Tarea' : 'Editar Tarea'}
+                  </h4>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    Actualiza los detalles, resultado esperado o estado de la tarea.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTask(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Form Fields */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Title / Action */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Nombre / Tarea Actual *
+                </label>
+                <textarea
+                  value={editingTask.title}
+                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                  rows={2}
+                  placeholder="Ej: Correr entrevistas Mom Test con cliente piloto"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* 🎯 Resultado Esperado */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 650, color: '#a5b4fc', marginBottom: '6px' }}>
+                  <Target size={14} color="#818cf8" />
+                  <span>Resultado Esperado (Entregable / Meta que valida el éxito)</span>
+                </label>
+                <textarea
+                  value={editingTask.expectedOutcome || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, expectedOutcome: e.target.value })}
+                  rows={2}
+                  placeholder="Ej: 5 entrevistas grabadas, documento de feedback y 2 acuerdos de piloto firmados"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.3)',
+                    color: '#e0e7ff',
+                    fontSize: '0.85rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* ➔ Siguiente Paso Posterior */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8', marginBottom: '6px' }}>
+                  <ArrowRight size={14} color="#38bdf8" />
+                  <span>Siguiente Paso Posterior (Opcional, acción que viene después)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingTask.nextAction || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, nextAction: e.target.value })}
+                  placeholder="Ej: Presentar matriz de dolores al equipo directivo (solo si es diferente a la tarea actual)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              {/* Entity & Type */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Entidad / Cliente
+                  </label>
+                  <select
+                    value={editingTask.entity}
+                    onChange={(e) => setEditingTask({ ...editingTask, entity: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                    }}
+                  >
+                    {entityList.map((ent) => (
+                      <option key={ent} value={ent} style={{ backgroundColor: '#1e293b', color: '#fff' }}>
+                        {ent}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                    Categoría / Tipo
+                  </label>
+                  <select
+                    value={editingTask.typeTag}
+                    onChange={(e) =>
+                      setEditingTask({
+                        ...editingTask,
+                        typeTag: e.target.value as 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial',
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="Agencia" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Agencia</option>
+                    <option value="Cliente" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Cliente</option>
+                    <option value="Finanzas" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Finanzas</option>
+                    <option value="Comercial" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Comercial</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                  Estado de la Tarea
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask({ ...editingTask, status: 'pending' })}
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      backgroundColor: editingTask.status === 'pending' ? 'rgba(148, 163, 184, 0.2)' : 'rgba(15, 23, 42, 0.4)',
+                      color: editingTask.status === 'pending' ? '#ffffff' : 'var(--text-muted)',
+                      border: editingTask.status === 'pending' ? '1px solid #94a3b8' : '1px solid var(--border-glass)',
+                    }}
+                  >
+                    <Circle size={14} />
+                    <span>Pendiente</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask({ ...editingTask, status: 'in_progress' })}
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      backgroundColor: editingTask.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(15, 23, 42, 0.4)',
+                      color: editingTask.status === 'in_progress' ? '#f59e0b' : 'var(--text-muted)',
+                      border: editingTask.status === 'in_progress' ? '1px solid #f59e0b' : '1px solid var(--border-glass)',
+                    }}
+                  >
+                    <Clock3 size={14} />
+                    <span>En proceso</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask({ ...editingTask, status: 'completed' })}
+                    style={{
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      backgroundColor: editingTask.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.4)',
+                      color: editingTask.status === 'completed' ? '#10b981' : 'var(--text-muted)',
+                      border: editingTask.status === 'completed' ? '1px solid #10b981' : '1px solid var(--border-glass)',
+                    }}
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Hecha</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Source / Note */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  Origen / Archivo fuente
+                </label>
+                <input
+                  type="text"
+                  value={editingTask.source || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, source: e.target.value })}
+                  placeholder="Ej: finanzas-data.json, CRM DB, o nota personal"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    border: '1px solid var(--border-glass)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.85rem',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', gap: '10px' }}>
+              <div>
+                {editingTask.status !== 'completed' && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAsCompletedDirect}
+                    style={{
+                      padding: '9px 14px',
+                      borderRadius: '8px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      color: '#10b981',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Check size={15} />
+                    <span>Completar</span>
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
+                  style={{
+                    padding: '9px 16px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-secondary)',
+                    border: '1px solid var(--border-glass)',
+                  }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={!editingTask.title.trim()}
+                  style={{
+                    padding: '9px 20px',
+                    borderRadius: '8px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: editingTask.title.trim() ? 'pointer' : 'not-allowed',
+                    backgroundColor: 'var(--primary)',
+                    color: '#ffffff',
+                    border: '1px solid var(--primary)',
+                    boxShadow: 'var(--shadow-glow)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: editingTask.title.trim() ? 1 : 0.6,
+                  }}
+                >
+                  <Save size={15} />
+                  <span>Guardar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AgencyTasksSection;
+
+

@@ -441,12 +441,29 @@ export const AgencyTasksSection: React.FC = () => {
                   ? '#f59e0b'
                   : badgeStyle.color;
 
-              // Check if next_action is distinct from title / notes (prevent duplicate)
+              // 1. Extraer Resultado Esperado (desired_outcome o campo result si no es un estado genérico)
+              let expectedOutcome = a.desired_outcome ? a.desired_outcome.trim() : undefined;
+              if (!expectedOutcome && a.result) {
+                const rLower = a.result.toLowerCase().trim();
+                const isGenericStatus = ['completada', 'completado', 'done', 'finalizada', 'hecha', 'en proceso', 'in progress', 'pendiente', 'pending'].includes(rLower);
+                if (!isGenericStatus && a.result.trim().length > 3) {
+                  expectedOutcome = a.result.trim();
+                }
+              }
+
+              // 2. Extraer Siguiente Paso (next_action o desde notas si venía incrustado)
               const rawNext = a.next_action ? a.next_action.trim() : '';
               const isDuplicateNext =
                 rawNext.toLowerCase() === title.toLowerCase().trim() ||
                 (a.notes && rawNext.toLowerCase() === a.notes.toLowerCase().trim());
-              const cleanNextAction = isDuplicateNext || !rawNext ? undefined : rawNext;
+              let cleanNextAction = isDuplicateNext || !rawNext ? undefined : rawNext;
+
+              if (!cleanNextAction && a.notes) {
+                const match = a.notes.match(/(?:siguiente paso|siguiente acci[oó]n)(?:\s+una vez completada)?:\s*([^.\n]+)/i);
+                if (match && match[1]) {
+                  cleanNextAction = match[1].trim();
+                }
+              }
 
               return {
                 id: a.id || `db-${idx}`,
@@ -454,7 +471,7 @@ export const AgencyTasksSection: React.FC = () => {
                 entity,
                 entityDisplay,
                 typeTag,
-                expectedOutcome: a.desired_outcome || undefined,
+                expectedOutcome,
                 nextAction: cleanNextAction,
                 source: 'CRM DB (Claude Cowork / MCP)',
                 status,
@@ -465,9 +482,28 @@ export const AgencyTasksSection: React.FC = () => {
 
           if (dbTasks.length > 0) {
             setTasks((prev) => {
-              const existingIds = new Set(prev.map((p) => String(p.id)));
-              const newFromDb = dbTasks.filter((d) => !existingIds.has(String(d.id)));
-              return [...prev, ...newFromDb];
+              const dbMap = new Map(dbTasks.map((d) => [String(d.id), d]));
+              // Actualizar tareas existentes en memoria/localStorage con los datos frescos de la BD
+              const updated = prev.map((t) => {
+                const fromDb = dbMap.get(String(t.id));
+                if (fromDb) {
+                  return {
+                    ...t,
+                    title: fromDb.title || t.title,
+                    expectedOutcome: fromDb.expectedOutcome || t.expectedOutcome,
+                    nextAction: fromDb.nextAction || t.nextAction,
+                    entity: fromDb.entity || t.entity,
+                    entityDisplay: fromDb.entityDisplay || t.entityDisplay,
+                    status: fromDb.status || t.status,
+                    borderColor: fromDb.borderColor || t.borderColor,
+                    createdAt: fromDb.createdAt || t.createdAt,
+                  };
+                }
+                return t;
+              });
+              const prevIds = new Set(prev.map((p) => String(p.id)));
+              const completelyNew = dbTasks.filter((d) => !prevIds.has(String(d.id)));
+              return [...updated, ...completelyNew];
             });
           }
         }

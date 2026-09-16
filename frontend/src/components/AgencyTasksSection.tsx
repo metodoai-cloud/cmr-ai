@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CheckCircle2,
   Clock3,
@@ -1126,401 +1127,414 @@ export const AgencyTasksSection: React.FC = () => {
         </div>
       )}
 
-      {/* Modal / Panel para Editar o Crear Tarea */}
-      {editingTask && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(10, 15, 29, 0.65)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
-          }}
-          onClick={() => setEditingTask(null)}
-        >
+      {/* Modal / Panel para Editar o Crear Tarea (Renderizado en document.body vía Portal para estar siempre centrado en el viewport) */}
+      {editingTask &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            className="glass-card"
             style={{
-              width: '100%',
-              maxWidth: '560px',
-              backgroundColor: 'var(--bg-card-solid)',
-              border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-md, 14px)',
-              padding: '28px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), var(--shadow-card)',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(10, 15, 29, 0.65)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 999999,
+              padding: '20px',
+              boxSizing: 'border-box',
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setEditingTask(null)}
           >
-            {/* Modal Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
+            <div
+              className="glass-card animate-fade-in"
+              style={{
+                width: '100%',
+                maxWidth: '560px',
+                backgroundColor: 'var(--bg-card-solid)',
+                border: '1px solid var(--border-glass)',
+                borderRadius: 'var(--radius-md, 14px)',
+                padding: '28px',
+                boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5), var(--shadow-card)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+                boxSizing: 'border-box',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div
+                    style={{
+                      padding: '8px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                      color: 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {isNewTask ? <Plus size={22} /> : <Edit3 size={22} />}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                      {isNewTask ? 'Crear Nueva Tarea' : 'Editar Tarea'}
+                    </h4>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      Actualiza los detalles, resultado esperado o estado de la tarea.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingTask(null)}
                   style={{
-                    padding: '8px',
-                    borderRadius: '10px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                    color: 'var(--primary)',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '6px',
+                    borderRadius: '6px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  {isNewTask ? <Plus size={22} /> : <Edit3 size={22} />}
-                </div>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 700 }}>
-                    {isNewTask ? 'Crear Nueva Tarea' : 'Editar Tarea'}
-                  </h4>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Actualiza los detalles, resultado esperado o estado de la tarea.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingTask(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '6px',
-                  borderRadius: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Form Fields */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Title / Action */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                  Nombre / Tarea Actual *
-                </label>
-                <textarea
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                  rows={2}
-                  placeholder="Ej: Correr entrevistas Mom Test con cliente piloto"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--bg-main)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.9rem',
-                    fontFamily: 'inherit',
-                    resize: 'vertical',
-                    outline: 'none',
-                    lineHeight: 1.45,
-                  }}
-                />
+                  <X size={20} />
+                </button>
               </div>
 
-              {/* 🎯 Resultado Esperado */}
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--primary)', marginBottom: '6px' }}>
-                  <Target size={15} color="var(--primary)" />
-                  <span>Resultado Esperado (Entregable / Meta que valida el éxito)</span>
-                </label>
-                <textarea
-                  value={editingTask.expectedOutcome || ''}
-                  onChange={(e) => setEditingTask({ ...editingTask, expectedOutcome: e.target.value })}
-                  rows={2}
-                  placeholder="Ej: 5 entrevistas grabadas, documento de feedback y 2 acuerdos firmados"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.06)',
-                    border: '1px solid rgba(99, 102, 241, 0.35)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.88rem',
-                    fontFamily: 'inherit',
-                    resize: 'vertical',
-                    outline: 'none',
-                    lineHeight: 1.45,
-                  }}
-                />
-              </div>
-
-              {/* ➔ Siguiente Paso Posterior */}
-              <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--info)', marginBottom: '6px' }}>
-                  <ArrowRight size={15} color="var(--info)" />
-                  <span>Siguiente Paso Posterior (Opcional, acción que viene después)</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingTask.nextAction || ''}
-                  onChange={(e) => setEditingTask({ ...editingTask, nextAction: e.target.value })}
-                  placeholder="Ej: Presentar matriz de dolores al equipo directivo (solo si es diferente a la tarea actual)"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--bg-main)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.88rem',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-
-              {/* Entity & Type */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              {/* Form Fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Title / Action */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                    Entidad / Cliente
+                    Nombre / Tarea Actual *
                   </label>
-                  <select
-                    value={editingTask.entity}
-                    onChange={(e) => setEditingTask({ ...editingTask, entity: e.target.value })}
+                  <textarea
+                    value={editingTask.title}
+                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                    rows={2}
+                    placeholder="Ej: Correr entrevistas Mom Test con cliente piloto"
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-main)',
+                      border: '1px solid var(--border-glass)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.9rem',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      outline: 'none',
+                      lineHeight: 1.45,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {/* 🎯 Resultado Esperado */}
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--primary)', marginBottom: '6px' }}>
+                    <Target size={15} color="var(--primary)" />
+                    <span>Resultado Esperado (Entregable / Meta que valida el éxito)</span>
+                  </label>
+                  <textarea
+                    value={editingTask.expectedOutcome || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, expectedOutcome: e.target.value })}
+                    rows={2}
+                    placeholder="Ej: 5 entrevistas grabadas, documento de feedback y 2 acuerdos firmados"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                      border: '1px solid rgba(99, 102, 241, 0.35)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.88rem',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      outline: 'none',
+                      lineHeight: 1.45,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {/* ➔ Siguiente Paso Posterior */}
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--info)', marginBottom: '6px' }}>
+                    <ArrowRight size={15} color="var(--info)" />
+                    <span>Siguiente Paso Posterior (Opcional, acción que viene después)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingTask.nextAction || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, nextAction: e.target.value })}
+                    placeholder="Ej: Presentar matriz de dolores al equipo directivo (solo si es diferente a la tarea actual)"
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
                       borderRadius: '8px',
                       backgroundColor: 'var(--bg-main)',
                       border: '1px solid var(--border-glass)',
                       color: 'var(--text-primary)',
                       fontSize: '0.88rem',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }}
-                  >
-                    {entityList.map((ent) => (
-                      <option key={ent} value={ent}>
-                        {ent}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
+                {/* Entity & Type */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                      Entidad / Cliente
+                    </label>
+                    <select
+                      value={editingTask.entity}
+                      onChange={(e) => setEditingTask({ ...editingTask, entity: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-main)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      {entityList.map((ent) => (
+                        <option key={ent} value={ent}>
+                          {ent}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                      Categoría / Tipo
+                    </label>
+                    <select
+                      value={editingTask.typeTag}
+                      onChange={(e) =>
+                        setEditingTask({
+                          ...editingTask,
+                          typeTag: e.target.value as 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial',
+                        })
+                      }
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-main)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <option value="Agencia">Agencia</option>
+                      <option value="Cliente">Cliente</option>
+                      <option value="Finanzas">Finanzas</option>
+                      <option value="Comercial">Comercial</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                    Estado de la Tarea
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTask({ ...editingTask, status: 'pending' })}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        backgroundColor: editingTask.status === 'pending' ? 'rgba(148, 163, 184, 0.25)' : 'var(--bg-main)',
+                        color: editingTask.status === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                        border: editingTask.status === 'pending' ? '1.5px solid #94a3b8' : '1px solid var(--border-glass)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Circle size={15} />
+                      <span>Pendiente</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingTask({ ...editingTask, status: 'in_progress' })}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        backgroundColor: editingTask.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-main)',
+                        color: editingTask.status === 'in_progress' ? 'var(--warning)' : 'var(--text-secondary)',
+                        border: editingTask.status === 'in_progress' ? '1.5px solid var(--warning)' : '1px solid var(--border-glass)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Clock3 size={15} />
+                      <span>En proceso</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingTask({ ...editingTask, status: 'completed' })}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        backgroundColor: editingTask.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-main)',
+                        color: editingTask.status === 'completed' ? 'var(--success)' : 'var(--text-secondary)',
+                        border: editingTask.status === 'completed' ? '1.5px solid var(--success)' : '1px solid var(--border-glass)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <CheckCircle2 size={15} />
+                      <span>Hecha</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Source / Note */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                    Categoría / Tipo
+                    Origen / Archivo fuente
                   </label>
-                  <select
-                    value={editingTask.typeTag}
-                    onChange={(e) =>
-                      setEditingTask({
-                        ...editingTask,
-                        typeTag: e.target.value as 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial',
-                      })
-                    }
+                  <input
+                    type="text"
+                    value={editingTask.source || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, source: e.target.value })}
+                    placeholder="Ej: finanzas-data.json, CRM DB, o nota personal"
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: '10px 14px',
                       borderRadius: '8px',
                       backgroundColor: 'var(--bg-main)',
                       border: '1px solid var(--border-glass)',
                       color: 'var(--text-primary)',
                       fontSize: '0.88rem',
                       outline: 'none',
+                      boxSizing: 'border-box',
                     }}
-                  >
-                    <option value="Agencia">Agencia</option>
-                    <option value="Cliente">Cliente</option>
-                    <option value="Finanzas">Finanzas</option>
-                    <option value="Comercial">Comercial</option>
-                  </select>
+                  />
                 </div>
               </div>
 
-              {/* Status */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                  Estado de la Tarea
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setEditingTask({ ...editingTask, status: 'pending' })}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      backgroundColor: editingTask.status === 'pending' ? 'rgba(148, 163, 184, 0.25)' : 'var(--bg-main)',
-                      color: editingTask.status === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
-                      border: editingTask.status === 'pending' ? '1.5px solid #94a3b8' : '1px solid var(--border-glass)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <Circle size={15} />
-                    <span>Pendiente</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setEditingTask({ ...editingTask, status: 'in_progress' })}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      backgroundColor: editingTask.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-main)',
-                      color: editingTask.status === 'in_progress' ? 'var(--warning)' : 'var(--text-secondary)',
-                      border: editingTask.status === 'in_progress' ? '1.5px solid var(--warning)' : '1px solid var(--border-glass)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <Clock3 size={15} />
-                    <span>En proceso</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setEditingTask({ ...editingTask, status: 'completed' })}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      backgroundColor: editingTask.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-main)',
-                      color: editingTask.status === 'completed' ? 'var(--success)' : 'var(--text-secondary)',
-                      border: editingTask.status === 'completed' ? '1.5px solid var(--success)' : '1px solid var(--border-glass)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <CheckCircle2 size={15} />
-                    <span>Hecha</span>
-                  </button>
+              {/* Modal Actions */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', gap: '10px' }}>
+                <div>
+                  {editingTask.status !== 'completed' && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAsCompletedDirect}
+                      style={{
+                        padding: '9px 15px',
+                        borderRadius: '8px',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                        color: 'var(--success)',
+                        border: '1px solid rgba(16, 185, 129, 0.35)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <Check size={16} />
+                      <span>Completar</span>
+                    </button>
+                  )}
                 </div>
-              </div>
 
-              {/* Source / Note */}
-              <div>
-                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                  Origen / Archivo fuente
-                </label>
-                <input
-                  type="text"
-                  value={editingTask.source || ''}
-                  onChange={(e) => setEditingTask({ ...editingTask, source: e.target.value })}
-                  placeholder="Ej: finanzas-data.json, CRM DB, o nota personal"
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--bg-main)',
-                    border: '1px solid var(--border-glass)',
-                    color: 'var(--text-primary)',
-                    fontSize: '0.88rem',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px', gap: '10px' }}>
-              <div>
-                {editingTask.status !== 'completed' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <button
                     type="button"
-                    onClick={handleMarkAsCompletedDirect}
+                    onClick={() => setEditingTask(null)}
                     style={{
-                      padding: '9px 15px',
+                      padding: '9px 18px',
                       borderRadius: '8px',
-                      fontSize: '0.82rem',
+                      fontSize: '0.85rem',
                       fontWeight: 600,
                       cursor: 'pointer',
-                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      color: 'var(--success)',
-                      border: '1px solid rgba(16, 185, 129, 0.35)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-secondary)',
+                      border: '1px solid var(--border-glass)',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveEdit}
+                    disabled={!editingTask.title.trim()}
+                    style={{
+                      padding: '9px 22px',
+                      borderRadius: '8px',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      cursor: editingTask.title.trim() ? 'pointer' : 'not-allowed',
+                      backgroundColor: 'var(--primary)',
+                      color: '#ffffff',
+                      border: '1px solid var(--primary)',
+                      boxShadow: 'var(--shadow-glow)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
-                      transition: 'all 0.15s ease',
+                      opacity: editingTask.title.trim() ? 1 : 0.6,
                     }}
                   >
-                    <Check size={16} />
-                    <span>Completar</span>
+                    <Save size={16} />
+                    <span>Guardar</span>
                   </button>
-                )}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setEditingTask(null)}
-                  style={{
-                    padding: '9px 18px',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    backgroundColor: 'transparent',
-                    color: 'var(--text-secondary)',
-                    border: '1px solid var(--border-glass)',
-                  }}
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSaveEdit}
-                  disabled={!editingTask.title.trim()}
-                  style={{
-                    padding: '9px 22px',
-                    borderRadius: '8px',
-                    fontSize: '0.85rem',
-                    fontWeight: 600,
-                    cursor: editingTask.title.trim() ? 'pointer' : 'not-allowed',
-                    backgroundColor: 'var(--primary)',
-                    color: '#ffffff',
-                    border: '1px solid var(--primary)',
-                    boxShadow: 'var(--shadow-glow)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    opacity: editingTask.title.trim() ? 1 : 0.6,
-                  }}
-                >
-                  <Save size={16} />
-                  <span>Guardar</span>
-                </button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
 
 export default AgencyTasksSection;
-
-

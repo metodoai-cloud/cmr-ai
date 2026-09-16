@@ -14,6 +14,9 @@ import {
   Save,
   Target,
   ArrowRight,
+  Calendar,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 
 export interface AgencyTask {
@@ -27,6 +30,7 @@ export interface AgencyTask {
   source?: string;
   status: 'pending' | 'in_progress' | 'completed';
   borderColor?: string;
+  createdAt?: string;       // Fecha de creación ISO
 }
 
 const ENTITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
@@ -337,6 +341,7 @@ export const AgencyTasksSection: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState<string>('all');
   const [companies, setCompanies] = useState<string[]>([]);
   const [showTasksList, setShowTasksList] = useState<boolean>(true);
+  const [dateSortOrder, setDateSortOrder] = useState<'recent' | 'oldest'>('recent');
 
   // Edit / Create Modal State
   const [editingTask, setEditingTask] = useState<AgencyTask | null>(null);
@@ -454,6 +459,7 @@ export const AgencyTasksSection: React.FC = () => {
                 source: 'CRM DB (Claude Cowork / MCP)',
                 status,
                 borderColor,
+                createdAt: a.created_at || a.occurred_at || new Date().toISOString(),
               };
             });
 
@@ -530,6 +536,7 @@ export const AgencyTasksSection: React.FC = () => {
       nextAction: '',
       source: 'Manual / Interfaz Web',
       status: 'pending',
+      createdAt: new Date().toISOString(),
     });
     setIsNewTask(true);
   };
@@ -555,6 +562,7 @@ export const AgencyTasksSection: React.FC = () => {
       expectedOutcome: editingTask.expectedOutcome?.trim() || undefined,
       nextAction: editingTask.nextAction?.trim() || undefined,
       borderColor: updatedBorder,
+      createdAt: editingTask.createdAt || new Date().toISOString(),
     };
 
     if (isNewTask) {
@@ -592,10 +600,37 @@ export const AgencyTasksSection: React.FC = () => {
     setEditingTask({ ...editingTask, status: 'completed' });
   };
 
-  const filteredTasks = tasks.filter((t) => {
-    if (selectedEntity === 'all') return true;
-    return t.entity === selectedEntity;
-  });
+  const toggleDateSort = () => {
+    setDateSortOrder((prev) => (prev === 'recent' ? 'oldest' : 'recent'));
+  };
+
+  const getTaskTimestamp = (task: AgencyTask): number => {
+    if (task.createdAt) {
+      const parsed = new Date(task.createdAt).getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+    if (typeof task.id === 'string' && task.id.startsWith('custom-')) {
+      const num = parseInt(task.id.replace('custom-', ''), 10);
+      if (!isNaN(num)) return num;
+    }
+    if (typeof task.id === 'number') {
+      return new Date('2026-09-01T00:00:00Z').getTime() + task.id * 86400000;
+    }
+    return 0;
+  };
+
+  const filteredTasks = React.useMemo(() => {
+    const list = tasks.filter((t) => {
+      if (selectedEntity === 'all') return true;
+      return t.entity === selectedEntity;
+    });
+
+    return [...list].sort((a, b) => {
+      const timeA = getTaskTimestamp(a);
+      const timeB = getTaskTimestamp(b);
+      return dateSortOrder === 'recent' ? timeB - timeA : timeA - timeB;
+    });
+  }, [tasks, selectedEntity, dateSortOrder]);
 
   const totalCount = tasks.length;
   const pendingTasks = filteredTasks.filter((t) => t.status === 'pending');
@@ -607,20 +642,19 @@ export const AgencyTasksSection: React.FC = () => {
   const completedCountAll = tasks.filter((t) => t.status === 'completed').length;
 
   const entityList = React.useMemo(() => {
-    const list: string[] = ['Agencia'];
-    const standardClients = ['Ascendra', 'Agrícola Protea', 'Gafexterna', 'Acmotrack'];
-    standardClients.forEach((c) => {
-      if (!list.includes(c)) list.push(c);
+    const set = new Set<string>();
+    tasks.forEach((t) => {
+      if (t.entity && t.entity.trim()) set.add(t.entity.trim());
     });
     companies.forEach((c) => {
-      if (!list.includes(c)) list.push(c);
+      if (c && c.trim()) set.add(c.trim());
     });
-    tasks.forEach((t) => {
-      if (t.entity && !list.includes(t.entity)) {
-        list.push(t.entity);
-      }
+    ['Agencia', 'Ascendra', 'Agrícola Protea', 'Gafexterna', 'Acmotrack'].forEach((c) => {
+      set.add(c);
     });
-    return list;
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, 'es', { sensitivity: 'base' })
+    );
   }, [companies, tasks]);
 
   const renderTaskCard = (task: AgencyTask) => {
@@ -787,6 +821,29 @@ export const AgencyTasksSection: React.FC = () => {
               ? '⏳ En proceso'
               : '○ Pendiente'}
           </span>
+
+          {/* Created Date Badge if available */}
+          {task.createdAt && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
+                fontWeight: 500,
+                backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                color: 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginLeft: 'auto',
+              }}
+              title={`Fecha de registro: ${new Date(task.createdAt).toLocaleString('es-CL')}`}
+            >
+              <Calendar size={11} style={{ opacity: 0.7 }} />
+              <span>{new Date(task.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}</span>
+            </span>
+          )}
         </div>
 
         {/* Next Action & Source Footer */}
@@ -979,60 +1036,102 @@ export const AgencyTasksSection: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs (Entity Pills) */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+      {/* Filter Tabs & Date Sort Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        {/* Entity Pills (Todas + A-Z Clients) */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => setSelectedEntity('all')}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '24px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              backgroundColor: selectedEntity === 'all' ? 'var(--primary)' : 'var(--bg-card-solid)',
+              color: selectedEntity === 'all' ? '#ffffff' : 'var(--text-secondary)',
+              border: selectedEntity === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.15s ease',
+              boxShadow: selectedEntity === 'all' ? '0 2px 8px rgba(99, 102, 241, 0.25)' : 'none',
+            }}
+          >
+            <span>Todas</span>
+            <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{tasks.length}</span>
+          </button>
+
+          {entityList.map((ent) => {
+            const style = getEntityBadgeStyle(ent);
+            const isSelected = selectedEntity === ent;
+            const count = tasks.filter((t) => t.entity === ent).length;
+            return (
+              <button
+                key={ent}
+                type="button"
+                onClick={() => setSelectedEntity(ent)}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '24px',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  backgroundColor: isSelected ? style.bg : 'var(--bg-card-solid)',
+                  color: isSelected ? style.color : 'var(--text-secondary)',
+                  border: isSelected ? style.border : '1px solid var(--border-glass)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: style.color }} />
+                <span>{ent}</span>
+                <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Date Sort Toggle Button */}
         <button
           type="button"
-          onClick={() => setSelectedEntity('all')}
+          onClick={toggleDateSort}
           style={{
-            padding: '8px 18px',
+            padding: '8px 16px',
             borderRadius: '24px',
-            fontSize: '0.85rem',
+            fontSize: '0.82rem',
             fontWeight: 600,
             cursor: 'pointer',
-            backgroundColor: selectedEntity === 'all' ? 'var(--primary)' : 'var(--bg-card-solid)',
-            color: selectedEntity === 'all' ? '#ffffff' : 'var(--text-secondary)',
-            border: selectedEntity === 'all' ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
+            backgroundColor: 'var(--bg-card-solid)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-glass)',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
             transition: 'all 0.15s ease',
+            marginLeft: 'auto',
           }}
+          className="glass-card-interactive"
+          title={
+            dateSortOrder === 'recent'
+              ? 'Orden actual: Más recientes primero. Clic para ordenar por más antiguas.'
+              : 'Orden actual: Más antiguas primero. Clic para ordenar por más recientes.'
+          }
         >
-          <span>Todas</span>
-          <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{tasks.length}</span>
+          <Calendar size={14} color="var(--primary)" />
+          <span style={{ color: 'var(--text-secondary)' }}>Fecha:</span>
+          <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
+            {dateSortOrder === 'recent' ? 'Más recientes' : 'Más antiguas'}
+          </span>
+          {dateSortOrder === 'recent' ? (
+            <ArrowDown size={14} color="var(--primary)" />
+          ) : (
+            <ArrowUp size={14} color="var(--primary)" />
+          )}
         </button>
-
-        {entityList.map((ent) => {
-          const style = getEntityBadgeStyle(ent);
-          const isSelected = selectedEntity === ent;
-          const count = tasks.filter((t) => t.entity === ent).length;
-          return (
-            <button
-              key={ent}
-              type="button"
-              onClick={() => setSelectedEntity(ent)}
-              style={{
-                padding: '8px 18px',
-                borderRadius: '24px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                backgroundColor: isSelected ? style.bg : 'var(--bg-card-solid)',
-                color: isSelected ? style.color : 'var(--text-secondary)',
-                border: isSelected ? style.border : '1px solid var(--border-glass)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: style.color }} />
-              <span>{ent}</span>
-              <span style={{ opacity: 0.85, fontSize: '0.8rem', fontWeight: 700 }}>{count}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* Task Sections Grouped by Status (Colapsable) */}

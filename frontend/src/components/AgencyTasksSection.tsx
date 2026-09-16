@@ -704,7 +704,7 @@ export const AgencyTasksSection: React.FC = () => {
           <div
             style={{
               backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              border: '1px solid rgba(99, 102, 241, 0.22)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
               borderRadius: '6px',
               padding: '8px 12px',
               display: 'flex',
@@ -712,9 +712,9 @@ export const AgencyTasksSection: React.FC = () => {
               gap: '8px',
             }}
           >
-            <Target size={15} color="#818cf8" style={{ marginTop: '2px', flexShrink: 0 }} />
-            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, color: '#e0e7ff' }}>
-              <span style={{ fontWeight: 650, color: '#a5b4fc', marginRight: '5px' }}>Resultado esperado:</span>
+            <Target size={15} color="var(--primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
+            <div style={{ fontSize: '0.82rem', lineHeight: 1.4, color: 'var(--text-primary)' }}>
+              <span style={{ fontWeight: 650, color: 'var(--primary-light)', marginRight: '5px' }}>Resultado esperado:</span>
               <span>{task.expectedOutcome}</span>
             </div>
           </div>
@@ -744,8 +744,8 @@ export const AgencyTasksSection: React.FC = () => {
               borderRadius: '6px',
               fontSize: '0.75rem',
               fontWeight: 500,
-              backgroundColor: 'rgba(148, 163, 184, 0.1)',
-              border: '1px solid rgba(148, 163, 184, 0.2)',
+              backgroundColor: 'rgba(148, 163, 184, 0.12)',
+              border: '1px solid rgba(148, 163, 184, 0.25)',
               color: 'var(--text-secondary)',
             }}
           >
@@ -767,16 +767,16 @@ export const AgencyTasksSection: React.FC = () => {
                   : 'rgba(148, 163, 184, 0.1)',
               color:
                 task.status === 'completed'
-                  ? '#10b981'
+                  ? 'var(--success)'
                   : task.status === 'in_progress'
-                  ? '#f59e0b'
+                  ? 'var(--warning)'
                   : 'var(--text-muted)',
               border: `1px solid ${
                 task.status === 'completed'
-                  ? 'rgba(16, 185, 129, 0.25)'
+                  ? 'rgba(16, 185, 129, 0.3)'
                   : task.status === 'in_progress'
-                  ? 'rgba(245, 158, 11, 0.25)'
-                  : 'rgba(148, 163, 184, 0.2)'
+                  ? 'rgba(245, 158, 11, 0.3)'
+                  : 'rgba(148, 163, 184, 0.25)'
               }`,
             }}
           >
@@ -795,16 +795,16 @@ export const AgencyTasksSection: React.FC = () => {
             <div
               style={{
                 fontSize: '0.78rem',
-                color: '#38bdf8',
+                color: 'var(--info)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontWeight: 500,
               }}
             >
-              <ArrowRight size={13} color="#38bdf8" />
+              <ArrowRight size={13} color="var(--info)" />
               <span>
-                <strong style={{ color: '#7dd3fc' }}>Siguiente paso:</strong> {task.nextAction}
+                <strong style={{ opacity: 0.9 }}>Siguiente paso:</strong> {task.nextAction}
               </span>
             </div>
           )}
@@ -858,9 +858,9 @@ export const AgencyTasksSection: React.FC = () => {
                 alignItems: 'center',
                 gap: '6px',
                 cursor: 'pointer',
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                color: '#818cf8',
-                border: '1px solid rgba(99, 102, 241, 0.4)',
+                backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                color: 'var(--primary)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
                 transition: 'all 0.15s ease',
               }}
             >
@@ -881,7 +881,7 @@ export const AgencyTasksSection: React.FC = () => {
                 alignItems: 'center',
                 gap: '8px',
                 cursor: 'pointer',
-                backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.15)' : 'var(--primary)',
+                backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.12)' : 'var(--primary)',
                 color: showTasksList ? 'var(--primary-light)' : '#ffffff',
                 border: '1px solid var(--primary)',
                 boxShadow: showTasksList ? 'none' : 'var(--shadow-glow)',
@@ -954,7 +954,7 @@ export const AgencyTasksSection: React.FC = () => {
             {inProgressCountAll}
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} />
             En proceso
           </div>
         </div>
@@ -972,7 +972,7 @@ export const AgencyTasksSection: React.FC = () => {
             {completedCountAll}
           </div>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} />
             Hechas (Histórico)
           </div>
         </div>
@@ -1069,7 +1069,7 @@ export const AgencyTasksSection: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#f59e0b' }} />
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: 'var(--warning)' }} />
                   <span>En proceso</span>
                 </div>
                 <span
@@ -1079,7 +1079,7 @@ export const AgencyTasksSection: React.FC = () => {
                     backgroundColor: 'rgba(245, 158, 11, 0.15)',
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: '#f59e0b',
+                    color: 'var(--warning)',
                   }}
                 >
                   {inProgressTasks.length}
@@ -1096,7 +1096,7 @@ export const AgencyTasksSection: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                  <span style={{ width: '9px', height: '9px', borderRadius: '50%', backgroundColor: 'var(--success)' }} />
                   <span>Hechas (Guardadas en histórico)</span>
                 </div>
                 <span
@@ -1106,7 +1106,7 @@ export const AgencyTasksSection: React.FC = () => {
                     backgroundColor: 'rgba(16, 185, 129, 0.15)',
                     fontSize: '0.75rem',
                     fontWeight: 700,
-                    color: '#10b981',
+                    color: 'var(--success)',
                   }}
                 >
                   {completedTasks.length}
@@ -1132,7 +1132,7 @@ export const AgencyTasksSection: React.FC = () => {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(10, 15, 29, 0.75)',
+            backgroundColor: 'rgba(10, 15, 29, 0.65)',
             backdropFilter: 'blur(6px)',
             display: 'flex',
             alignItems: 'center',
@@ -1149,9 +1149,9 @@ export const AgencyTasksSection: React.FC = () => {
               maxWidth: '560px',
               backgroundColor: 'var(--bg-card-solid)',
               border: '1px solid var(--border-glass)',
-              borderRadius: 'var(--radius-md, 12px)',
+              borderRadius: 'var(--radius-md, 14px)',
               padding: '28px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), var(--shadow-card)',
               display: 'flex',
               flexDirection: 'column',
               gap: '20px',
@@ -1162,19 +1162,22 @@ export const AgencyTasksSection: React.FC = () => {
           >
             {/* Modal Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
                     padding: '8px',
-                    borderRadius: '8px',
+                    borderRadius: '10px',
                     backgroundColor: 'rgba(99, 102, 241, 0.15)',
                     color: 'var(--primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  {isNewTask ? <Plus size={20} /> : <Edit3 size={20} />}
+                  {isNewTask ? <Plus size={22} /> : <Edit3 size={22} />}
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                  <h4 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 700 }}>
                     {isNewTask ? 'Crear Nueva Tarea' : 'Editar Tarea'}
                   </h4>
                   <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1186,11 +1189,15 @@ export const AgencyTasksSection: React.FC = () => {
                 type="button"
                 onClick={() => setEditingTask(null)}
                 style={{
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
                   color: 'var(--text-muted)',
                   cursor: 'pointer',
-                  padding: '4px',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
               >
                 <X size={20} />
@@ -1201,7 +1208,7 @@ export const AgencyTasksSection: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Title / Action */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   Nombre / Tarea Actual *
                 </label>
                 <textarea
@@ -1213,47 +1220,49 @@ export const AgencyTasksSection: React.FC = () => {
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backgroundColor: 'var(--bg-main)',
                     border: '1px solid var(--border-glass)',
                     color: 'var(--text-primary)',
                     fontSize: '0.9rem',
                     fontFamily: 'inherit',
                     resize: 'vertical',
                     outline: 'none',
+                    lineHeight: 1.45,
                   }}
                 />
               </div>
 
               {/* 🎯 Resultado Esperado */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 650, color: '#a5b4fc', marginBottom: '6px' }}>
-                  <Target size={14} color="#818cf8" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--primary)', marginBottom: '6px' }}>
+                  <Target size={15} color="var(--primary)" />
                   <span>Resultado Esperado (Entregable / Meta que valida el éxito)</span>
                 </label>
                 <textarea
                   value={editingTask.expectedOutcome || ''}
                   onChange={(e) => setEditingTask({ ...editingTask, expectedOutcome: e.target.value })}
                   rows={2}
-                  placeholder="Ej: 5 entrevistas grabadas, documento de feedback y 2 acuerdos de piloto firmados"
+                  placeholder="Ej: 5 entrevistas grabadas, documento de feedback y 2 acuerdos firmados"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                    border: '1px solid rgba(99, 102, 241, 0.3)',
-                    color: '#e0e7ff',
-                    fontSize: '0.85rem',
+                    backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.88rem',
                     fontFamily: 'inherit',
                     resize: 'vertical',
                     outline: 'none',
+                    lineHeight: 1.45,
                   }}
                 />
               </div>
 
               {/* ➔ Siguiente Paso Posterior */}
               <div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#38bdf8', marginBottom: '6px' }}>
-                  <ArrowRight size={14} color="#38bdf8" />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--info)', marginBottom: '6px' }}>
+                  <ArrowRight size={15} color="var(--info)" />
                   <span>Siguiente Paso Posterior (Opcional, acción que viene después)</span>
                 </label>
                 <input
@@ -1265,10 +1274,10 @@ export const AgencyTasksSection: React.FC = () => {
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backgroundColor: 'var(--bg-main)',
                     border: '1px solid var(--border-glass)',
                     color: 'var(--text-primary)',
-                    fontSize: '0.85rem',
+                    fontSize: '0.88rem',
                     outline: 'none',
                   }}
                 />
@@ -1277,7 +1286,7 @@ export const AgencyTasksSection: React.FC = () => {
               {/* Entity & Type */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
                     Entidad / Cliente
                   </label>
                   <select
@@ -1287,15 +1296,15 @@ export const AgencyTasksSection: React.FC = () => {
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      backgroundColor: 'var(--bg-main)',
                       border: '1px solid var(--border-glass)',
                       color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
+                      fontSize: '0.88rem',
                       outline: 'none',
                     }}
                   >
                     {entityList.map((ent) => (
-                      <option key={ent} value={ent} style={{ backgroundColor: '#1e293b', color: '#fff' }}>
+                      <option key={ent} value={ent}>
                         {ent}
                       </option>
                     ))}
@@ -1303,7 +1312,7 @@ export const AgencyTasksSection: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
                     Categoría / Tipo
                   </label>
                   <select
@@ -1318,24 +1327,24 @@ export const AgencyTasksSection: React.FC = () => {
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                      backgroundColor: 'var(--bg-main)',
                       border: '1px solid var(--border-glass)',
                       color: 'var(--text-primary)',
-                      fontSize: '0.85rem',
+                      fontSize: '0.88rem',
                       outline: 'none',
                     }}
                   >
-                    <option value="Agencia" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Agencia</option>
-                    <option value="Cliente" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Cliente</option>
-                    <option value="Finanzas" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Finanzas</option>
-                    <option value="Comercial" style={{ backgroundColor: '#1e293b', color: '#fff' }}>Comercial</option>
+                    <option value="Agencia">Agencia</option>
+                    <option value="Cliente">Cliente</option>
+                    <option value="Finanzas">Finanzas</option>
+                    <option value="Comercial">Comercial</option>
                   </select>
                 </div>
               </div>
 
               {/* Status */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '8px' }}>
                   Estado de la Tarea
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -1343,21 +1352,22 @@ export const AgencyTasksSection: React.FC = () => {
                     type="button"
                     onClick={() => setEditingTask({ ...editingTask, status: 'pending' })}
                     style={{
-                      padding: '9px 12px',
+                      padding: '10px 12px',
                       borderRadius: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      backgroundColor: editingTask.status === 'pending' ? 'rgba(148, 163, 184, 0.2)' : 'rgba(15, 23, 42, 0.4)',
-                      color: editingTask.status === 'pending' ? '#ffffff' : 'var(--text-muted)',
-                      border: editingTask.status === 'pending' ? '1px solid #94a3b8' : '1px solid var(--border-glass)',
+                      backgroundColor: editingTask.status === 'pending' ? 'rgba(148, 163, 184, 0.25)' : 'var(--bg-main)',
+                      color: editingTask.status === 'pending' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      border: editingTask.status === 'pending' ? '1.5px solid #94a3b8' : '1px solid var(--border-glass)',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <Circle size={14} />
+                    <Circle size={15} />
                     <span>Pendiente</span>
                   </button>
 
@@ -1365,21 +1375,22 @@ export const AgencyTasksSection: React.FC = () => {
                     type="button"
                     onClick={() => setEditingTask({ ...editingTask, status: 'in_progress' })}
                     style={{
-                      padding: '9px 12px',
+                      padding: '10px 12px',
                       borderRadius: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      backgroundColor: editingTask.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(15, 23, 42, 0.4)',
-                      color: editingTask.status === 'in_progress' ? '#f59e0b' : 'var(--text-muted)',
-                      border: editingTask.status === 'in_progress' ? '1px solid #f59e0b' : '1px solid var(--border-glass)',
+                      backgroundColor: editingTask.status === 'in_progress' ? 'rgba(245, 158, 11, 0.2)' : 'var(--bg-main)',
+                      color: editingTask.status === 'in_progress' ? 'var(--warning)' : 'var(--text-secondary)',
+                      border: editingTask.status === 'in_progress' ? '1.5px solid var(--warning)' : '1px solid var(--border-glass)',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <Clock3 size={14} />
+                    <Clock3 size={15} />
                     <span>En proceso</span>
                   </button>
 
@@ -1387,21 +1398,22 @@ export const AgencyTasksSection: React.FC = () => {
                     type="button"
                     onClick={() => setEditingTask({ ...editingTask, status: 'completed' })}
                     style={{
-                      padding: '9px 12px',
+                      padding: '10px 12px',
                       borderRadius: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
-                      backgroundColor: editingTask.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(15, 23, 42, 0.4)',
-                      color: editingTask.status === 'completed' ? '#10b981' : 'var(--text-muted)',
-                      border: editingTask.status === 'completed' ? '1px solid #10b981' : '1px solid var(--border-glass)',
+                      backgroundColor: editingTask.status === 'completed' ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-main)',
+                      color: editingTask.status === 'completed' ? 'var(--success)' : 'var(--text-secondary)',
+                      border: editingTask.status === 'completed' ? '1.5px solid var(--success)' : '1px solid var(--border-glass)',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <CheckCircle2 size={14} />
+                    <CheckCircle2 size={15} />
                     <span>Hecha</span>
                   </button>
                 </div>
@@ -1409,7 +1421,7 @@ export const AgencyTasksSection: React.FC = () => {
 
               {/* Source / Note */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
                   Origen / Archivo fuente
                 </label>
                 <input
@@ -1421,10 +1433,10 @@ export const AgencyTasksSection: React.FC = () => {
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                    backgroundColor: 'var(--bg-main)',
                     border: '1px solid var(--border-glass)',
                     color: 'var(--text-primary)',
-                    fontSize: '0.85rem',
+                    fontSize: '0.88rem',
                     outline: 'none',
                   }}
                 />
@@ -1439,20 +1451,21 @@ export const AgencyTasksSection: React.FC = () => {
                     type="button"
                     onClick={handleMarkAsCompletedDirect}
                     style={{
-                      padding: '9px 14px',
+                      padding: '9px 15px',
                       borderRadius: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: '0.82rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      color: '#10b981',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: 'var(--success)',
+                      border: '1px solid rgba(16, 185, 129, 0.35)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <Check size={15} />
+                    <Check size={16} />
                     <span>Completar</span>
                   </button>
                 )}
@@ -1463,7 +1476,7 @@ export const AgencyTasksSection: React.FC = () => {
                   type="button"
                   onClick={() => setEditingTask(null)}
                   style={{
-                    padding: '9px 16px',
+                    padding: '9px 18px',
                     borderRadius: '8px',
                     fontSize: '0.85rem',
                     fontWeight: 600,
@@ -1481,7 +1494,7 @@ export const AgencyTasksSection: React.FC = () => {
                   onClick={handleSaveEdit}
                   disabled={!editingTask.title.trim()}
                   style={{
-                    padding: '9px 20px',
+                    padding: '9px 22px',
                     borderRadius: '8px',
                     fontSize: '0.85rem',
                     fontWeight: 600,
@@ -1496,7 +1509,7 @@ export const AgencyTasksSection: React.FC = () => {
                     opacity: editingTask.title.trim() ? 1 : 0.6,
                   }}
                 >
-                  <Save size={15} />
+                  <Save size={16} />
                   <span>Guardar</span>
                 </button>
               </div>

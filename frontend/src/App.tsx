@@ -1303,20 +1303,38 @@ Equipo Método AI`;
                                 <stop offset="100%" stopColor="#10b981" />
                               </linearGradient>
                             </defs>
-                            {/* Track de fondo */}
+                            {/* Canal completo del velocímetro: vacío con fondo translúcido y bordes azul */}
                             <path
                               d="M 24 54 A 46 46 0 0 1 116 54"
                               fill="none"
-                              stroke="rgba(255, 255, 255, 0.08)"
-                              strokeWidth="9"
+                              stroke="rgba(59, 130, 246, 0.15)"
+                              strokeWidth="10"
                               strokeLinecap="round"
                             />
-                            {/* Arco coloreado */}
+                            {/* Borde exterior azul */}
+                            <path
+                              d="M 19 54 A 51 51 0 0 1 121 54"
+                              fill="none"
+                              stroke="#3b82f6"
+                              strokeWidth="1.2"
+                              strokeLinecap="round"
+                              style={{ opacity: 0.8 }}
+                            />
+                            {/* Borde interior azul */}
+                            <path
+                              d="M 29 54 A 41 41 0 0 1 111 54"
+                              fill="none"
+                              stroke="#3b82f6"
+                              strokeWidth="1.2"
+                              strokeLinecap="round"
+                              style={{ opacity: 0.8 }}
+                            />
+                            {/* Arco coloreado de avance (progreso actual) */}
                             <path
                               d="M 24 54 A 46 46 0 0 1 116 54"
                               fill="none"
                               stroke="url(#gaugeGradientBrecha)"
-                              strokeWidth="9"
+                              strokeWidth="10"
                               strokeLinecap="round"
                               strokeDasharray="144.5"
                               strokeDashoffset={144.5 * (1 - gaugeRatio)}
@@ -1336,9 +1354,9 @@ Equipo Método AI`;
                             {/* Centro de la aguja */}
                             <circle cx="70" cy="54" r="4.5" fill="#6366f1" stroke="#ffffff" strokeWidth="1.5" />
                             {/* Etiquetas min, actual % y max */}
-                            <text x="18" y="64" fill="var(--text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">$0</text>
+                            <text x="18" y="65" fill="var(--text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">$0</text>
                             <text x="70" y="42" fill="#f59e0b" fontSize="8.5" fontWeight="700" textAnchor="middle">{Math.round(gaugeRatio * 100)}%</text>
-                            <text x="122" y="64" fill="var(--text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">$1.44M</text>
+                            <text x="122" y="65" fill="#3b82f6" fontSize="8" fontWeight="700" textAnchor="middle">$1.44M</text>
                           </svg>
                         </div>
                       </div>

@@ -1186,61 +1186,193 @@ Equipo Método AI`;
               </div>
 
               {/* FILA 2: Salud Financiera & Metas */}
-              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>DÍAS DE FLUJO</span>
-                  <Clock size={18} color="#f59e0b" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '10px' }}>
-                  51,5 <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}>días</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span>Meta: 90 d</span>
-                  <span>·</span>
-                  <span style={{ color: '#10b981' }}>237,6 d sin sueldo</span>
-                </div>
-              </div>
+              {(() => {
+                const baseCostsWithSalary = 830050;
+                const baseCostsWithoutSalary = 180050;
+                const breakEvenTarget = 1444444;
+                const confirmedRetainer = 790000;
+                const currentNetCash = dashboardData?.finance?.net_cash ?? 1426168;
 
-              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PUNTO DE EQUILIBRIO</span>
-                  <DollarSign size={18} color="#818cf8" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-light)', marginTop: '10px' }}>
-                  {formatMoney(1444444)}
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Sueldo ($650k) ÷ 45% (Compensación)
-                </div>
-              </div>
+                const runwayDaysWithSalary = parseFloat((currentNetCash / (baseCostsWithSalary / 30)).toFixed(1));
+                const runwayDaysWithoutSalary = parseFloat((currentNetCash / (baseCostsWithoutSalary / 30)).toFixed(1));
+                const targetDays = 90;
+                const flowGreenPct = Math.min(100, Math.max(0, (runwayDaysWithSalary / targetDays) * 100));
+                const flowOrangePct = 100 - flowGreenPct;
+                const daysMissing = Math.max(0, targetDays - runwayDaysWithSalary);
 
-              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>BRECHA VS RETAINER</span>
-                  <ArrowDownRight size={18} color="#f59e0b" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '10px' }}>
-                  -{formatMoney(654444)}
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                  Falta para equilibrio (Retainer $790k)
-                </div>
-              </div>
+                const gaugeRatio = Math.min(1, Math.max(0, confirmedRetainer / breakEvenTarget));
+                const gaugeAngleDeg = 180 * (1 - gaugeRatio);
+                const gaugeAngleRad = (Math.PI * gaugeAngleDeg) / 180;
+                const needleLength = 34;
+                const needleX = 70 + needleLength * Math.cos(gaugeAngleRad);
+                const needleY = 54 - needleLength * Math.sin(gaugeAngleRad);
 
-              <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>ESTADO DISPERSIÓN</span>
-                  <Building size={18} color="#c084fc" />
-                </div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
-                  Cuenta Empresa (Ingresos)
-                </div>
-                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', fontWeight: 600 }}>
-                  ⚠️ Pendiente dispersión 5/45/20/30
-                </div>
-              </div>
+                return (
+                  <>
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>DÍAS DE FLUJO</span>
+                          <Clock size={18} color="#f59e0b" />
+                        </div>
+
+                        {/* Barra horizontal bicolor: Verde (días actuales) + Naranja (faltante para 90d) */}
+                        <div style={{ marginTop: '14px', marginBottom: '12px' }}>
+                          <div style={{
+                            width: '100%',
+                            height: '10px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            position: 'relative'
+                          }}>
+                            <div
+                              title={`Días de flujo actuales: ${runwayDaysWithSalary} días`}
+                              style={{
+                                width: `${flowGreenPct}%`,
+                                backgroundColor: '#10b981',
+                                transition: 'width 0.4s ease',
+                                boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)'
+                              }}
+                            />
+                            <div
+                              title={`Faltan para meta 90d: ${daysMissing.toFixed(1)} días`}
+                              style={{
+                                width: `${flowOrangePct}%`,
+                                backgroundColor: '#f59e0b',
+                                transition: 'width 0.4s ease',
+                                opacity: 0.9,
+                                boxShadow: '0 0 8px rgba(245, 158, 11, 0.3)'
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                            <span style={{ color: '#10b981', fontWeight: 600 }}>{runwayDaysWithSalary} d actuales</span>
+                            <span style={{ color: '#f59e0b', fontWeight: 600 }}>{daysMissing.toFixed(1)} d faltan</span>
+                            <span style={{ fontWeight: 600 }}>Meta 90d</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>
+                          {runwayDaysWithSalary.toLocaleString('es-CL')} <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}>días</span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span>Meta: 90 d</span>
+                          <span>·</span>
+                          <span style={{ color: '#10b981' }}>{runwayDaysWithoutSalary.toLocaleString('es-CL')} d sin sueldo</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PUNTO DE EQUILIBRIO</span>
+                          <DollarSign size={18} color="#818cf8" />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--primary-light)', marginTop: '10px' }}>
+                          {formatMoney(1444444)}
+                          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                          Sueldo ($650k) ÷ 45% (Compensación)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>BRECHA VS RETAINER</span>
+                          <ArrowDownRight size={18} color="#f59e0b" />
+                        </div>
+
+                        {/* Velocímetro (Gauge SVG) */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '6px 0 2px 0' }}>
+                          <svg width="130" height="64" viewBox="0 0 140 68" style={{ overflow: 'visible' }}>
+                            <defs>
+                              <linearGradient id="gaugeGradientBrecha" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#f43f5e" />
+                                <stop offset="50%" stopColor="#f59e0b" />
+                                <stop offset="100%" stopColor="#10b981" />
+                              </linearGradient>
+                            </defs>
+                            {/* Track de fondo */}
+                            <path
+                              d="M 24 54 A 46 46 0 0 1 116 54"
+                              fill="none"
+                              stroke="rgba(255, 255, 255, 0.08)"
+                              strokeWidth="9"
+                              strokeLinecap="round"
+                            />
+                            {/* Arco coloreado */}
+                            <path
+                              d="M 24 54 A 46 46 0 0 1 116 54"
+                              fill="none"
+                              stroke="url(#gaugeGradientBrecha)"
+                              strokeWidth="9"
+                              strokeLinecap="round"
+                              strokeDasharray="144.5"
+                              strokeDashoffset={144.5 * (1 - gaugeRatio)}
+                              style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                            />
+                            {/* Aguja indicadora */}
+                            <line
+                              x1="70"
+                              y1="54"
+                              x2={needleX}
+                              y2={needleY}
+                              stroke="#ffffff"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              style={{ transition: 'all 0.5s ease', filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.6))' }}
+                            />
+                            {/* Centro de la aguja */}
+                            <circle cx="70" cy="54" r="4.5" fill="#6366f1" stroke="#ffffff" strokeWidth="1.5" />
+                            {/* Etiquetas min, actual % y max */}
+                            <text x="18" y="64" fill="var(--text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">$0</text>
+                            <text x="70" y="42" fill="#f59e0b" fontSize="8.5" fontWeight="700" textAnchor="middle">{Math.round(gaugeRatio * 100)}%</text>
+                            <text x="122" y="64" fill="var(--text-muted)" fontSize="8" fontWeight="600" textAnchor="middle">$1.44M</text>
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#f59e0b', marginTop: '2px' }}>
+                          -{formatMoney(654444)}
+                          <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
+                          Falta para equilibrio (Retainer $790k)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>ESTADO DISPERSIÓN</span>
+                          <Building size={18} color="#c084fc" />
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
+                          Cuenta Empresa (Ingresos)
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', fontWeight: 600 }}>
+                          ⚠️ Pendiente dispersión 5/45/20/30
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Quick AI Action Card */}

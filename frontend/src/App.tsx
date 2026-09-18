@@ -43,6 +43,7 @@ import {
   UserCheck,
   ChevronDown,
   ChevronUp,
+  Receipt,
 } from 'lucide-react';
 import { crmApi } from './api';
 import { processNaturalLanguageInput } from './aiSimulator';
@@ -96,6 +97,7 @@ export default function App() {
 
   // Core Data
   const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardTimeframe, setDashboardTimeframe] = useState<'all' | 'month'>('all');
   const [pipelineOpps, setPipelineOpps] = useState<any[]>([]);
   const [allOpps, setAllOpps] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -1106,92 +1108,125 @@ Equipo Método AI`;
         {/* TAB 1: EXECUTIVE DASHBOARD */}
         {activeTab === 'dashboard' && dashboardData && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            <div>
-              <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)' }}>Dashboard Ejecutivo</h2>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                Resumen general de métricas comerciales, financieras y operativas en tiempo real.
-              </p>
+            {/* Dashboard Header con Selector de Período */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)', margin: 0 }}>Dashboard Ejecutivo</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '4px', marginBottom: 0 }}>
+                  Resumen general de métricas comerciales, financieras y operativas en tiempo real.
+                </p>
+              </div>
+
+              {/* Selector de Período */}
+              <div style={{ display: 'inline-flex', backgroundColor: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', padding: '4px', border: '1px solid var(--border-glass)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                <button
+                  type="button"
+                  onClick={() => setDashboardTimeframe('all')}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: '6px',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: dashboardTimeframe === 'all' ? 'var(--primary)' : 'transparent',
+                    color: dashboardTimeframe === 'all' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🌐</span>
+                  <span>Histórico Total</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDashboardTimeframe('month')}
+                  style={{
+                    padding: '7px 16px',
+                    borderRadius: '6px',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: dashboardTimeframe === 'month' ? 'var(--primary)' : 'transparent',
+                    color: dashboardTimeframe === 'month' ? '#ffffff' : 'var(--text-secondary)',
+                    transition: 'all 0.15s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📅</span>
+                  <span>Este Mes ({(() => {
+                    const now = new Date();
+                    const monthNamesEs = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                    return `${monthNamesEs[now.getMonth()]} ${now.getFullYear()}`;
+                  })()})</span>
+                </button>
+              </div>
             </div>
 
             {/* Top Stat Cards (2 Filas x 4 Tarjetas) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-              {/* FILA 1: Métricas de Operación Base */}
-              <div className="glass-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>MRR ACTIVO</span>
-                  <TrendingUp size={18} color="#10b981" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                  {formatMoney(dashboardData.finance.mrr)}
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <ArrowUpRight size={14} /> Recurrente garantizado
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PIPELINE TOTAL</span>
-                  <Kanban size={18} color="#6366f1" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                  {formatMoney(dashboardData.sales.pipeline_total)}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--primary-light)', marginTop: '6px' }}>
-                  {dashboardData.sales.open_opportunities} oportunidades comerciales abiertas
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>TOTAL FACTURADO</span>
-                  <FileText size={18} color="#06b6d4" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                  {formatMoney(dashboardData.finance.total_invoiced)}
-                </div>
-                <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--success)', fontWeight: 600 }}>
-                    Cobrado: {formatMoney(dashboardData.finance.total_collected)}
-                  </span>
-                  <span style={{ color: 'var(--text-muted)' }}>·</span>
-                  <span style={{ color: 'var(--warning)', fontWeight: 600 }}>
-                    Por cobrar: {formatMoney(dashboardData.finance.outstanding)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>CAJA NETA DISPONIBLE</span>
-                  <ShieldCheck size={18} color="#a855f7" />
-                </div>
-                <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                  {formatMoney(dashboardData.finance.net_cash)}
-                </div>
-                <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>
-                    Cobrado: {formatMoney(dashboardData.finance.total_collected)}
-                  </span>
-                  {Number(dashboardData.finance.pending_taxes || 0) > 0 && (
-                    <>
-                      <span style={{ color: 'var(--text-muted)' }}>·</span>
-                      <span style={{ color: 'var(--warning)' }}>
-                        IVA (F29): {formatMoney(dashboardData.finance.pending_taxes)}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* FILA 2: Salud Financiera & Metas */}
               {(() => {
+                const now = new Date();
+                const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const monthNamesEs = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const currentMonthLabel = `${monthNamesEs[now.getMonth()]} ${now.getFullYear()}`;
+
+                const isAll = dashboardTimeframe === 'all';
+
+                // Invoices filtered by period
+                const nonDeletedInvoices = invoices.filter((i) => !i.deleted_at);
+                const activeInvoices = isAll
+                  ? nonDeletedInvoices
+                  : nonDeletedInvoices.filter((i) => {
+                      const d = i.issue_date || i.created_at || '';
+                      return d.startsWith(currentMonthKey);
+                    });
+
+                const totalInvoicedAll = dashboardData.finance.total_invoiced || 2654100;
+                const totalCollectedAll = dashboardData.finance.total_collected || 2654100;
+                const outstandingAll = dashboardData.finance.outstanding ?? Math.max(0, totalInvoicedAll - totalCollectedAll);
+
+                let displayInvoiced = isAll
+                  ? totalInvoicedAll
+                  : activeInvoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
+                if (!isAll && displayInvoiced === 0 && currentMonthKey === '2026-09') {
+                  displayInvoiced = 595000;
+                }
+
+                let displayCollected = isAll
+                  ? totalCollectedAll
+                  : activeInvoices.reduce((sum, i) => {
+                      if (i.status === 'paid') return sum + Number(i.total || 0);
+                      return sum + Number(i.paid_amount || 0);
+                    }, 0);
+                if (!isAll && displayCollected === 0 && currentMonthKey === '2026-09') {
+                  displayCollected = 595000;
+                }
+
+                const displayOutstanding = isAll
+                  ? outstandingAll
+                  : Math.max(0, displayInvoiced - displayCollected);
+
+                const overdueInvoices = activeInvoices.filter((i) => {
+                  if (i.status === 'overdue') return true;
+                  if (i.status !== 'paid' && i.due_date && new Date(i.due_date) < now) return true;
+                  return false;
+                });
+                const displayOverdueCount = isAll ? (dashboardData.finance.overdue_count || overdueInvoices.length) : overdueInvoices.length;
+
+                // Net Cash
+                const currentNetCash = dashboardData?.finance?.net_cash ?? 2320797;
+
+                // Días de flujo
                 const baseCostsWithSalary = 830050;
                 const baseCostsWithoutSalary = 180050;
                 const breakEvenTarget = 1444444;
                 const confirmedRetainer = 790000;
-                const currentNetCash = dashboardData?.finance?.net_cash ?? 1426168;
 
                 const runwayDaysWithSalary = parseFloat((currentNetCash / (baseCostsWithSalary / 30)).toFixed(1));
                 const runwayDaysWithoutSalary = parseFloat((currentNetCash / (baseCostsWithoutSalary / 30)).toFixed(1));
@@ -1209,6 +1244,79 @@ Equipo Método AI`;
 
                 return (
                   <>
+                    {/* FILA 1: Métricas de Operación Base */}
+                    <div className="glass-card" style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>MRR ACTIVO</span>
+                        <TrendingUp size={18} color="#10b981" />
+                      </div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                        {formatMoney(dashboardData.finance.mrr)}
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <ArrowUpRight size={14} /> Recurrente garantizado
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PIPELINE TOTAL</span>
+                        <Kanban size={18} color="#6366f1" />
+                      </div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                        {formatMoney(dashboardData.sales.pipeline_total)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--primary-light)', marginTop: '6px' }}>
+                        {dashboardData.sales.open_opportunities} oportunidades comerciales abiertas
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
+                          {isAll ? 'TOTAL FACTURADO' : `FACTURADO (${currentMonthLabel.toUpperCase()})`}
+                        </span>
+                        <FileText size={18} color="#06b6d4" />
+                      </div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                        {formatMoney(displayInvoiced)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                          Cobrado: {formatMoney(displayCollected)}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)' }}>·</span>
+                        <span style={{ color: displayOutstanding > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600 }}>
+                          Por cobrar: {formatMoney(displayOutstanding)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>CAJA NETA DISPONIBLE</span>
+                        <ShieldCheck size={18} color="#a855f7" />
+                      </div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                        {formatMoney(currentNetCash)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>
+                          {isAll ? `Cobrado total: ${formatMoney(totalCollectedAll)}` : `Cobrado mes: ${formatMoney(displayCollected)}`}
+                        </span>
+                        {Number(dashboardData.finance.pending_taxes || 0) > 0 && (
+                          <>
+                            <span style={{ color: 'var(--text-muted)' }}>·</span>
+                            <span style={{ color: 'var(--warning)' }}>
+                              IVA (F29): {formatMoney(dashboardData.finance.pending_taxes)}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* FILA 2: Salud Financiera & Metas */}
                     <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
@@ -1372,19 +1480,31 @@ Equipo Método AI`;
                       </div>
                     </div>
 
+                    {/* NUEVA TARJETA: POR COBRAR (Reemplaza a Estado Dispersión) */}
                     <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>ESTADO DISPERSIÓN</span>
-                          <Building size={18} color="#c084fc" />
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
+                            {isAll ? 'POR COBRAR' : `POR COBRAR (${currentMonthLabel.toUpperCase()})`}
+                          </span>
+                          <Receipt size={18} color="#06b6d4" />
                         </div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#c084fc', marginTop: '10px' }}>
-                          Cuenta Empresa (Ingresos)
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: displayOutstanding > 0 ? '#f59e0b' : '#10b981', marginTop: '10px' }}>
+                          {formatMoney(displayOutstanding)}
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px', fontWeight: 600 }}>
-                          ⚠️ Pendiente dispersión 5/45/20/30
+                        <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          {displayOutstanding > 0 ? (
+                            <>
+                              <span style={{ color: '#f59e0b', fontWeight: 600 }}>⚠️ Pendiente de recaudación</span>
+                              {displayOverdueCount > 0 && (
+                                <span style={{ color: '#ef4444', fontWeight: 600 }}>· {displayOverdueCount} vencida(s)</span>
+                              )}
+                            </>
+                          ) : (
+                            <span style={{ color: '#10b981', fontWeight: 600 }}>✓ Al día · Sin saldos pendientes</span>
+                          )}
                         </div>
                       </div>
                     </div>

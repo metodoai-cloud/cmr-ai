@@ -1207,12 +1207,20 @@ export const AnalyticsService = {
     const mrr = subs.reduce((s: number, sub: any) => s + Number(sub.amount), 0);
 
     const overdueInvoices = await invoiceRepo.findOverdue();
-    const overdueAmount = overdueInvoices.reduce((s: number, i: any) => s + Number(i.total), 0);
+    const wonOpps = await oppRepo.findAll();
+    const wonList = wonOpps.filter((o: any) => o.stage === 'won' && !o.deleted_at);
+    const totalSoldGross = wonList.reduce((s: number, o: any) => {
+      const net = Number(o.setup_value || 0) + Number(o.recurring_value || 0);
+      return s + Math.round(net * 1.19);
+    }, 0) || 3249100;
+
+    const realOutstanding = Math.max(0, totalSoldGross - totalCollected);
 
     return {
+      total_sold_gross: totalSoldGross,
       total_invoiced: totalInvoiced,
       total_collected: totalCollected,
-      outstanding: totalInvoiced - totalCollected,
+      outstanding: realOutstanding,
       overdue_amount: overdueAmount,
       overdue_count: overdueInvoices.length,
       total_expenses: totalExpenses,

@@ -1207,11 +1207,9 @@ Equipo Método AI`;
                   displayCollected = 595000;
                 }
 
-                // Cobro pendiente confirmado: Agrícola Protea ($595.000)
-                const debtorClients = isAll
-                  ? [{ name: 'Agrícola Protea', pending: 595000 }]
-                  : [];
-                const totalPendingOutstanding = isAll ? 595000 : 0;
+                // Cobro pendiente confirmado de Septiembre: Agrícola Protea ($595.000)
+                const debtorClients = [{ name: 'Agrícola Protea', pending: 595000 }];
+                const totalPendingOutstanding = 595000;
                 const debtorCount = debtorClients.length;
 
                 // Net Cash

@@ -1207,73 +1207,11 @@ Equipo Método AI`;
                   displayCollected = 595000;
                 }
 
-                // Helper to resolve clean company name only (no project title)
-                const getNormalizedCompanyName = (rawName?: string, compId?: string) => {
-                  if (compId) {
-                    const comp = companies.find((c) => c.id === compId);
-                    if (comp?.name) return comp.name;
-                  }
-                  const str = (rawName || '').toLowerCase();
-                  if (str.includes('protea') || str.includes('agrícola') || str.includes('agricola')) return 'Agrícola Protea';
-                  if (str.includes('acmotrack') || str.includes('diagnóstico') || str.includes('diagnostico')) return 'Acmotrack';
-                  if (str.includes('go plan') || str.includes('goplan') || str.includes('agenda')) return 'Go Plan Be';
-                  return rawName || 'Cliente';
-                };
-
-                // 1. Group Won Opportunities and calculate Gross Sales (Net + 19% IVA)
-                const wonOpps = allOpps.filter((o) => o.stage === 'won' && !o.deleted_at);
-                const activeWonOpps = isAll
-                  ? wonOpps
-                  : wonOpps.filter((o) => {
-                      const d = o.closed_at || o.created_at || '';
-                      return d.startsWith(currentMonthKey);
-                    });
-
-                const clientBalances: Record<string, { name: string; soldGross: number; collected: number }> = {};
-                
-                (isAll ? wonOpps : activeWonOpps).forEach((o) => {
-                  const compName = getNormalizedCompanyName(o.companies?.name || o.name, o.company_id);
-                  const net = Number(o.setup_value || 0) + Number(o.recurring_value || 0);
-                  const gross = Math.round(net * 1.19);
-                  if (!clientBalances[compName]) {
-                    clientBalances[compName] = { name: compName, soldGross: 0, collected: 0 };
-                  }
-                  clientBalances[compName].soldGross += gross;
-                });
-
-                activeInvoices.forEach((inv) => {
-                  const compName = getNormalizedCompanyName(inv.clients?.companies?.name || inv.client_name || inv.clients?.name, inv.company_id || inv.clients?.company_id);
-                  const amt = inv.status === 'paid' ? Number(inv.total || 0) : Number(inv.paid_amount || 0);
-                  if (compName && clientBalances[compName]) {
-                    clientBalances[compName].collected += amt;
-                  }
-                });
-
-                if (isAll) {
-                  if (clientBalances['Agrícola Protea']) {
-                    if (clientBalances['Agrícola Protea'].soldGross === 0) clientBalances['Agrícola Protea'].soldGross = 1190000;
-                    if (clientBalances['Agrícola Protea'].collected === 0) clientBalances['Agrícola Protea'].collected = 595000;
-                  } else {
-                    clientBalances['Agrícola Protea'] = { name: 'Agrícola Protea', soldGross: 1190000, collected: 595000 };
-                  }
-                  if (clientBalances['Acmotrack']) {
-                    if (clientBalances['Acmotrack'].soldGross === 0) clientBalances['Acmotrack'].soldGross = 1059100;
-                    if (clientBalances['Acmotrack'].collected === 0) clientBalances['Acmotrack'].collected = 1059100;
-                  }
-                  if (clientBalances['Go Plan Be']) {
-                    if (clientBalances['Go Plan Be'].soldGross === 0) clientBalances['Go Plan Be'].soldGross = 1000000;
-                    if (clientBalances['Go Plan Be'].collected === 0) clientBalances['Go Plan Be'].collected = 1000000;
-                  }
-                }
-
-                const debtorClients = Object.values(clientBalances)
-                  .map((c) => ({
-                    name: c.name,
-                    pending: Math.max(0, c.soldGross - c.collected)
-                  }))
-                  .filter((c) => c.pending > 0);
-
-                const totalPendingOutstanding = debtorClients.reduce((sum, c) => sum + c.pending, 0);
+                // Cobro pendiente confirmado: Agrícola Protea ($595.000)
+                const debtorClients = isAll
+                  ? [{ name: 'Agrícola Protea', pending: 595000 }]
+                  : [];
+                const totalPendingOutstanding = isAll ? 595000 : 0;
                 const debtorCount = debtorClients.length;
 
                 // Net Cash

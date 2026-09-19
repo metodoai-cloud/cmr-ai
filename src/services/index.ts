@@ -1207,6 +1207,7 @@ export const AnalyticsService = {
     const mrr = subs.reduce((s: number, sub: any) => s + Number(sub.amount), 0);
 
     const overdueInvoices = await invoiceRepo.findOverdue();
+    const overdueAmount = overdueInvoices.reduce((s: number, i: any) => s + Number(i.total), 0);
     const wonOpps = await oppRepo.findAll();
     const wonList = wonOpps.filter((o: any) => o.stage === 'won' && !o.deleted_at);
     const totalSoldGross = wonList.reduce((s: number, o: any) => {

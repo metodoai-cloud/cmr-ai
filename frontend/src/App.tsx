@@ -44,6 +44,9 @@ import {
   ChevronDown,
   ChevronUp,
   Receipt,
+  Zap,
+  Sparkles,
+  Code2,
 } from 'lucide-react';
 import { crmApi } from './api';
 import { processNaturalLanguageInput } from './aiSimulator';
@@ -182,6 +185,7 @@ export default function App() {
   });
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [projectStatusView, setProjectStatusView] = useState<'active' | 'completed' | 'cancelled'>('active');
+  const [servicePillarFilter, setServicePillarFilter] = useState<'all' | '1' | '2' | '3' | '4'>('all');
 
   // Project Email Status Modal State
   const [showProjectEmailModal, setShowProjectEmailModal] = useState(false);
@@ -2912,78 +2916,386 @@ Equipo Método AI`;
               </div>
             </div>
 
-            {/* Catalog of Services */}
-            <div className="glass-card" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            {/* Catalog of Services with 4 Strategic Pillars */}
+            <div className="glass-card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.15rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Tag size={18} color="var(--primary)" />
-                    Catálogo de Servicios & Ofertas ({services.length})
+                  <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                    <Tag size={20} color="var(--primary)" />
+                    Catálogo Oficial de Servicios & Ofertas ({services.length})
                   </h3>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Estructura oficial de productos, precios de setup y mensualidades recurrentes.
+                  <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                    Estructura comercial dividida en los 4 pilares estratégicos de la agencia: Entrada Legal, Automatización, Marketing Growth y Software.
                   </span>
                 </div>
               </div>
+
+              {/* 4 Pillars Filter Selector Pills */}
+              {(() => {
+                const p1Items = services.filter((s: any) =>
+                  s.category?.includes('1') ||
+                  s.category?.toLowerCase().includes('empresa') ||
+                  s.name?.toLowerCase().includes('creación de empresa')
+                );
+                const p2Items = services.filter((s: any) =>
+                  s.category?.includes('2') ||
+                  s.category?.toLowerCase().includes('proceso') ||
+                  s.category?.toLowerCase().includes('automatiz') ||
+                  s.name?.toLowerCase().includes('automatiz') ||
+                  s.name?.toLowerCase().includes('diagnóstico')
+                );
+                const p3Items = services.filter((s: any) =>
+                  s.category?.includes('3') ||
+                  s.category?.toLowerCase().includes('marketing') ||
+                  s.name?.toLowerCase().includes('marketing') ||
+                  s.name?.toLowerCase().includes('campaña')
+                );
+                const p4Items = services.filter((s: any) =>
+                  s.category?.includes('4') ||
+                  s.category?.toLowerCase().includes('producto') ||
+                  s.category?.toLowerCase().includes('web app') ||
+                  s.name?.toLowerCase().includes('producto') ||
+                  s.name?.toLowerCase().includes('web app')
+                );
+
+                const pillars = [
+                  { id: 'all', label: 'Todos los Servicios', count: services.length, color: 'var(--primary)', icon: Sparkles },
+                  { id: '1', label: '1. Creación de Empresa', count: p1Items.length, color: '#3b82f6', icon: Building },
+                  { id: '2', label: '2. Automatización & Procesos', count: p2Items.length, color: '#10b981', icon: Zap },
+                  { id: '3', label: '3. Marketing & Campañas', count: p3Items.length, color: '#f59e0b', icon: TrendingUp },
+                  { id: '4', label: '4. Desarrollo de Producto', count: p4Items.length, color: '#8b5cf6', icon: Code2 },
+                ];
+
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                    {pillars.map((p) => {
+                      const IconComp = p.icon;
+                      const isSelected = servicePillarFilter === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setServicePillarFilter(p.id as any)}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '24px',
+                            fontSize: '0.825rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            backgroundColor: isSelected
+                              ? p.id === 'all' ? 'var(--primary)' : `${p.color}20`
+                              : 'var(--bg-card-solid)',
+                            color: isSelected
+                              ? p.id === 'all' ? '#ffffff' : p.color
+                              : 'var(--text-secondary)',
+                            border: isSelected
+                              ? `1.5px solid ${p.color}`
+                              : '1px solid var(--border-glass)',
+                            boxShadow: isSelected ? `0 0 14px ${p.color}30` : 'none',
+                            transition: 'all 0.15s ease',
+                          }}
+                          className="glass-card-interactive"
+                        >
+                          <IconComp size={15} color={isSelected ? (p.id === 'all' ? '#fff' : p.color) : 'var(--text-muted)'} />
+                          <span>{p.label}</span>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              padding: '1px 6px',
+                              borderRadius: '10px',
+                              backgroundColor: isSelected ? (p.id === 'all' ? 'rgba(255,255,255,0.25)' : `${p.color}30`) : 'rgba(255,255,255,0.06)',
+                              color: isSelected ? (p.id === 'all' ? '#fff' : p.color) : 'var(--text-muted)',
+                            }}
+                          >
+                            {p.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {services.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                   No hay servicios dados de alta en el catálogo.
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
-                        {['Servicio', 'Categoría', 'Setup Inicial', 'Mensualidad (MRR)', 'Modalidad', 'Margen Objetivo', 'Estado'].map((h) => (
-                          <th key={h} style={{ padding: '10px 12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.775rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {services.map((srv: any) => (
-                        <tr
-                          key={srv.id}
-                          style={{ borderBottom: '1px solid var(--border-glass)', transition: 'background 0.15s' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-glass)')}
-                          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+                  {(() => {
+                    const pillarConfigs = [
+                      {
+                        id: '1',
+                        number: '1',
+                        title: 'Creación de Empresa desde Cero',
+                        roleTag: 'Etapa de Entrada & Legal',
+                        description: 'Constitución legal, inicio de actividades, setup bancario y formalización integral para nuevos emprendimientos.',
+                        color: '#3b82f6',
+                        bg: 'rgba(59, 130, 246, 0.08)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        badgeBg: 'rgba(59, 130, 246, 0.15)',
+                        icon: Building,
+                        items: services.filter((s: any) =>
+                          s.category?.includes('1') ||
+                          s.category?.toLowerCase().includes('empresa') ||
+                          s.name?.toLowerCase().includes('creación de empresa')
+                        ),
+                      },
+                      {
+                        id: '2',
+                        number: '2',
+                        title: 'Automatización & Procesos',
+                        roleTag: 'Core Operativo & Retainers',
+                        description: 'Diagnóstico de flujos, implementación de automatizaciones clave (n8n/Make/IA) y mantenimiento mensual continuo.',
+                        color: '#10b981',
+                        bg: 'rgba(16, 185, 129, 0.08)',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        badgeBg: 'rgba(16, 185, 129, 0.15)',
+                        icon: Zap,
+                        items: services.filter((s: any) =>
+                          s.category?.includes('2') ||
+                          s.category?.toLowerCase().includes('proceso') ||
+                          s.category?.toLowerCase().includes('automatiz') ||
+                          s.name?.toLowerCase().includes('automatiz') ||
+                          s.name?.toLowerCase().includes('diagnóstico')
+                        ),
+                      },
+                      {
+                        id: '3',
+                        number: '3',
+                        title: 'Marketing & Campañas Growth',
+                        roleTag: 'Tráfico & Escala Comercial',
+                        description: 'Pauta publicitaria digital (Meta/Google Ads), embudos de captación directa y optimización continua de CAC.',
+                        color: '#f59e0b',
+                        bg: 'rgba(245, 158, 11, 0.08)',
+                        border: '1px solid rgba(245, 158, 11, 0.25)',
+                        badgeBg: 'rgba(245, 158, 11, 0.15)',
+                        icon: TrendingUp,
+                        items: services.filter((s: any) =>
+                          s.category?.includes('3') ||
+                          s.category?.toLowerCase().includes('marketing') ||
+                          s.name?.toLowerCase().includes('marketing') ||
+                          s.name?.toLowerCase().includes('campaña')
+                        ),
+                      },
+                      {
+                        id: '4',
+                        number: '4',
+                        title: 'Desarrollo de Producto & Web App',
+                        roleTag: 'High-Ticket & Software a Medida',
+                        description: 'Portales interactivos para clientes, plataformas SaaS y aplicaciones web personalizadas para modelos escalables.',
+                        color: '#8b5cf6',
+                        bg: 'rgba(139, 92, 246, 0.08)',
+                        border: '1px solid rgba(139, 92, 246, 0.25)',
+                        badgeBg: 'rgba(139, 92, 246, 0.15)',
+                        icon: Code2,
+                        items: services.filter((s: any) =>
+                          s.category?.includes('4') ||
+                          s.category?.toLowerCase().includes('producto') ||
+                          s.category?.toLowerCase().includes('web app') ||
+                          s.name?.toLowerCase().includes('producto') ||
+                          s.name?.toLowerCase().includes('web app')
+                        ),
+                      },
+                    ];
+
+                    const visiblePillars = pillarConfigs.filter(
+                      (p) => servicePillarFilter === 'all' || servicePillarFilter === p.id
+                    );
+
+                    return visiblePillars.map((pilar) => {
+                      const IconComp = pilar.icon;
+                      if (pilar.items.length === 0) return null;
+
+                      return (
+                        <div
+                          key={pilar.id}
+                          style={{
+                            backgroundColor: 'var(--bg-card-solid)',
+                            border: '1px solid var(--border-glass)',
+                            borderLeft: `5px solid ${pilar.color}`,
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '20px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px',
+                          }}
+                          className="animate-fade-in"
                         >
-                          <td style={{ padding: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            <div>{srv.name}</div>
-                            {srv.description && (
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '2px' }}>
-                                {srv.description}
+                          {/* Pillar Header */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                              <div
+                                style={{
+                                  width: '42px',
+                                  height: '42px',
+                                  borderRadius: '10px',
+                                  backgroundColor: pilar.bg,
+                                  border: pilar.border,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: pilar.color,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <IconComp size={22} />
                               </div>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>
-                              {srv.category || 'General'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>
-                            {formatMoney(srv.standard_setup_price)}
-                          </td>
-                          <td style={{ padding: '12px', color: '#10b981', fontWeight: 700 }}>
-                            {formatMoney(srv.standard_recurring_price)}/mes
-                          </td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
-                            <span style={{ textTransform: 'capitalize' }}>{srv.billing_type || 'Híbrido'}</span> ({srv.billing_frequency || 'monthly'})
-                          </td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>
-                            {srv.target_margin ? `${srv.target_margin}%` : '—'}
-                          </td>
-                          <td style={{ padding: '12px' }}>
-                            <span className={`badge ${srv.active !== false ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.75rem' }}>
-                              {srv.active !== false ? 'Activo' : 'Inactivo'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.7rem',
+                                      fontWeight: 800,
+                                      padding: '2px 7px',
+                                      borderRadius: '6px',
+                                      backgroundColor: pilar.badgeBg,
+                                      color: pilar.color,
+                                      letterSpacing: '0.04em',
+                                      textTransform: 'uppercase',
+                                    }}
+                                  >
+                                    PILAR {pilar.number}
+                                  </span>
+                                  <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                    {pilar.title}
+                                  </h4>
+                                  <span
+                                    style={{
+                                      fontSize: '0.725rem',
+                                      fontWeight: 600,
+                                      color: pilar.color,
+                                      border: `1px solid ${pilar.color}40`,
+                                      backgroundColor: `${pilar.color}15`,
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                    }}
+                                  >
+                                    {pilar.roleTag}
+                                  </span>
+                                </div>
+                                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                  {pilar.description}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  color: 'var(--text-muted)',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                  padding: '4px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-glass)',
+                                }}
+                              >
+                                {pilar.items.length} {pilar.items.length === 1 ? 'oferta' : 'ofertas'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Pillar Offers Table */}
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-glass)' }}>
+                                  {['Oferta / Entregable', 'Setup Inicial', 'Mensualidad (MRR)', 'Modalidad', 'Margen Obj.', 'Estado'].map((h) => (
+                                    <th
+                                      key={h}
+                                      style={{
+                                        padding: '8px 10px',
+                                        textAlign: 'left',
+                                        color: 'var(--text-muted)',
+                                        fontWeight: 600,
+                                        fontSize: '0.725rem',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.04em',
+                                      }}
+                                    >
+                                      {h}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {pilar.items.map((srv: any) => (
+                                  <tr
+                                    key={srv.id}
+                                    style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)', transition: 'background 0.15s' }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                                  >
+                                    <td style={{ padding: '10px', fontWeight: 600, color: 'var(--text-primary)', maxWidth: '320px' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: pilar.color, flexShrink: 0 }} />
+                                        <span>{srv.name}</span>
+                                      </div>
+                                      {srv.description && (
+                                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontWeight: 400, marginTop: '3px', lineHeight: 1.35, paddingLeft: '12px' }}>
+                                          {srv.description}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', color: 'var(--text-primary)', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>
+                                      {Number(srv.standard_setup_price) > 0 ? (
+                                        formatMoney(srv.standard_setup_price)
+                                      ) : (
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>$0 (Sin setup)</span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px' }}>
+                                      {Number(srv.standard_recurring_price) > 0 ? (
+                                        <span style={{ color: '#10b981', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace" }}>
+                                          {formatMoney(srv.standard_recurring_price)}/mes
+                                        </span>
+                                      ) : (
+                                        <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '10px', color: 'var(--text-secondary)' }}>
+                                      <span
+                                        style={{
+                                          fontSize: '0.75rem',
+                                          padding: '2px 8px',
+                                          borderRadius: '6px',
+                                          backgroundColor: srv.billing_type === 'recurring' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                                          color: srv.billing_type === 'recurring' ? '#34d399' : 'var(--text-secondary)',
+                                          fontWeight: 600,
+                                          textTransform: 'capitalize',
+                                        }}
+                                      >
+                                        {srv.billing_type === 'recurring'
+                                          ? 'Retainer Mensual'
+                                          : srv.billing_type === 'one_time'
+                                          ? 'Pago Único'
+                                          : srv.billing_type || 'Híbrido'}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                                      {srv.target_margin ? `${srv.target_margin}%` : '—'}
+                                    </td>
+                                    <td style={{ padding: '10px' }}>
+                                      <span className={`badge ${srv.active !== false ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                        {srv.active !== false ? 'Activo' : 'Inactivo'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               )}
             </div>

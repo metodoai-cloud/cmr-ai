@@ -70,7 +70,16 @@ jobs:
           echo "🚀 Conectando a $VPS_USER@$VPS_HOST..."
           
           if [ -n "$VPS_SSH_KEY" ]; then
-            echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+            # Validar si pegaron la clave pública por error
+            if [[ "$VPS_SSH_KEY" == ssh-* ]] || [[ "$VPS_SSH_KEY" == ecdsa-* ]]; then
+              echo "❌ ERROR: Has pegado la clave PÚBLICA en VPS_SSH_KEY."
+              echo "👉 Debes pegar la clave PRIVADA (la que empieza con '-----BEGIN OPENSSH PRIVATE KEY-----')."
+              exit 1
+            fi
+            
+            # Formatear y asegurar saltos de línea limpios
+            printf "%s\n" "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+            echo "" >> ~/.ssh/deploy_key
             chmod 600 ~/.ssh/deploy_key
             SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15"
           else

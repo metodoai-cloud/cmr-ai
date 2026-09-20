@@ -2933,31 +2933,59 @@ Equipo Método AI`;
 
               {/* 4 Pillars Filter Selector Pills */}
               {(() => {
-                const p1Items = services.filter((s: any) =>
-                  s.category?.includes('1') ||
-                  s.category?.toLowerCase().includes('empresa') ||
-                  s.name?.toLowerCase().includes('creación de empresa')
-                );
-                const p2Items = services.filter((s: any) =>
-                  s.category?.includes('2') ||
-                  s.category?.toLowerCase().includes('proceso') ||
-                  s.category?.toLowerCase().includes('automatiz') ||
-                  s.name?.toLowerCase().includes('automatiz') ||
-                  s.name?.toLowerCase().includes('diagnóstico')
-                );
-                const p3Items = services.filter((s: any) =>
-                  s.category?.includes('3') ||
-                  s.category?.toLowerCase().includes('marketing') ||
-                  s.name?.toLowerCase().includes('marketing') ||
-                  s.name?.toLowerCase().includes('campaña')
-                );
-                const p4Items = services.filter((s: any) =>
-                  s.category?.includes('4') ||
-                  s.category?.toLowerCase().includes('producto') ||
-                  s.category?.toLowerCase().includes('web app') ||
-                  s.name?.toLowerCase().includes('producto') ||
-                  s.name?.toLowerCase().includes('web app')
-                );
+                const getServicePillar = (srv: any): '1' | '2' | '3' | '4' => {
+                  const cat = (srv.category || '').toLowerCase();
+                  const name = (srv.name || '').toLowerCase();
+
+                  // 1. Creación de Empresa desde Cero (Starter, VIP)
+                  if (
+                    cat.includes('servicio 1') ||
+                    cat.includes('creación de empresa') ||
+                    name.includes('creación de empresa')
+                  ) {
+                    return '1';
+                  }
+
+                  // 2. Automatización & Procesos (Diagnóstico, 1/2/3 Automatizaciones, Retainer Continuo)
+                  if (
+                    cat.includes('servicio 2') ||
+                    cat.includes('diagnóstico') ||
+                    cat.includes('automatiz') ||
+                    name.includes('automatiz') ||
+                    name.includes('diagnóstico')
+                  ) {
+                    return '2';
+                  }
+
+                  // 3. Marketing & Campañas Growth (Marketing / Campaña Growth)
+                  if (
+                    cat.includes('servicio 3') ||
+                    cat.includes('marketing') ||
+                    cat.includes('campaña') ||
+                    name.includes('marketing') ||
+                    name.includes('campaña')
+                  ) {
+                    return '3';
+                  }
+
+                  // 4. Desarrollo de Producto & Web App (Plataformas, Software)
+                  if (
+                    cat.includes('servicio 4') ||
+                    cat.includes('producto') ||
+                    cat.includes('web app') ||
+                    name.includes('producto') ||
+                    name.includes('web app')
+                  ) {
+                    return '4';
+                  }
+
+                  return '2';
+                };
+
+                const p1Items = services.filter((s: any) => getServicePillar(s) === '1');
+                const p2Items = services.filter((s: any) => getServicePillar(s) === '2');
+                const p3Items = services.filter((s: any) => getServicePillar(s) === '3');
+                const p4Items = services.filter((s: any) => getServicePillar(s) === '4');
 
                 const pillars = [
                   { id: 'all', label: 'Todos los Servicios', count: services.length, color: 'var(--primary)', icon: Sparkles },
@@ -3028,6 +3056,51 @@ Equipo Método AI`;
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
                   {(() => {
+                    const getServicePillar = (srv: any): '1' | '2' | '3' | '4' => {
+                      const cat = (srv.category || '').toLowerCase();
+                      const name = (srv.name || '').toLowerCase();
+
+                      if (
+                        cat.includes('servicio 1') ||
+                        cat.includes('creación de empresa') ||
+                        name.includes('creación de empresa')
+                      ) {
+                        return '1';
+                      }
+
+                      if (
+                        cat.includes('servicio 2') ||
+                        cat.includes('diagnóstico') ||
+                        cat.includes('automatiz') ||
+                        name.includes('automatiz') ||
+                        name.includes('diagnóstico')
+                      ) {
+                        return '2';
+                      }
+
+                      if (
+                        cat.includes('servicio 3') ||
+                        cat.includes('marketing') ||
+                        cat.includes('campaña') ||
+                        name.includes('marketing') ||
+                        name.includes('campaña')
+                      ) {
+                        return '3';
+                      }
+
+                      if (
+                        cat.includes('servicio 4') ||
+                        cat.includes('producto') ||
+                        cat.includes('web app') ||
+                        name.includes('producto') ||
+                        name.includes('web app')
+                      ) {
+                        return '4';
+                      }
+
+                      return '2';
+                    };
+
                     const pillarConfigs = [
                       {
                         id: '1',
@@ -3040,11 +3113,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(59, 130, 246, 0.25)',
                         badgeBg: 'rgba(59, 130, 246, 0.15)',
                         icon: Building,
-                        items: services.filter((s: any) =>
-                          s.category?.includes('1') ||
-                          s.category?.toLowerCase().includes('empresa') ||
-                          s.name?.toLowerCase().includes('creación de empresa')
-                        ),
+                        items: services.filter((s: any) => getServicePillar(s) === '1'),
                       },
                       {
                         id: '2',
@@ -3057,13 +3126,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(16, 185, 129, 0.25)',
                         badgeBg: 'rgba(16, 185, 129, 0.15)',
                         icon: Zap,
-                        items: services.filter((s: any) =>
-                          s.category?.includes('2') ||
-                          s.category?.toLowerCase().includes('proceso') ||
-                          s.category?.toLowerCase().includes('automatiz') ||
-                          s.name?.toLowerCase().includes('automatiz') ||
-                          s.name?.toLowerCase().includes('diagnóstico')
-                        ),
+                        items: services.filter((s: any) => getServicePillar(s) === '2'),
                       },
                       {
                         id: '3',
@@ -3076,12 +3139,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(245, 158, 11, 0.25)',
                         badgeBg: 'rgba(245, 158, 11, 0.15)',
                         icon: TrendingUp,
-                        items: services.filter((s: any) =>
-                          s.category?.includes('3') ||
-                          s.category?.toLowerCase().includes('marketing') ||
-                          s.name?.toLowerCase().includes('marketing') ||
-                          s.name?.toLowerCase().includes('campaña')
-                        ),
+                        items: services.filter((s: any) => getServicePillar(s) === '3'),
                       },
                       {
                         id: '4',
@@ -3094,13 +3152,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(139, 92, 246, 0.25)',
                         badgeBg: 'rgba(139, 92, 246, 0.15)',
                         icon: Code2,
-                        items: services.filter((s: any) =>
-                          s.category?.includes('4') ||
-                          s.category?.toLowerCase().includes('producto') ||
-                          s.category?.toLowerCase().includes('web app') ||
-                          s.name?.toLowerCase().includes('producto') ||
-                          s.name?.toLowerCase().includes('web app')
-                        ),
+                        items: services.filter((s: any) => getServicePillar(s) === '4'),
                       },
                     ];
 

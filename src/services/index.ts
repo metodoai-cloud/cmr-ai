@@ -1070,15 +1070,32 @@ export const ServiceCatalog = {
     const activeFilter = filters.active !== undefined ? filters.active : true;
     const services = await serviceRepo.findAll({ ...filters, active: activeFilter });
     return services.sort((a: any, b: any) => {
+      // 1. Si existe sort_order explícito
+      if (a.sort_order !== undefined && b.sort_order !== undefined && a.sort_order !== b.sort_order) {
+        return Number(a.sort_order) - Number(b.sort_order);
+      }
+
+      // 2. Si el nombre comienza con número (ej: "1. Diagnóstico", "2. 1 Auto", "3. 2 Auto", "4. 3 Auto", "5. Retainer")
+      const matchA = (a.name || '').match(/^(\d+)[.\-)\s]/);
+      const matchB = (b.name || '').match(/^(\d+)[.\-)\s]/);
+      if (matchA && matchB) {
+        const numA = parseInt(matchA[1], 10);
+        const numB = parseInt(matchB[1], 10);
+        if (numA !== numB) return numA - numB;
+      }
+      if (matchA && !matchB) return -1;
+      if (!matchA && matchB) return 1;
+
+      // 3. Comparación por categoría
       const catA = a.category || '';
       const catB = b.category || '';
-      if (catA !== catB) {
-        return catA.localeCompare(catB, 'es', { numeric: true });
+      if (catA && catB && catA !== catB) {
+        const cmp = catA.localeCompare(catB, 'es', { numeric: true });
+        if (cmp !== 0) return cmp;
       }
-      if (a.billing_type !== b.billing_type) {
-        return a.billing_type === 'one_time' ? -1 : 1;
-      }
-      return (Number(a.standard_setup_price) || 0) - (Number(b.standard_setup_price) || 0);
+
+      // 4. Comparación natural por nombre
+      return (a.name || '').localeCompare(b.name || '', 'es', { numeric: true });
     });
   },
   async getById(id: string) { return serviceRepo.findById(id); },

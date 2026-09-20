@@ -3101,6 +3101,37 @@ Equipo Método AI`;
                       return '2';
                     };
 
+                    const sortServices = (list: any[]) => {
+                      return [...list].sort((a: any, b: any) => {
+                        // 1. Si existe sort_order explícito
+                        if (a.sort_order !== undefined && b.sort_order !== undefined && a.sort_order !== b.sort_order) {
+                          return Number(a.sort_order) - Number(b.sort_order);
+                        }
+
+                        // 2. Si el nombre comienza con número (ej: "1. Diagnóstico", "2. 1 Auto", "3. 2 Auto", "4. 3 Auto", "5. Retainer")
+                        const matchA = (a.name || '').match(/^(\d+)[.\-)\s]/);
+                        const matchB = (b.name || '').match(/^(\d+)[.\-)\s]/);
+                        if (matchA && matchB) {
+                          const numA = parseInt(matchA[1], 10);
+                          const numB = parseInt(matchB[1], 10);
+                          if (numA !== numB) return numA - numB;
+                        }
+                        if (matchA && !matchB) return -1;
+                        if (!matchA && matchB) return 1;
+
+                        // 3. Si la categoría tiene numeración (ej: "Servicio 2.1" vs "Servicio 2.2")
+                        const catA = a.category || '';
+                        const catB = b.category || '';
+                        if (catA && catB && catA !== catB) {
+                          const cmp = catA.localeCompare(catB, 'es', { numeric: true });
+                          if (cmp !== 0) return cmp;
+                        }
+
+                        // 4. Fallback: Orden natural por nombre con soporte numérico
+                        return (a.name || '').localeCompare(b.name || '', 'es', { numeric: true });
+                      });
+                    };
+
                     const pillarConfigs = [
                       {
                         id: '1',
@@ -3113,7 +3144,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(59, 130, 246, 0.25)',
                         badgeBg: 'rgba(59, 130, 246, 0.15)',
                         icon: Building,
-                        items: services.filter((s: any) => getServicePillar(s) === '1'),
+                        items: sortServices(services.filter((s: any) => getServicePillar(s) === '1')),
                       },
                       {
                         id: '2',
@@ -3126,7 +3157,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(16, 185, 129, 0.25)',
                         badgeBg: 'rgba(16, 185, 129, 0.15)',
                         icon: Zap,
-                        items: services.filter((s: any) => getServicePillar(s) === '2'),
+                        items: sortServices(services.filter((s: any) => getServicePillar(s) === '2')),
                       },
                       {
                         id: '3',
@@ -3139,7 +3170,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(245, 158, 11, 0.25)',
                         badgeBg: 'rgba(245, 158, 11, 0.15)',
                         icon: TrendingUp,
-                        items: services.filter((s: any) => getServicePillar(s) === '3'),
+                        items: sortServices(services.filter((s: any) => getServicePillar(s) === '3')),
                       },
                       {
                         id: '4',
@@ -3152,7 +3183,7 @@ Equipo Método AI`;
                         border: '1px solid rgba(139, 92, 246, 0.25)',
                         badgeBg: 'rgba(139, 92, 246, 0.15)',
                         icon: Code2,
-                        items: services.filter((s: any) => getServicePillar(s) === '4'),
+                        items: sortServices(services.filter((s: any) => getServicePillar(s) === '4')),
                       },
                     ];
 

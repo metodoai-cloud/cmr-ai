@@ -33,57 +33,37 @@ export interface AgencyTask {
   createdAt?: string;       // Fecha de creación ISO
 }
 
-const ENTITY_STYLES: Record<string, { color: string; bg: string; border: string }> = {
-  Agencia: {
-    color: '#818cf8',
-    bg: 'rgba(99, 102, 241, 0.15)',
-    border: '1px solid rgba(99, 102, 241, 0.35)',
-  },
-  Ascendra: {
-    color: '#2dd4bf',
-    bg: 'rgba(13, 148, 136, 0.15)',
-    border: '1px solid rgba(13, 148, 136, 0.35)',
-  },
-  Gafexterna: {
-    color: '#fb923c',
-    bg: 'rgba(249, 115, 22, 0.15)',
-    border: '1px solid rgba(249, 115, 22, 0.35)',
-  },
-  Acmotrack: {
-    color: '#c084fc',
-    bg: 'rgba(168, 85, 247, 0.15)',
-    border: '1px solid rgba(168, 85, 247, 0.35)',
-  },
-  'Agrícola Protea': {
-    color: '#34d399',
-    bg: 'rgba(16, 185, 129, 0.15)',
-    border: '1px solid rgba(16, 185, 129, 0.35)',
-  },
-};
-
 const DYNAMIC_PALETTE = [
-  { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.35)' }, // sky
-  { color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.35)' }, // rose
-  { color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.35)' }, // amber
-  { color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)', border: '1px solid rgba(236, 72, 153, 0.35)' }, // pink
-  { color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.35)' }, // cyan
+  { color: '#818cf8', bg: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.35)' }, // Indigo (Agencia / Interno)
+  { color: '#2dd4bf', bg: 'rgba(13, 148, 136, 0.15)', border: '1px solid rgba(13, 148, 136, 0.35)' }, // Teal
+  { color: '#fb923c', bg: 'rgba(249, 115, 22, 0.15)', border: '1px solid rgba(249, 115, 22, 0.35)' }, // Orange
+  { color: '#c084fc', bg: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.35)' }, // Purple
+  { color: '#34d399', bg: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.35)' }, // Emerald
+  { color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: '1px solid rgba(56, 189, 248, 0.35)' }, // Sky
+  { color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.35)' }, // Rose
+  { color: '#eab308', bg: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.35)' }, // Amber
+  { color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)', border: '1px solid rgba(236, 72, 153, 0.35)' }, // Pink
+  { color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.15)', border: '1px solid rgba(6, 182, 212, 0.35)' }, // Cyan
 ];
 
 const getEntityBadgeStyle = (entity: string) => {
-  if (ENTITY_STYLES[entity]) return ENTITY_STYLES[entity];
+  if (!entity || entity.toLowerCase() === 'agencia' || entity.toLowerCase() === 'agencia-ia' || entity.toLowerCase() === 'interno') {
+    return DYNAMIC_PALETTE[0];
+  }
   let hash = 0;
   for (let i = 0; i < entity.length; i++) hash = entity.charCodeAt(i) + ((hash << 5) - hash);
-  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  // Asignar determinísticamente entre los colores de clientes (índices 1 a N)
+  const index = (Math.abs(hash) % (DYNAMIC_PALETTE.length - 1)) + 1;
   return DYNAMIC_PALETTE[index];
 };
 
 const INITIAL_TASKS: AgencyTask[] = [
-  // --- Gafexterna (4) ---
+  // --- GAF Externa (4) ---
   {
     id: 1,
     title: 'Correr entrevistas Mom Test y definir cliente(s) piloto',
-    entity: 'Gafexterna',
-    entityDisplay: 'Gafexterna',
+    entity: 'GAF Externa',
+    entityDisplay: 'GAF Externa',
     typeTag: 'Cliente',
     expectedOutcome: 'Documento con 5 entrevistas analizadas y 2 clientes piloto pre-acordados.',
     nextAction: 'Sintetizar matriz de dolores y validar propuesta comercial.',
@@ -93,9 +73,9 @@ const INITIAL_TASKS: AgencyTask[] = [
   },
   {
     id: 2,
-    title: 'Ir actualizando a VALIDADO cada fase del pipeline de Gafexterna',
-    entity: 'Gafexterna',
-    entityDisplay: 'Gafexterna',
+    title: 'Ir actualizando a VALIDADO cada fase del pipeline de GAF Externa',
+    entity: 'GAF Externa',
+    entityDisplay: 'GAF Externa',
     typeTag: 'Cliente',
     expectedOutcome: 'Checklist de fases del pipeline 1 a 6 con confirmación de Paola.',
     source: 'estado-cliente',
@@ -105,8 +85,8 @@ const INITIAL_TASKS: AgencyTask[] = [
   {
     id: 3,
     title: 'Diseño de wireframes de interfaz y validación de propuesta de valor',
-    entity: 'Gafexterna',
-    entityDisplay: 'Gafexterna',
+    entity: 'GAF Externa',
+    entityDisplay: 'GAF Externa',
     typeTag: 'Cliente',
     expectedOutcome: 'Figma interactivo con pantallas de onboarding y panel principal.',
     nextAction: 'Agendar sesión de feedback de 30 minutos.',
@@ -116,9 +96,9 @@ const INITIAL_TASKS: AgencyTask[] = [
   },
   {
     id: 4,
-    title: 'Revisión y ajustes de entregables iniciales de Gafexterna',
-    entity: 'Gafexterna',
-    entityDisplay: 'Gafexterna',
+    title: 'Revisión y ajustes de entregables iniciales de GAF Externa',
+    entity: 'GAF Externa',
+    entityDisplay: 'GAF Externa',
     typeTag: 'Cliente',
     expectedOutcome: 'PDF de entregables aprobado por el cliente.',
     source: 'preguntas-pendientes-paola.md',
@@ -341,6 +321,7 @@ export const AgencyTasksSection: React.FC = () => {
   const [selectedEntity, setSelectedEntity] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
   const [companies, setCompanies] = useState<string[]>([]);
+  const [companyMap, setCompanyMap] = useState<Record<string, string>>({});
   const [showTasksList, setShowTasksList] = useState<boolean>(true);
   const [dateSortOrder, setDateSortOrder] = useState<'recent' | 'oldest'>('recent');
 
@@ -360,9 +341,11 @@ export const AgencyTasksSection: React.FC = () => {
   useEffect(() => {
     const loadDbTasks = async () => {
       try {
-        const [resAct, resCo] = await Promise.all([
+        const [resAct, resCo, resContact, resOpp] = await Promise.all([
           fetch('/api/activities').then((r) => (r.ok ? r.json() : [])),
           fetch('/api/companies').then((r) => (r.ok ? r.json() : [])),
+          fetch('/api/contacts').then((r) => (r.ok ? r.json() : [])),
+          fetch('/api/opportunities').then((r) => (r.ok ? r.json() : [])),
         ]);
 
         const coMap: Record<string, string> = {};
@@ -370,11 +353,30 @@ export const AgencyTasksSection: React.FC = () => {
           const names: string[] = [];
           resCo.forEach((c: any) => {
             if (c.id && c.name) {
-              coMap[c.id] = c.name;
-              names.push(c.name);
+              coMap[c.id] = c.name.trim();
+              names.push(c.name.trim());
             }
           });
           setCompanies(names);
+          setCompanyMap(coMap);
+        }
+
+        const contactCoMap: Record<string, string> = {};
+        if (Array.isArray(resContact)) {
+          resContact.forEach((ct: any) => {
+            if (ct.id && ct.company_id && coMap[ct.company_id]) {
+              contactCoMap[ct.id] = coMap[ct.company_id];
+            }
+          });
+        }
+
+        const oppCoMap: Record<string, string> = {};
+        if (Array.isArray(resOpp)) {
+          resOpp.forEach((o: any) => {
+            if (o.id && o.company_id && coMap[o.company_id]) {
+              oppCoMap[o.id] = coMap[o.company_id];
+            }
+          });
         }
 
         if (Array.isArray(resAct)) {
@@ -394,33 +396,18 @@ export const AgencyTasksSection: React.FC = () => {
             .map((a: any, idx: number) => {
               const notesParts = (a.notes || '').split(' — ');
               const title = notesParts[0] || a.notes || 'Tarea sin título';
-              const rawCompanyName = a.company_id ? (coMap[a.company_id] || '').trim() : '';
+              
+              // 100% Relacional: Resolver el nombre de la empresa directamente desde la BD
+              const resolvedCompany =
+                (a.company_id && coMap[a.company_id]) ||
+                (a.opportunity_id && oppCoMap[a.opportunity_id]) ||
+                (a.contact_id && contactCoMap[a.contact_id]) ||
+                '';
 
-              let entity = 'Agencia';
-              let entityDisplay = 'Agencia-IA';
-              let typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial' = 'Agencia';
-
-              if (rawCompanyName && rawCompanyName.toLowerCase() !== 'agencia') {
-                entity = rawCompanyName;
-                entityDisplay = rawCompanyName;
-                typeTag = 'Cliente';
-              } else if (title.toLowerCase().includes('protea') || (a.notes && a.notes.toLowerCase().includes('protea'))) {
-                entity = 'Agrícola Protea';
-                entityDisplay = 'Agrícola Protea';
-                typeTag = 'Cliente';
-              } else if (title.toLowerCase().includes('ascendra') || (a.notes && a.notes.toLowerCase().includes('ascendra'))) {
-                entity = 'Ascendra';
-                entityDisplay = 'Ascendra Gestión Inmobiliaria';
-                typeTag = 'Cliente';
-              } else if (title.toLowerCase().includes('gafexterna') || (a.notes && (a.notes.toLowerCase().includes('gafexterna') || a.notes.toLowerCase().includes('paola')))) {
-                entity = 'Gafexterna';
-                entityDisplay = 'Gafexterna';
-                typeTag = 'Cliente';
-              } else if (title.toLowerCase().includes('acmotrack') || (a.notes && a.notes.toLowerCase().includes('acmotrack'))) {
-                entity = 'Acmotrack';
-                entityDisplay = 'Acmotrack';
-                typeTag = 'Cliente';
-              }
+              const isClientTask = Boolean(resolvedCompany && resolvedCompany.toLowerCase() !== 'agencia');
+              const entity = isClientTask ? resolvedCompany : 'Agencia';
+              const entityDisplay = isClientTask ? resolvedCompany : 'Agencia-IA';
+              const typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial' = isClientTask ? 'Cliente' : 'Agencia';
 
               let status: 'pending' | 'in_progress' | 'completed' = 'pending';
               if (
@@ -604,6 +591,29 @@ export const AgencyTasksSection: React.FC = () => {
 
     if (isNewTask) {
       setTasks((prev) => [taskToSave, ...prev]);
+
+      // Guardar en la base de datos vinculando el company_id real si aplica:
+      const matchedCompanyId = Object.entries(companyMap).find(
+        ([_, name]) => name.toLowerCase() === taskToSave.entity.toLowerCase()
+      )?.[0] || null;
+
+      fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'task',
+          notes: taskToSave.title,
+          desired_outcome: taskToSave.expectedOutcome || null,
+          next_action: taskToSave.nextAction || null,
+          company_id: matchedCompanyId,
+          result:
+            taskToSave.status === 'completed'
+              ? 'completada'
+              : taskToSave.status === 'in_progress'
+              ? 'en proceso'
+              : 'pendiente',
+        }),
+      }).catch(console.warn);
     } else {
       setTasks((prev) =>
         prev.map((t) => (t.id === taskToSave.id ? taskToSave : t))
@@ -611,6 +621,10 @@ export const AgencyTasksSection: React.FC = () => {
 
       // Sync to backend if it's a DB record
       if (typeof taskToSave.id === 'string' && taskToSave.id.length > 10 && !taskToSave.id.startsWith('custom-')) {
+        const matchedCompanyId = Object.entries(companyMap).find(
+          ([_, name]) => name.toLowerCase() === taskToSave.entity.toLowerCase()
+        )?.[0] || null;
+
         fetch(`/api/activities/${taskToSave.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -618,6 +632,7 @@ export const AgencyTasksSection: React.FC = () => {
             notes: taskToSave.title,
             desired_outcome: taskToSave.expectedOutcome || null,
             next_action: taskToSave.nextAction || null,
+            company_id: matchedCompanyId,
             result:
               taskToSave.status === 'completed'
                 ? 'completada'
@@ -691,18 +706,18 @@ export const AgencyTasksSection: React.FC = () => {
 
   const entityList = React.useMemo(() => {
     const set = new Set<string>();
-    tasks.forEach((t) => {
-      if (t.entity && t.entity.trim()) set.add(t.entity.trim());
-    });
+    set.add('Agencia');
     companies.forEach((c) => {
-      if (c && c.trim()) set.add(c.trim());
+      if (c && c.trim() && c.toLowerCase() !== 'agencia') set.add(c.trim());
     });
-    ['Agencia', 'Ascendra', 'Agrícola Protea', 'Gafexterna', 'Acmotrack'].forEach((c) => {
-      set.add(c);
+    tasks.forEach((t) => {
+      if (t.entity && t.entity.trim() && t.entity.toLowerCase() !== 'agencia') set.add(t.entity.trim());
     });
-    return Array.from(set).sort((a, b) =>
-      a.localeCompare(b, 'es', { sensitivity: 'base' })
-    );
+    return Array.from(set).sort((a, b) => {
+      if (a === 'Agencia') return -1;
+      if (b === 'Agencia') return 1;
+      return a.localeCompare(b, 'es', { sensitivity: 'base' });
+    });
   }, [companies, tasks]);
 
   const renderTaskCard = (task: AgencyTask) => {

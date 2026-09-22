@@ -917,7 +917,29 @@ export const AgencyTasksSection: React.FC = () => {
               : '○ Pendiente'}
           </span>
 
-          {/* Fecha de Término / Límite (dueDate) */}
+          {/* Created Date Badge if available (Lado Izquierdo) */}
+          {task.createdAt && (
+            <span
+              style={{
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.7rem',
+                fontWeight: 500,
+                backgroundColor: 'rgba(148, 163, 184, 0.08)',
+                border: '1px solid rgba(148, 163, 184, 0.2)',
+                color: 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+              title={`Fecha de creación/registro: ${new Date(task.createdAt).toLocaleString('es-CL')}`}
+            >
+              <Calendar size={11} style={{ opacity: 0.7 }} />
+              <span>Creada: {new Date(task.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}</span>
+            </span>
+          )}
+
+          {/* Fecha de Término / Límite (Lado Derecho) */}
           {task.dueDate && (() => {
             const today = new Date().toISOString().split('T')[0];
             const isOverdue = task.status !== 'completed' && task.dueDate < today;
@@ -948,37 +970,15 @@ export const AgencyTasksSection: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
+                  marginLeft: 'auto',
                 }}
                 title={`Fecha de término / límite: ${task.dueDate}${isOverdue ? ' (¡Vencida!)' : ''}`}
               >
                 <Clock3 size={12} />
-                <span>Término: {formattedDate}</span>
+                <span>Límite: {formattedDate}</span>
               </span>
             );
           })()}
-
-          {/* Created Date Badge if available */}
-          {task.createdAt && (
-            <span
-              style={{
-                padding: '2px 8px',
-                borderRadius: '6px',
-                fontSize: '0.7rem',
-                fontWeight: 500,
-                backgroundColor: 'rgba(148, 163, 184, 0.08)',
-                border: '1px solid rgba(148, 163, 184, 0.2)',
-                color: 'var(--text-muted)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                marginLeft: 'auto',
-              }}
-              title={`Fecha de registro: ${new Date(task.createdAt).toLocaleString('es-CL')}`}
-            >
-              <Calendar size={11} style={{ opacity: 0.7 }} />
-              <span>{new Date(task.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}</span>
-            </span>
-          )}
         </div>
 
         {/* Next Action & Source Footer */}
@@ -1637,12 +1637,52 @@ export const AgencyTasksSection: React.FC = () => {
                   />
                 </div>
 
-                {/* 📅 Fechas: Término / Límite y Registro */}
+                {/* 📅 Fechas: Lado Izquierdo = Fecha de Creación (Solo Lectura), Lado Derecho = Fecha Límite (Editable) */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  {/* Lado Izquierdo: Fecha de Creación / Registro (No editable) */}
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      <Calendar size={14} style={{ opacity: 0.7 }} />
+                      <span>Fecha de Creación / Registro</span>
+                    </label>
+                    <div
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.88rem',
+                        boxSizing: 'border-box',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        cursor: 'default',
+                        userSelect: 'none',
+                      }}
+                      title="La fecha de creación se genera automáticamente al registrar la tarea"
+                    >
+                      <Clock3 size={15} style={{ opacity: 0.6 }} />
+                      <span>
+                        {editingTask.createdAt
+                          ? new Date(editingTask.createdAt).toLocaleString('es-CL', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : new Date().toLocaleDateString('es-CL')}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lado Derecho: Fecha Límite / Término (Editable) */}
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
                       <Calendar size={15} color="var(--primary)" />
-                      <span>Fecha de Término / Límite</span>
+                      <span>Fecha Límite / Término</span>
                     </label>
                     <input
                       type="date"
@@ -1655,33 +1695,6 @@ export const AgencyTasksSection: React.FC = () => {
                         backgroundColor: 'var(--bg-main)',
                         border: '1px solid var(--border-glass)',
                         color: 'var(--text-primary)',
-                        fontSize: '0.88rem',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                      Fecha de Registro / Creación
-                    </label>
-                    <input
-                      type="date"
-                      value={editingTask.createdAt ? editingTask.createdAt.split('T')[0] : ''}
-                      onChange={(e) =>
-                        setEditingTask({
-                          ...editingTask,
-                          createdAt: e.target.value ? new Date(e.target.value + 'T12:00:00Z').toISOString() : new Date().toISOString(),
-                        })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--bg-main)',
-                        border: '1px solid var(--border-glass)',
-                        color: 'var(--text-secondary)',
                         fontSize: '0.88rem',
                         outline: 'none',
                         boxSizing: 'border-box',

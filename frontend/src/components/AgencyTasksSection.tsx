@@ -27,6 +27,7 @@ export interface AgencyTask {
   typeTag: 'Cliente' | 'Agencia' | 'Finanzas' | 'Comercial';
   expectedOutcome?: string; // Resultado esperado o entregable concreto
   nextAction?: string;      // Siguiente paso posterior (distinto al título)
+  dueDate?: string;         // Fecha de término / vencimiento (YYYY-MM-DD)
   source?: string;
   status: 'pending' | 'in_progress' | 'completed';
   borderColor?: string;
@@ -453,6 +454,10 @@ export const AgencyTasksSection: React.FC = () => {
                 }
               }
 
+              // 3. Extraer Fecha de Término / Límite
+              const rawDueDate = a.next_action_date || a.due_date;
+              const dueDate = rawDueDate ? String(rawDueDate).split('T')[0] : undefined;
+
               return {
                 id: a.id || `db-${idx}`,
                 title,
@@ -461,6 +466,7 @@ export const AgencyTasksSection: React.FC = () => {
                 typeTag,
                 expectedOutcome,
                 nextAction: cleanNextAction,
+                dueDate,
                 source: 'CRM DB (Claude Cowork / MCP)',
                 status,
                 borderColor,
@@ -480,6 +486,7 @@ export const AgencyTasksSection: React.FC = () => {
                     title: fromDb.title || t.title,
                     expectedOutcome: fromDb.expectedOutcome || t.expectedOutcome,
                     nextAction: fromDb.nextAction || t.nextAction,
+                    dueDate: fromDb.dueDate || t.dueDate,
                     entity: fromDb.entity || t.entity,
                     entityDisplay: fromDb.entityDisplay || t.entityDisplay,
                     status: fromDb.status || t.status,
@@ -558,6 +565,7 @@ export const AgencyTasksSection: React.FC = () => {
       typeTag: 'Agencia',
       expectedOutcome: '',
       nextAction: '',
+      dueDate: '',
       source: 'Manual / Interfaz Web',
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -585,6 +593,7 @@ export const AgencyTasksSection: React.FC = () => {
           : editingTask.entity,
       expectedOutcome: editingTask.expectedOutcome?.trim() || undefined,
       nextAction: editingTask.nextAction?.trim() || undefined,
+      dueDate: editingTask.dueDate?.trim() || undefined,
       borderColor: updatedBorder,
       createdAt: editingTask.createdAt || new Date().toISOString(),
     };
@@ -592,7 +601,7 @@ export const AgencyTasksSection: React.FC = () => {
     if (isNewTask) {
       setTasks((prev) => [taskToSave, ...prev]);
 
-      // Guardar en la base de datos vinculando el company_id real si aplica:
+      // Guardar en la base de datos vinculando el company_id real y la fecha de término:
       const matchedCompanyId = Object.entries(companyMap).find(
         ([_, name]) => name.toLowerCase() === taskToSave.entity.toLowerCase()
       )?.[0] || null;
@@ -605,6 +614,7 @@ export const AgencyTasksSection: React.FC = () => {
           notes: taskToSave.title,
           desired_outcome: taskToSave.expectedOutcome || null,
           next_action: taskToSave.nextAction || null,
+          next_action_date: taskToSave.dueDate || null,
           company_id: matchedCompanyId,
           result:
             taskToSave.status === 'completed'
@@ -632,6 +642,7 @@ export const AgencyTasksSection: React.FC = () => {
             notes: taskToSave.title,
             desired_outcome: taskToSave.expectedOutcome || null,
             next_action: taskToSave.nextAction || null,
+            next_action_date: taskToSave.dueDate || null,
             company_id: matchedCompanyId,
             result:
               taskToSave.status === 'completed'
@@ -884,6 +895,46 @@ export const AgencyTasksSection: React.FC = () => {
               ? '⏳ En proceso'
               : '○ Pendiente'}
           </span>
+
+          {/* Fecha de Término / Límite (dueDate) */}
+          {task.dueDate && (() => {
+            const today = new Date().toISOString().split('T')[0];
+            const isOverdue = task.status !== 'completed' && task.dueDate < today;
+            const isToday = task.dueDate === today;
+            const parts = task.dueDate.split('-');
+            const formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : task.dueDate;
+
+            return (
+              <span
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.72rem',
+                  fontWeight: 650,
+                  backgroundColor: isOverdue
+                    ? 'rgba(239, 68, 68, 0.16)'
+                    : isToday
+                    ? 'rgba(245, 158, 11, 0.16)'
+                    : 'rgba(59, 130, 246, 0.12)',
+                  border: `1px solid ${
+                    isOverdue
+                      ? 'rgba(239, 68, 68, 0.35)'
+                      : isToday
+                      ? 'rgba(245, 158, 11, 0.35)'
+                      : 'rgba(59, 130, 246, 0.3)'
+                  }`,
+                  color: isOverdue ? '#f87171' : isToday ? '#fbbf24' : '#60a5fa',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title={`Fecha de término / límite: ${task.dueDate}${isOverdue ? ' (¡Vencida!)' : ''}`}
+              >
+                <Clock3 size={12} />
+                <span>Término: {formattedDate}</span>
+              </span>
+            );
+          })()}
 
           {/* Created Date Badge if available */}
           {task.createdAt && (
@@ -1563,6 +1614,59 @@ export const AgencyTasksSection: React.FC = () => {
                       boxSizing: 'border-box',
                     }}
                   />
+                </div>
+
+                {/* 📅 Fechas: Término / Límite y Registro */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                      <Calendar size={15} color="var(--primary)" />
+                      <span>Fecha de Término / Límite</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={editingTask.dueDate || ''}
+                      onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-main)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-primary)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 650, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                      Fecha de Registro / Creación
+                    </label>
+                    <input
+                      type="date"
+                      value={editingTask.createdAt ? editingTask.createdAt.split('T')[0] : ''}
+                      onChange={(e) =>
+                        setEditingTask({
+                          ...editingTask,
+                          createdAt: e.target.value ? new Date(e.target.value + 'T12:00:00Z').toISOString() : new Date().toISOString(),
+                        })
+                      }
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-main)',
+                        border: '1px solid var(--border-glass)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Entity & Type */}

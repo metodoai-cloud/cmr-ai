@@ -667,7 +667,13 @@ export const AgencyTasksSection: React.FC = () => {
     setDateSortOrder((prev) => (prev === 'recent' ? 'oldest' : 'recent'));
   };
 
-  const getTaskTimestamp = (task: AgencyTask): number => {
+  const getTaskEffectiveTimestamp = (task: AgencyTask): number => {
+    // 1. Priorizar Fecha de Término / Vencimiento
+    if (task.dueDate) {
+      const parsed = new Date(task.dueDate + 'T00:00:00Z').getTime();
+      if (!isNaN(parsed)) return parsed;
+    }
+    // 2. Fallback a Fecha de Creación / Registro
     if (task.createdAt) {
       const parsed = new Date(task.createdAt).getTime();
       if (!isNaN(parsed)) return parsed;
@@ -696,8 +702,23 @@ export const AgencyTasksSection: React.FC = () => {
     });
 
     return [...list].sort((a, b) => {
-      const timeA = getTaskTimestamp(a);
-      const timeB = getTaskTimestamp(b);
+      const hasDueA = Boolean(a.dueDate);
+      const hasDueB = Boolean(b.dueDate);
+
+      // Si ambas tienen fecha de término, ordenar por fecha de término
+      if (hasDueA && hasDueB) {
+        const timeA = new Date(a.dueDate + 'T00:00:00Z').getTime();
+        const timeB = new Date(b.dueDate + 'T00:00:00Z').getTime();
+        return dateSortOrder === 'recent' ? timeA - timeB : timeB - timeA;
+      }
+
+      // Las tareas con fecha límite definida tienen prioridad visual
+      if (hasDueA && !hasDueB) return -1;
+      if (!hasDueA && hasDueB) return 1;
+
+      // Si ninguna tiene fecha de término, ordenar por fecha de creación
+      const timeA = getTaskEffectiveTimestamp(a);
+      const timeB = getTaskEffectiveTimestamp(b);
       return dateSortOrder === 'recent' ? timeB - timeA : timeA - timeB;
     });
   }, [entityFilteredTasks, statusFilter, dateSortOrder]);
@@ -1339,14 +1360,14 @@ export const AgencyTasksSection: React.FC = () => {
           className="glass-card-interactive"
           title={
             dateSortOrder === 'recent'
-              ? 'Orden actual: Más recientes primero. Clic para ordenar por más antiguas.'
-              : 'Orden actual: Más antiguas primero. Clic para ordenar por más recientes.'
+              ? 'Orden actual: Próximas a vencer primero. Clic para ordenar por más lejanas.'
+              : 'Orden actual: Más lejanas primero. Clic para ordenar por próximas a vencer.'
           }
         >
           <Calendar size={14} color="var(--primary)" />
-          <span style={{ color: 'var(--text-secondary)' }}>Fecha:</span>
+          <span style={{ color: 'var(--text-secondary)' }}>Vencimiento:</span>
           <span style={{ color: 'var(--primary)', fontWeight: 700 }}>
-            {dateSortOrder === 'recent' ? 'Más recientes' : 'Más antiguas'}
+            {dateSortOrder === 'recent' ? 'Próximas a vencer' : 'Más lejanas'}
           </span>
           {dateSortOrder === 'recent' ? (
             <ArrowDown size={14} color="var(--primary)" />

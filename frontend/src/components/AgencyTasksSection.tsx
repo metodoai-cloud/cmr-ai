@@ -1099,51 +1099,7 @@ export const AgencyTasksSection: React.FC = () => {
 
       {/* Top 4 KPI Cards (Filtros Interactivos) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '14px' }}>
-        {/* Total */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => handleCardFilterClick('all')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardFilterClick('all'); }}
-          style={{
-            padding: '16px 20px',
-            backgroundColor: statusFilter === 'all' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card-solid)',
-            border: statusFilter === 'all' ? '1.5px solid #6366f1' : '1px solid var(--border-glass)',
-            boxShadow: statusFilter === 'all' ? '0 0 18px rgba(99, 102, 241, 0.32)' : 'none',
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            position: 'relative',
-          }}
-          className="glass-card-interactive"
-          title={statusFilter === 'all' ? 'Mostrando todas las tareas' : 'Clic para ver todas las tareas'}
-        >
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: statusFilter === 'all' ? '#818cf8' : 'var(--text-primary)', lineHeight: 1.1 }}>
-              {totalCount}
-            </div>
-            {statusFilter === 'all' && (
-              <span
-                style={{
-                  fontSize: '0.68rem',
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(99, 102, 241, 0.25)',
-                  color: '#818cf8',
-                  border: '1px solid rgba(99, 102, 241, 0.4)',
-                }}
-              >
-                ● Activo
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: statusFilter === 'all' ? '#c7d2fe' : 'var(--text-secondary)', marginTop: '4px' }}>
-            Total de tareas
-          </div>
-        </div>
-
-        {/* Pendientes */}
+        {/* 1. Pendientes */}
         <div
           role="button"
           tabIndex={0}
@@ -1151,9 +1107,9 @@ export const AgencyTasksSection: React.FC = () => {
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardFilterClick('pending'); }}
           style={{
             padding: '16px 20px',
-            backgroundColor: statusFilter === 'pending' ? 'rgba(148, 163, 184, 0.12)' : 'var(--bg-card-solid)',
-            border: statusFilter === 'pending' ? '1.5px solid #94a3b8' : '1px solid var(--border-glass)',
-            boxShadow: statusFilter === 'pending' ? '0 0 18px rgba(148, 163, 184, 0.3)' : 'none',
+            backgroundColor: statusFilter === 'pending' ? 'rgba(249, 115, 22, 0.12)' : 'var(--bg-card-solid)',
+            border: statusFilter === 'pending' ? '1.5px solid #f97316' : '1px solid var(--border-glass)',
+            boxShadow: statusFilter === 'pending' ? '0 0 18px rgba(249, 115, 22, 0.35)' : 'none',
             borderRadius: 'var(--radius-sm)',
             cursor: 'pointer',
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1163,7 +1119,7 @@ export const AgencyTasksSection: React.FC = () => {
           title={statusFilter === 'pending' ? 'Filtro activo: Pendientes (Clic para ver todas)' : 'Clic para filtrar solo tareas pendientes'}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: statusFilter === 'pending' ? '#cbd5e1' : 'var(--text-primary)', lineHeight: 1.1 }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: statusFilter === 'pending' ? '#fb923c' : 'var(--text-primary)', lineHeight: 1.1 }}>
               {pendingCountAll}
             </div>
             {statusFilter === 'pending' && (
@@ -1173,22 +1129,22 @@ export const AgencyTasksSection: React.FC = () => {
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: '12px',
-                  backgroundColor: 'rgba(148, 163, 184, 0.25)',
-                  color: '#cbd5e1',
-                  border: '1px solid rgba(148, 163, 184, 0.4)',
+                  backgroundColor: 'rgba(249, 115, 22, 0.25)',
+                  color: '#fb923c',
+                  border: '1px solid rgba(249, 115, 22, 0.4)',
                 }}
               >
                 ● Activo
               </span>
             )}
           </div>
-          <div style={{ fontSize: '0.8rem', color: statusFilter === 'pending' ? '#e2e8f0' : 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#94a3b8' }} />
+          <div style={{ fontSize: '0.8rem', color: statusFilter === 'pending' ? '#fed7aa' : 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f97316' }} />
             Pendientes
           </div>
         </div>
 
-        {/* En proceso */}
+        {/* 2. En proceso */}
         <div
           role="button"
           tabIndex={0}
@@ -1233,7 +1189,7 @@ export const AgencyTasksSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Hechas */}
+        {/* 3. Hechas */}
         <div
           role="button"
           tabIndex={0}
@@ -1275,6 +1231,50 @@ export const AgencyTasksSection: React.FC = () => {
           <div style={{ fontSize: '0.8rem', color: statusFilter === 'completed' ? '#a7f3d0' : 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success)' }} />
             Hechas (Histórico)
+          </div>
+        </div>
+
+        {/* 4. Total */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => handleCardFilterClick('all')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCardFilterClick('all'); }}
+          style={{
+            padding: '16px 20px',
+            backgroundColor: statusFilter === 'all' ? 'rgba(99, 102, 241, 0.12)' : 'var(--bg-card-solid)',
+            border: statusFilter === 'all' ? '1.5px solid #6366f1' : '1px solid var(--border-glass)',
+            boxShadow: statusFilter === 'all' ? '0 0 18px rgba(99, 102, 241, 0.32)' : 'none',
+            borderRadius: 'var(--radius-sm)',
+            cursor: 'pointer',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+          }}
+          className="glass-card-interactive"
+          title={statusFilter === 'all' ? 'Mostrando todas las tareas' : 'Clic para ver todas las tareas'}
+        >
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: '1.85rem', fontWeight: 800, color: statusFilter === 'all' ? '#818cf8' : 'var(--text-primary)', lineHeight: 1.1 }}>
+              {totalCount}
+            </div>
+            {statusFilter === 'all' && (
+              <span
+                style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                  color: '#818cf8',
+                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                }}
+              >
+                ● Activo
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '0.8rem', color: statusFilter === 'all' ? '#c7d2fe' : 'var(--text-secondary)', marginTop: '4px' }}>
+            Total de tareas
           </div>
         </div>
       </div>

@@ -283,6 +283,8 @@ CREATE TABLE IF NOT EXISTS projects (
     CHECK (status IN ('onboarding','in_progress','review','completed','cancelled')),
   sold_price NUMERIC(12,2) DEFAULT 0,
   estimated_cost NUMERIC(12,2) DEFAULT 0,
+  next_step TEXT,
+  next_step_owner TEXT DEFAULT 'Agencia',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

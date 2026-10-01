@@ -182,10 +182,21 @@ export default function App() {
     start_date: '',
     due_date: '',
     estimated_cost: 0,
+    next_step: '',
+    next_step_owner: 'Agencia',
   });
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [projectStatusView, setProjectStatusView] = useState<'active' | 'completed' | 'cancelled'>('active');
   const [servicePillarFilter, setServicePillarFilter] = useState<'all' | '1' | '2' | '3' | '4'>('all');
+  const [projectModalTab, setProjectModalTab] = useState<'details' | 'activities'>('details');
+  const [showAddProjectActivityForm, setShowAddProjectActivityForm] = useState(false);
+  const [newProjActivityType, setNewProjActivityType] = useState('meeting');
+  const [newProjActivityResult, setNewProjActivityResult] = useState('');
+  const [newProjActivityNotes, setNewProjActivityNotes] = useState('');
+  const [newProjActivityNextAction, setNewProjActivityNextAction] = useState('');
+  const [newProjActivityNextOwner, setNewProjActivityNextOwner] = useState<'Agencia' | 'Cliente' | 'Tercero'>('Agencia');
+  const [newProjActivityNextDate, setNewProjActivityNextDate] = useState('');
+  const [isSavingProjActivity, setIsSavingProjActivity] = useState(false);
 
   // Project Email Status Modal State
   const [showProjectEmailModal, setShowProjectEmailModal] = useState(false);
@@ -587,9 +598,16 @@ export default function App() {
   };
 
   // Open Project Edit Modal
-  const openEditProjectModal = (p: any, companyName: string) => {
+  const openEditProjectModal = (p: any, companyName: string, initialTab: 'details' | 'activities' = 'details') => {
     setEditingProjectId(p.id);
     setProjectCompanyName(companyName);
+    setProjectModalTab(initialTab);
+    setShowAddProjectActivityForm(false);
+    setNewProjActivityResult('');
+    setNewProjActivityNotes('');
+    setNewProjActivityNextAction('');
+    setNewProjActivityNextOwner(p.next_step_owner || 'Agencia');
+    setNewProjActivityNextDate('');
     setProjectForm({
       name: p.name || '',
       status: p.status || 'onboarding',
@@ -597,6 +615,8 @@ export default function App() {
       start_date: p.start_date || '',
       due_date: p.due_date || '',
       estimated_cost: Number(p.estimated_cost) || 0,
+      next_step: p.next_step || '',
+      next_step_owner: p.next_step_owner || 'Agencia',
     });
     setShowProjectModal(true);
   };
@@ -614,6 +634,8 @@ export default function App() {
         start_date: projectForm.start_date || null,
         due_date: projectForm.due_date || null,
         estimated_cost: Number(projectForm.estimated_cost) || 0,
+        next_step: projectForm.next_step.trim() || null,
+        next_step_owner: projectForm.next_step_owner,
       });
       setShowProjectModal(false);
       await loadData();
@@ -621,6 +643,60 @@ export default function App() {
       alert(`Error al actualizar proyecto: ${err.message}`);
     } finally {
       setIsSavingProject(false);
+    }
+  };
+
+  // Add Activity / Meeting to Project (Syncs Next Step automatically)
+  const handleAddProjectActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProjectId || !newProjActivityResult.trim()) return;
+
+    const currentProj = projects.find((p) => p.id === editingProjectId);
+    const clientObj = currentProj ? (Array.isArray(currentProj.clients) ? currentProj.clients[0] : currentProj.clients) : null;
+    const oppObj = currentProj ? allOpps.find((o) => o.id === currentProj.opportunity_id) : null;
+    const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
+    const companyId = companyObj?.id || oppObj?.company_id || clientObj?.company_id;
+    const contactId = clientObj?.primary_contact_id || oppObj?.contact_id;
+
+    try {
+      setIsSavingProjActivity(true);
+      
+      // 1. Create activity in unified activities table
+      await crmApi.createActivity({
+        opportunity_id: currentProj?.opportunity_id || undefined,
+        company_id: companyId || undefined,
+        contact_id: contactId || undefined,
+        type: newProjActivityType,
+        result: newProjActivityResult.trim(),
+        notes: newProjActivityNotes.trim() || undefined,
+        next_action: newProjActivityNextAction.trim() || undefined,
+        next_action_date: newProjActivityNextDate || undefined,
+        occurred_at: new Date().toISOString(),
+      });
+
+      // 2. Automatically sync next step to Project
+      if (newProjActivityNextAction.trim()) {
+        await crmApi.updateProject(editingProjectId, {
+          next_step: newProjActivityNextAction.trim(),
+          next_step_owner: newProjActivityNextOwner,
+        });
+        setProjectForm((prev) => ({
+          ...prev,
+          next_step: newProjActivityNextAction.trim(),
+          next_step_owner: newProjActivityNextOwner,
+        }));
+      }
+
+      setNewProjActivityResult('');
+      setNewProjActivityNotes('');
+      setNewProjActivityNextAction('');
+      setNewProjActivityNextDate('');
+      setShowAddProjectActivityForm(false);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al registrar reunión o nota en el proyecto: ${err.message}`);
+    } finally {
+      setIsSavingProjActivity(false);
     }
   };
 
@@ -641,6 +717,18 @@ export default function App() {
     const formattedStart = formatDate(p.start_date);
     const formattedDue = p.due_date ? formatDate(p.due_date) : 'A definir';
 
+    // Prioritize project's next_step, fallback to latest activity's next_action
+    let nextStepText = p.next_step ? p.next_step.trim() : '';
+    if (!nextStepText) {
+      const oppActs = activities.filter((a) => a.opportunity_id === p.opportunity_id || (companyId && a.company_id === companyId));
+      const latestActWithNext = oppActs.find((a) => a.next_action && a.next_action.trim());
+      if (latestActWithNext) {
+        nextStepText = latestActWithNext.next_action.trim();
+      }
+    }
+    const finalNextStep = nextStepText || 'A coordinar en la próxima sesión de avance';
+    const finalNextOwner = p.next_step_owner || 'Agencia';
+
     const subject = `Actualización de Estado: ${projectName} — Método AI`;
     const body = `Hola ${contactName},
 
@@ -652,6 +740,8 @@ Te compartimos la actualización de avance y estado de tu proyecto con Método A
 • Fecha de Inicio: ${formattedStart}
 • Fecha Comprometida de Entrega: ${formattedDue}
 • Inversión Acordada: ${formatMoney(p.sold_price)}
+• Próximo Paso: ${finalNextStep}
+• A Cargo de: ${finalNextOwner}
 
 Quedamos a tu entera disposición ante cualquier duda o para coordinar la sesión de revisión.
 
@@ -765,6 +855,23 @@ Equipo Método AI`;
   const selectedOppActivities = selectedOpp
     ? activities
         .filter((a) => a.opportunity_id === selectedOpp.id)
+        .sort((a, b) => new Date(b.occurred_at || b.created_at).getTime() - new Date(a.occurred_at || a.created_at).getTime())
+    : [];
+
+  // Filter activities for currently editing project (includes opportunity & company 360 history)
+  const currentEditingProject = projects.find((p) => p.id === editingProjectId);
+  const currentProjOpp = currentEditingProject ? allOpps.find((o) => o.id === currentEditingProject.opportunity_id) : null;
+  const currentProjClient = currentEditingProject ? (Array.isArray(currentEditingProject.clients) ? currentEditingProject.clients[0] : currentEditingProject.clients) : null;
+  const currentProjCompany = currentProjClient?.companies ? (Array.isArray(currentProjClient.companies) ? currentProjClient.companies[0] : currentProjClient.companies) : null;
+  const currentProjCompanyId = currentProjCompany?.id || currentProjOpp?.company_id || currentProjClient?.company_id;
+
+  const selectedProjectActivities = currentEditingProject
+    ? activities
+        .filter((a) => {
+          if (currentEditingProject.opportunity_id && a.opportunity_id === currentEditingProject.opportunity_id) return true;
+          if (currentProjCompanyId && a.company_id === currentProjCompanyId) return true;
+          return false;
+        })
         .sort((a, b) => new Date(b.occurred_at || b.created_at).getTime() - new Date(a.occurred_at || a.created_at).getTime())
     : [];
 
@@ -2771,6 +2878,68 @@ Equipo Método AI`;
                                 </div>
                               </div>
 
+                              {/* Próximo Paso & A Cargo De */}
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.025)',
+                                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  padding: '7px 12px',
+                                  fontSize: '0.785rem',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
+                                  <span style={{ color: 'var(--text-muted)', fontWeight: 600, flexShrink: 0 }}>Próximo Paso:</span>
+                                  <span
+                                    style={{
+                                      color: p.next_step ? 'var(--text-primary)' : 'var(--text-muted)',
+                                      fontStyle: p.next_step ? 'normal' : 'italic',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                    title={p.next_step || 'Sin próximo paso definido'}
+                                  >
+                                    {p.next_step || 'Sin próximo paso definido (haz clic para editar)'}
+                                  </span>
+                                </div>
+                                <span
+                                  style={{
+                                    fontSize: '0.675rem',
+                                    fontWeight: 700,
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    flexShrink: 0,
+                                    letterSpacing: '0.02em',
+                                    backgroundColor:
+                                      p.next_step_owner === 'Cliente'
+                                        ? 'rgba(16, 185, 129, 0.15)'
+                                        : p.next_step_owner === 'Tercero'
+                                        ? 'rgba(245, 158, 11, 0.15)'
+                                        : 'rgba(99, 102, 241, 0.15)',
+                                    color:
+                                      p.next_step_owner === 'Cliente'
+                                        ? '#34d399'
+                                        : p.next_step_owner === 'Tercero'
+                                        ? '#fbbf24'
+                                        : '#818cf8',
+                                    border: `1px solid ${
+                                      p.next_step_owner === 'Cliente'
+                                        ? 'rgba(16, 185, 129, 0.3)'
+                                        : p.next_step_owner === 'Tercero'
+                                        ? 'rgba(245, 158, 11, 0.3)'
+                                        : 'rgba(99, 102, 241, 0.3)'
+                                    }`,
+                                  }}
+                                >
+                                  A cargo: {p.next_step_owner || 'Agencia'}
+                                </span>
+                              </div>
+
                               {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega | Botón Enviar Correo) */}
                               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
@@ -2794,37 +2963,74 @@ Equipo Método AI`;
                                   </div>
                                 </div>
 
-                                {/* Botón Acción Rápida: Enviar Estado por Correo */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleOpenProjectEmail(e, p, companyName, statusLabel)}
-                                  style={{
-                                    padding: '4px 10px',
-                                    fontSize: '0.725rem',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '5px',
-                                    borderRadius: 'var(--radius-sm)',
-                                    backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                    border: '1px solid rgba(99, 102, 241, 0.35)',
-                                    color: 'var(--primary-light)',
-                                    cursor: 'pointer',
-                                    fontWeight: 600,
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.25)';
-                                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
-                                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
-                                  }}
-                                  title="Previsualizar y enviar actualización de estado por correo al cliente"
-                                >
-                                  <Mail size={12} />
-                                  <span>Enviar Correo</span>
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {/* Botón Acción Rápida: Bitácora & Reuniones */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditProjectModal(p, companyName, 'activities');
+                                    }}
+                                    style={{
+                                      padding: '4px 10px',
+                                      fontSize: '0.725rem',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      borderRadius: 'var(--radius-sm)',
+                                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                                      color: 'var(--text-primary)',
+                                      cursor: 'pointer',
+                                      fontWeight: 600,
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                                    }}
+                                    title="Abrir bitácora y registrar reunión o avance de este proyecto"
+                                  >
+                                    <Clock size={12} color="var(--primary-light)" />
+                                    <span>Bitácora</span>
+                                  </button>
+
+                                  {/* Botón Acción Rápida: Enviar Estado por Correo */}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenProjectEmail(e, p, companyName, statusLabel)}
+                                    style={{
+                                      padding: '4px 10px',
+                                      fontSize: '0.725rem',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      borderRadius: 'var(--radius-sm)',
+                                      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                      border: '1px solid rgba(99, 102, 241, 0.35)',
+                                      color: 'var(--primary-light)',
+                                      cursor: 'pointer',
+                                      fontWeight: 600,
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.25)';
+                                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
+                                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
+                                    }}
+                                    title="Previsualizar y enviar actualización de estado por correo al cliente"
+                                  >
+                                    <Mail size={12} />
+                                    <span>Enviar Correo</span>
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -4590,14 +4796,14 @@ Equipo Método AI`;
         </div>
       )}
 
-      {/* ── PROJECT EDIT MODAL ── */}
+      {/* ── PROJECT EDIT & BITÁCORA MODAL ── */}
       {showProjectModal && (
         <div
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
-            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(5px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -4610,13 +4816,14 @@ Equipo Método AI`;
             className="glass-card animate-fade-in"
             style={{
               width: '100%',
-              maxWidth: '540px',
+              maxWidth: '720px',
+              maxHeight: '90vh',
               backgroundColor: 'var(--bg-card-solid)',
               border: '1px solid var(--border-glass)',
               borderRadius: 'var(--radius-md)',
               display: 'flex',
               flexDirection: 'column',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
               overflow: 'hidden',
             }}
             onClick={(e) => e.stopPropagation()}
@@ -4629,161 +4836,575 @@ Equipo Método AI`;
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <Briefcase size={20} color="var(--primary)" />
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
-                  Editar Proyecto de Implementación
-                </h3>
+                <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary-light)', display: 'flex', alignItems: 'center' }}>
+                  <Briefcase size={20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary-light)', fontSize: '0.8rem', fontWeight: 700 }}>
+                    <Building size={13} />
+                    <span>{projectCompanyName || 'Empresa'}</span>
+                  </div>
+                  <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0, fontWeight: 700 }}>
+                    {projectForm.name || 'Detalle del Proyecto'}
+                  </h3>
+                </div>
               </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {currentEditingProject && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      const statusLabel =
+                        currentEditingProject.status === 'onboarding'
+                          ? 'ONBOARDING'
+                          : currentEditingProject.status === 'in_progress'
+                          ? 'EN PROCESO'
+                          : currentEditingProject.status === 'review'
+                          ? 'EN REVISIÓN'
+                          : currentEditingProject.status === 'completed'
+                          ? 'COMPLETADO'
+                          : String(currentEditingProject.status).toUpperCase();
+                      handleOpenProjectEmail(e, currentEditingProject, projectCompanyName, statusLabel);
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                    title="Previsualizar y enviar reporte de estado por correo al cliente"
+                  >
+                    <Mail size={13} />
+                    <span>Enviar Correo</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowProjectModal(false)}
+                  className="btn-icon"
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-glass)', backgroundColor: 'rgba(0,0,0,0.15)', padding: '0 20px' }}>
               <button
-                onClick={() => setShowProjectModal(false)}
-                className="btn-icon"
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                type="button"
+                onClick={() => setProjectModalTab('details')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: projectModalTab === 'details' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: projectModalTab === 'details' ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontWeight: projectModalTab === 'details' ? 700 : 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease',
+                }}
               >
-                <X size={18} />
+                <Briefcase size={15} color={projectModalTab === 'details' ? 'var(--primary-light)' : 'var(--text-muted)'} />
+                <span>Datos del Proyecto</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProjectModalTab('activities')}
+                style={{
+                  padding: '12px 16px',
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: projectModalTab === 'activities' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: projectModalTab === 'activities' ? 'var(--text-primary)' : 'var(--text-muted)',
+                  fontWeight: projectModalTab === 'activities' ? 700 : 500,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Clock size={15} color={projectModalTab === 'activities' ? 'var(--primary-light)' : 'var(--text-muted)'} />
+                <span>Bitácora & Reuniones</span>
+                <span
+                  style={{
+                    backgroundColor: projectModalTab === 'activities' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.06)',
+                    color: projectModalTab === 'activities' ? 'var(--primary-light)' : 'var(--text-muted)',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {selectedProjectActivities.length}
+                </span>
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSaveProject} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Empresa (Read Only) */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Empresa / Cliente (Solo Lectura)
-                </label>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '10px 14px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid var(--border-glass)',
-                    borderRadius: 'var(--radius-sm)',
-                    color: 'var(--text-primary)',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                  }}
-                >
-                  <Building size={16} color="var(--primary-light)" />
-                  <span>{projectCompanyName || 'Empresa'}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>Fijo</span>
-                </div>
-              </div>
-
-              {/* Nombre del Proyecto */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Nombre del Proyecto *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej: Diagnóstico Estratégico y Orden Operativo"
-                  value={projectForm.name}
-                  onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                />
-              </div>
-
-              {/* Estado y Precio Acordado */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                    Estado del Proyecto *
-                  </label>
-                  <select
-                    value={projectForm.status}
-                    onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                  >
-                    <option value="onboarding">Onboarding</option>
-                    <option value="in_progress">En Proceso</option>
-                    <option value="review">En Revisión</option>
-                    <option value="completed">Completado</option>
-                    <option value="cancelled">Cancelado</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                    Precio Pactado en Venta (Solo Lectura)
-                  </label>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid var(--border-glass)',
-                      borderRadius: 'var(--radius-sm)',
-                      color: 'var(--success)',
-                      fontWeight: 700,
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.9rem',
-                    }}
-                  >
-                    <span>{formatMoney(projectForm.sold_price)}</span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontWeight: 500, fontFamily: 'inherit' }}>Fijado</span>
+            {/* Modal Body Container with Scroll */}
+            <div style={{ padding: '20px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {projectModalTab === 'details' ? (
+                /* TAB 1: DATOS DEL PROYECTO */
+                <form onSubmit={handleSaveProject} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Empresa (Read Only) */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Empresa / Cliente (Solo Lectura)
+                    </label>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 14px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid var(--border-glass)',
+                        borderRadius: 'var(--radius-sm)',
+                        color: 'var(--text-primary)',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                      }}
+                    >
+                      <Building size={16} color="var(--primary-light)" />
+                      <span>{projectCompanyName || 'Empresa'}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px' }}>Fijo</span>
+                    </div>
                   </div>
+
+                  {/* Nombre del Proyecto */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Nombre del Proyecto *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej: Diagnóstico Estratégico y Orden Operativo"
+                      value={projectForm.name}
+                      onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })}
+                      style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                    />
+                  </div>
+
+                  {/* Estado y Precio Acordado */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        Estado del Proyecto *
+                      </label>
+                      <select
+                        value={projectForm.status}
+                        onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                      >
+                        <option value="onboarding">Onboarding</option>
+                        <option value="in_progress">En Proceso</option>
+                        <option value="review">En Revisión</option>
+                        <option value="completed">Completado</option>
+                        <option value="cancelled">Cancelado</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        Precio Pactado en Venta (Solo Lectura)
+                      </label>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '10px 12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid var(--border-glass)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: 'var(--success)',
+                          fontWeight: 700,
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        <span>{formatMoney(projectForm.sold_price)}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: '4px', fontWeight: 500, fontFamily: 'inherit' }}>Fijado</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fechas de Inicio y Entrega */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        Fecha de Inicio
+                      </label>
+                      <input
+                        type="date"
+                        value={projectForm.start_date}
+                        onChange={(e) => setProjectForm({ ...projectForm, start_date: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        Fecha de Entrega
+                      </label>
+                      <input
+                        type="date"
+                        value={projectForm.due_date}
+                        onChange={(e) => setProjectForm({ ...projectForm, due_date: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Próximo Paso y A Cargo De */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        Próximo Paso / Hito Siguiente
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Ej: Revisión y validación de flujos Make"
+                        value={projectForm.next_step}
+                        onChange={(e) => setProjectForm({ ...projectForm, next_step: e.target.value })}
+                        style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                        A Cargo de *
+                      </label>
+                      <select
+                        value={projectForm.next_step_owner}
+                        onChange={(e) => setProjectForm({ ...projectForm, next_step_owner: e.target.value as any })}
+                        style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                      >
+                        <option value="Agencia">Agencia</option>
+                        <option value="Cliente">Cliente</option>
+                        <option value="Tercero">Tercero</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Costo Estimado (Opcional) */}
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                      Costo Estimado de Ejecución ($ CLP) — Opcional
+                    </label>
+                    <input
+                      type="number"
+                      value={projectForm.estimated_cost}
+                      onChange={(e) => setProjectForm({ ...projectForm, estimated_cost: Number(e.target.value) || 0 })}
+                      placeholder="0"
+                      style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                    <button type="button" onClick={() => setShowProjectModal(false)} className="btn btn-ghost">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={isSavingProject} className="btn btn-primary">
+                      <Check size={16} />
+                      {isSavingProject ? 'Guardando...' : 'Guardar Cambios'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                /* TAB 2: BITÁCORA Y REUNIONES DEL PROYECTO */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Top Bar with Action */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                        Historial Cronológico de Reuniones e Hitos
+                      </h4>
+                      <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        Bitácora 360° desde la preventa hasta la fase operativa actual
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProjectActivityForm(!showAddProjectActivityForm)}
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: '0.775rem', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <PlusCircle size={14} />
+                      {showAddProjectActivityForm ? 'Cancelar' : '+ Registrar Reunión / Nota'}
+                    </button>
+                  </div>
+
+                  {/* Form to Record Meeting / Activity */}
+                  {showAddProjectActivityForm && (
+                    <form
+                      onSubmit={handleAddProjectActivity}
+                      className="glass-card animate-fade-in"
+                      style={{
+                        padding: '16px',
+                        backgroundColor: 'var(--bg-glass)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px',
+                        border: '1px solid var(--primary-glow)',
+                        borderRadius: 'var(--radius-sm)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--primary-light)' }}>
+                          📝 Registrar Nueva Actividad / Reunión
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                            Tipo de Actividad *
+                          </label>
+                          <select
+                            value={newProjActivityType}
+                            onChange={(e) => setNewProjActivityType(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                          >
+                            <option value="meeting">🗓️ Reunión de Avance / Hito</option>
+                            <option value="note">📝 Nota Interna / Bitácora</option>
+                            <option value="call">📞 Llamada Telefónica</option>
+                            <option value="task">⚙️ Tarea Técnica / Entregable</option>
+                            <option value="whatsapp">💬 Coordinación WhatsApp</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                            Resumen / Resultado *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ej: Aprobación de arquitectura y validación de entregable Fase 1"
+                            value={newProjActivityResult}
+                            onChange={(e) => setNewProjActivityResult(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                          Detalles / Notas de la sesión
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={newProjActivityNotes}
+                          onChange={(e) => setNewProjActivityNotes(e.target.value)}
+                          placeholder="Puntos tratados, acuerdos específicos, accesos pendientes..."
+                          style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none', resize: 'vertical' }}
+                        />
+                      </div>
+
+                      {/* Próxima Acción & Responsable (Actualiza automáticamente el proyecto) */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                            Próxima Acción / Siguiente Paso
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: Entregar credenciales y validar catálogo"
+                            value={newProjActivityNextAction}
+                            onChange={(e) => setNewProjActivityNextAction(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                            A Cargo de
+                          </label>
+                          <select
+                            value={newProjActivityNextOwner}
+                            onChange={(e) => setNewProjActivityNextOwner(e.target.value as any)}
+                            style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                          >
+                            <option value="Agencia">Agencia</option>
+                            <option value="Cliente">Cliente</option>
+                            <option value="Tercero">Tercero</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                            Fecha Límite
+                          </label>
+                          <input
+                            type="date"
+                            value={newProjActivityNextDate}
+                            onChange={(e) => setNewProjActivityNextDate(e.target.value)}
+                            style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                          />
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddProjectActivityForm(false)}
+                          className="btn btn-ghost btn-sm"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSavingProjActivity}
+                          className="btn btn-primary btn-sm"
+                        >
+                          <Check size={14} />
+                          {isSavingProjActivity ? 'Guardando...' : 'Guardar y Actualizar Proyecto'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* Chronological Timeline List */}
+                  {selectedProjectActivities.length === 0 ? (
+                    <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', backgroundColor: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)' }}>
+                      No hay actividades ni reuniones registradas aún para este proyecto o cliente.
+                      <div style={{ marginTop: '8px' }}>
+                        <button
+                          onClick={() => setShowAddProjectActivityForm(true)}
+                          className="btn btn-ghost btn-sm"
+                        >
+                          + Registrar la primera reunión de avance
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', position: 'relative', paddingLeft: '8px' }}>
+                      {selectedProjectActivities.map((act, idx) => {
+                        const meta = getActivityTypeMeta(act.type);
+                        const dateFormatted = new Date(act.occurred_at || act.created_at).toLocaleString([], {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        });
+
+                        return (
+                          <div
+                            key={act.id || idx}
+                            style={{
+                              display: 'flex',
+                              gap: '12px',
+                              alignItems: 'flex-start',
+                              position: 'relative',
+                            }}
+                          >
+                            {/* Timeline node icon */}
+                            <div
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: meta.bg,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                zIndex: 1,
+                                marginTop: '2px',
+                              }}
+                            >
+                              {meta.icon}
+                            </div>
+
+                            {/* Card Content */}
+                            <div
+                              style={{
+                                flex: 1,
+                                backgroundColor: 'var(--bg-glass)',
+                                border: '1px solid var(--border-glass)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '12px 14px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '6px',
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.675rem',
+                                      fontWeight: 700,
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      backgroundColor: meta.bg,
+                                      color: meta.color,
+                                      textTransform: 'uppercase',
+                                    }}
+                                  >
+                                    {meta.label}
+                                  </span>
+                                  <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.875rem' }}>
+                                    {act.result}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+                                  {dateFormatted}
+                                </span>
+                              </div>
+
+                              {act.notes && (
+                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.45, backgroundColor: 'rgba(255,255,255,0.02)', padding: '6px 10px', borderRadius: '4px' }}>
+                                  {act.notes}
+                                </p>
+                              )}
+
+                              {act.next_action && (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '8px',
+                                    marginTop: '4px',
+                                    padding: '6px 10px',
+                                    backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                                    borderRadius: '4px',
+                                    fontSize: '0.75rem',
+                                    border: '1px solid rgba(99, 102, 241, 0.15)',
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <ArrowRight size={13} color="var(--primary-light)" />
+                                    <span style={{ color: 'var(--text-muted)' }}>Siguiente paso acordado:</span>
+                                    <span style={{ color: 'var(--primary-light)', fontWeight: 600 }}>{act.next_action}</span>
+                                  </div>
+                                  {act.next_action_date && (
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                                      Límite: {formatDate(act.next_action_date)}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              {/* Fechas de Inicio y Entrega */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                    Fecha de Inicio
-                  </label>
-                  <input
-                    type="date"
-                    value={projectForm.start_date}
-                    onChange={(e) => setProjectForm({ ...projectForm, start_date: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                    Fecha de Entrega
-                  </label>
-                  <input
-                    type="date"
-                    value={projectForm.due_date}
-                    onChange={(e) => setProjectForm({ ...projectForm, due_date: e.target.value })}
-                    style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              {/* Costo Estimado (Opcional) */}
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-                  Costo Estimado de Ejecución ($ CLP) — Opcional
-                </label>
-                <input
-                  type="number"
-                  value={projectForm.estimated_cost}
-                  onChange={(e) => setProjectForm({ ...projectForm, estimated_cost: Number(e.target.value) || 0 })}
-                  placeholder="0"
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
-                />
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setShowProjectModal(false)} className="btn btn-ghost">
-                  Cancelar
-                </button>
-                <button type="submit" disabled={isSavingProject} className="btn btn-primary">
-                  <Check size={16} />
-                  {isSavingProject ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -4878,7 +5499,7 @@ Equipo Método AI`;
                   Cuerpo del Mensaje (Previsualización Editable)
                 </label>
                 <textarea
-                  rows={8}
+                  rows={12}
                   value={projectEmailData.body}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, body: e.target.value })}
                   style={{ width: '100%', padding: '12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}

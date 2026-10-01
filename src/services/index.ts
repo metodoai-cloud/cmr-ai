@@ -1155,6 +1155,8 @@ export const ProjectService = {
     if (data.due_date !== undefined) payload.due_date = data.due_date || null;
     if (data.completed_at !== undefined) payload.completed_at = data.completed_at || null;
     if (data.service_id !== undefined) payload.service_id = data.service_id || null;
+    if (data.next_step !== undefined) payload.next_step = data.next_step ? String(data.next_step).trim() : null;
+    if (data.next_step_owner !== undefined) payload.next_step_owner = data.next_step_owner || 'Agencia';
 
     const project = await projectRepo.update(id, payload);
     await auditRepo.logAction({

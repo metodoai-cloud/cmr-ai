@@ -9,6 +9,7 @@ import {
   Settings,
   ArrowUpRight,
   ArrowDownRight,
+  ArrowRight,
   TrendingUp,
   Clock,
   Send,

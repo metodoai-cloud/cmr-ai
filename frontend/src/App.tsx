@@ -209,6 +209,8 @@ export default function App() {
     startDate: string;
     dueDate: string;
     soldPrice: number;
+    nextStep?: string;
+    nextStepOwner?: string;
     subject: string;
     body: string;
     opportunityId?: string;
@@ -757,6 +759,8 @@ Equipo Método AI`;
       startDate: formattedStart,
       dueDate: formattedDue,
       soldPrice: p.sold_price || 0,
+      nextStep: finalNextStep,
+      nextStepOwner: finalNextOwner,
       subject,
       body,
       opportunityId: p.opportunity_id,
@@ -5494,15 +5498,35 @@ Equipo Método AI`;
                 />
               </div>
 
+              {/* Resumen Clave de Próximo Paso & Responsable */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', padding: '12px 14px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: 'var(--radius-sm)' }}>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    🎯 Próximo Paso Comprometido
+                  </span>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                    {projectEmailData.nextStep || 'A coordinar en la próxima sesión'}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    👤 Responsable / A Cargo
+                  </span>
+                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.85rem' }}>
+                    {projectEmailData.nextStepOwner || 'Agencia'}
+                  </strong>
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                   Cuerpo del Mensaje (Previsualización Editable)
                 </label>
                 <textarea
-                  rows={12}
+                  rows={15}
                   value={projectEmailData.body}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, body: e.target.value })}
-                  style={{ width: '100%', padding: '12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ width: '100%', minHeight: '260px', padding: '12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.6, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
 

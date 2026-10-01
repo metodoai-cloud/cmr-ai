@@ -5436,6 +5436,7 @@ Equipo Método AI`;
             style={{
               width: '100%',
               maxWidth: '580px',
+              maxHeight: '90vh',
               backgroundColor: 'var(--bg-card-solid)',
               border: '1px solid var(--border-glass)',
               borderRadius: 'var(--radius-md)',
@@ -5449,16 +5450,17 @@ Equipo Método AI`;
             {/* Header */}
             <div
               style={{
-                padding: '16px 20px',
+                padding: '14px 20px',
                 borderBottom: '1px solid var(--border-glass)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
+                flexShrink: 0,
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Mail size={20} color="var(--primary)" />
-                <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>
+                <h3 style={{ fontSize: '1.05rem', color: 'var(--text-primary)', margin: 0 }}>
                   Enviar Estado del Proyecto por Correo
                 </h3>
               </div>
@@ -5471,10 +5473,19 @@ Equipo Método AI`;
               </button>
             </div>
 
-            {/* Content */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Scrollable Content Body */}
+            <div
+              style={{
+                padding: '16px 20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                overflowY: 'auto',
+                flex: 1,
+              }}
+            >
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                   Destinatario (Correo del Cliente) *
                 </label>
                 <input
@@ -5483,86 +5494,98 @@ Equipo Método AI`;
                   placeholder="ejemplo@cliente.com"
                   value={projectEmailData.to}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, to: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                   Asunto
                 </label>
                 <input
                   type="text"
                   value={projectEmailData.subject}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
-                  style={{ width: '100%', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.875rem', outline: 'none' }}
+                  style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                 />
               </div>
 
               {/* Resumen Clave de Próximo Paso & Responsable */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', padding: '12px 14px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', padding: '10px 12px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: 'var(--radius-sm)' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     🎯 Próximo Paso Comprometido
                   </span>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.8rem' }}>
                     {projectEmailData.nextStep || 'A coordinar en la próxima sesión'}
                   </strong>
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     👤 Responsable / A Cargo
                   </span>
-                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.85rem' }}>
+                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.8rem' }}>
                     {projectEmailData.nextStepOwner || 'Agencia'}
                   </strong>
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                   Cuerpo del Mensaje (Previsualización Editable)
                 </label>
                 <textarea
-                  rows={15}
+                  rows={8}
                   value={projectEmailData.body}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, body: e.target.value })}
-                  style={{ width: '100%', minHeight: '260px', padding: '12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.6, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ width: '100%', minHeight: '150px', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
+            </div>
 
-              {/* Actions */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', flexWrap: 'wrap', gap: '10px' }}>
+            {/* Pinned Action Footer */}
+            <div
+              style={{
+                padding: '12px 20px',
+                borderTop: '1px solid var(--border-glass)',
+                backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexShrink: 0,
+                gap: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setShowProjectEmailModal(false)}
+                className="btn btn-ghost"
+                style={{ fontSize: '0.825rem' }}
+              >
+                Cancelar
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowProjectEmailModal(false)}
-                  className="btn btn-ghost"
-                  style={{ fontSize: '0.825rem' }}
+                  onClick={() => handleLaunchEmailClient('gmail')}
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Abrir en pestaña de Gmail Web"
                 >
-                  Cancelar
+                  <ExternalLink size={14} />
+                  Abrir en Gmail Web
                 </button>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchEmailClient('gmail')}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    title="Abrir en pestaña de Gmail Web"
-                  >
-                    <ExternalLink size={14} />
-                    Abrir en Gmail Web
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleLaunchEmailClient('default')}
-                    className="btn btn-primary"
-                    style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    title="Abrir en tu cliente de correo predeterminado (Outlook, Apple Mail, etc.)"
-                  >
-                    <Send size={14} />
-                    Abrir en Mi Correo
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleLaunchEmailClient('default')}
+                  className="btn btn-primary"
+                  style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  title="Abrir en tu cliente de correo predeterminado (Outlook, Apple Mail, etc.)"
+                >
+                  <Send size={14} />
+                  Abrir en Mi Correo
+                </button>
               </div>
             </div>
           </div>

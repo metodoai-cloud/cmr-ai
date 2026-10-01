@@ -323,7 +323,7 @@ export const AgencyTasksSection: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
   const [companies, setCompanies] = useState<string[]>([]);
   const [companyMap, setCompanyMap] = useState<Record<string, string>>({});
-  const [showTasksList, setShowTasksList] = useState<boolean>(true);
+  const [showTasksList, setShowTasksList] = useState<boolean>(false);
   const [dateSortOrder, setDateSortOrder] = useState<'recent' | 'oldest'>('recent');
 
   // Edit / Create Modal State
@@ -1066,29 +1066,39 @@ export const AgencyTasksSection: React.FC = () => {
               type="button"
               onClick={() => setShowTasksList(!showTasksList)}
               style={{
-                padding: '8px 18px',
+                padding: '9px 20px',
                 borderRadius: 'var(--radius-sm)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
+                fontSize: '0.875rem',
+                fontWeight: 700,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
                 cursor: 'pointer',
-                backgroundColor: showTasksList ? 'rgba(99, 102, 241, 0.12)' : 'var(--primary)',
-                color: showTasksList ? 'var(--primary-light)' : '#ffffff',
-                border: '1px solid var(--primary)',
-                boxShadow: showTasksList ? 'none' : 'var(--shadow-glow)',
-                transition: 'all 0.15s ease',
+                backgroundColor: showTasksList ? 'rgba(37, 99, 235, 0.15)' : '#2563eb',
+                color: showTasksList ? '#93c5fd' : '#ffffff',
+                border: showTasksList ? '1px solid rgba(59, 130, 246, 0.4)' : '1px solid #60a5fa',
+                boxShadow: showTasksList ? 'none' : '0 4px 14px rgba(37, 99, 235, 0.45)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = showTasksList ? 'rgba(37, 99, 235, 0.25)' : '#1d4ed8';
+                e.currentTarget.style.boxShadow = showTasksList ? 'none' : '0 6px 18px rgba(37, 99, 235, 0.6)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = showTasksList ? 'rgba(37, 99, 235, 0.15)' : '#2563eb';
+                e.currentTarget.style.boxShadow = showTasksList ? 'none' : '0 4px 14px rgba(37, 99, 235, 0.45)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
             >
               {showTasksList ? (
                 <>
-                  <ChevronUp size={16} />
+                  <ChevronUp size={17} />
                   <span>Ocultar Tareas</span>
                 </>
               ) : (
                 <>
-                  <ChevronDown size={16} />
+                  <ChevronDown size={17} />
                   <span>Mostrar Tareas ({filteredTasks.length})</span>
                 </>
               )}

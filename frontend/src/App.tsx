@@ -5787,7 +5787,37 @@ Equipo Método AI`;
                 flex: 1,
               }}
             >
-              {/* Selector de Contactos de la Empresa */}
+              {/* 1. Resumen Clave de Próximo Paso & Responsable (Al principio) */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  background: 'rgba(99, 102, 241, 0.08)',
+                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                }}
+              >
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    🎯 Próximo Paso Comprometido
+                  </span>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.825rem' }}>
+                    {projectEmailData.nextStep || 'A coordinar en la próxima sesión'}
+                  </strong>
+                </div>
+                <div>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    👤 Responsable / A Cargo
+                  </span>
+                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.825rem' }}>
+                    {projectEmailData.nextStepOwner || 'Agencia'}
+                  </strong>
+                </div>
+              </div>
+
+              {/* 2. Selector de Contactos de la Empresa */}
               {projectEmailData.availableContacts && projectEmailData.availableContacts.length > 0 && (
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--primary-light)', display: 'block', marginBottom: '4px', fontWeight: 700 }}>
@@ -5821,61 +5851,44 @@ Equipo Método AI`;
                 </div>
               )}
 
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Destinatario (Correo del Cliente) *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="ejemplo@cliente.com"
-                  value={projectEmailData.to}
-                  onChange={(e) => setProjectEmailData({ ...projectEmailData, to: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Asunto
-                </label>
-                <input
-                  type="text"
-                  value={projectEmailData.subject}
-                  onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
-                  style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
-                />
-              </div>
-
-              {/* Resumen Clave de Próximo Paso & Responsable */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', padding: '10px 12px', background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: 'var(--radius-sm)' }}>
+              {/* 3. Destinatario & Asunto en cuadrícula organizada */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    🎯 Próximo Paso Comprometido
-                  </span>
-                  <strong style={{ color: 'var(--text-primary)', fontSize: '0.8rem' }}>
-                    {projectEmailData.nextStep || 'A coordinar en la próxima sesión'}
-                  </strong>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    Destinatario (Correo del Cliente) *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="ejemplo@cliente.com"
+                    value={projectEmailData.to}
+                    onChange={(e) => setProjectEmailData({ ...projectEmailData, to: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                  />
                 </div>
                 <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.675rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    👤 Responsable / A Cargo
-                  </span>
-                  <strong style={{ color: 'var(--primary-light)', fontSize: '0.8rem' }}>
-                    {projectEmailData.nextStepOwner || 'Agencia'}
-                  </strong>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    Asunto
+                  </label>
+                  <input
+                    type="text"
+                    value={projectEmailData.subject}
+                    onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                  />
                 </div>
               </div>
 
+              {/* 4. Cuerpo del Mensaje */}
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                   Cuerpo del Mensaje (Previsualización Editable)
                 </label>
                 <textarea
-                  rows={8}
+                  rows={9}
                   value={projectEmailData.body}
                   onChange={(e) => setProjectEmailData({ ...projectEmailData, body: e.target.value })}
-                  style={{ width: '100%', minHeight: '150px', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
+                  style={{ width: '100%', minHeight: '160px', padding: '10px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.825rem', outline: 'none', lineHeight: 1.5, resize: 'vertical', fontFamily: 'inherit' }}
                 />
               </div>
             </div>

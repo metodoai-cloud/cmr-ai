@@ -195,9 +195,16 @@ export default function App() {
   const [newProjActivityResult, setNewProjActivityResult] = useState('');
   const [newProjActivityNotes, setNewProjActivityNotes] = useState('');
   const [newProjActivityNextAction, setNewProjActivityNextAction] = useState('');
-  const [newProjActivityNextOwner, setNewProjActivityNextOwner] = useState<'Agencia' | 'Cliente' | 'Tercero'>('Agencia');
-  const [newProjActivityNextDate, setNewProjActivityNextDate] = useState('');
   const [isSavingProjActivity, setIsSavingProjActivity] = useState(false);
+  const [editingProjActivityId, setEditingProjActivityId] = useState<string | null>(null);
+  const [editProjActivityType, setEditProjActivityType] = useState('meeting');
+  const [editProjActivityResult, setEditProjActivityResult] = useState('');
+  const [editProjActivityNotes, setEditProjActivityNotes] = useState('');
+  const [editProjActivityNextAction, setEditProjActivityNextAction] = useState('');
+  const [editProjActivityNextOwner, setEditProjActivityNextOwner] = useState<'Agencia' | 'Cliente' | 'Tercero'>('Agencia');
+  const [editProjActivityNextDate, setEditProjActivityNextDate] = useState('');
+  const [isUpdatingProjActivity, setIsUpdatingProjActivity] = useState(false);
+  const [isDeletingProjActivityId, setIsDeletingProjActivityId] = useState<string | null>(null);
 
   // Project Email Status Modal State
   const [showProjectEmailModal, setShowProjectEmailModal] = useState(false);
@@ -702,6 +709,70 @@ export default function App() {
       alert(`Error al registrar reunión o nota en el proyecto: ${err.message}`);
     } finally {
       setIsSavingProjActivity(false);
+    }
+  };
+
+  // Start Editing Activity
+  const handleStartEditProjectActivity = (act: any) => {
+    setEditingProjActivityId(act.id);
+    setEditProjActivityType(act.type || 'meeting');
+    setEditProjActivityResult(act.result || '');
+    setEditProjActivityNotes(act.notes || '');
+    setEditProjActivityNextAction(act.next_action || '');
+    setEditProjActivityNextDate(act.next_action_date ? act.next_action_date.substring(0, 10) : '');
+    setEditProjActivityNextOwner(projectForm.next_step_owner || 'Agencia');
+  };
+
+  // Save Edited Activity
+  const handleSaveEditedProjectActivity = async (e: React.FormEvent, actId: string) => {
+    e.preventDefault();
+    if (!actId || !editProjActivityResult.trim()) return;
+
+    try {
+      setIsUpdatingProjActivity(true);
+      await crmApi.updateActivity(actId, {
+        type: editProjActivityType,
+        result: editProjActivityResult.trim(),
+        notes: editProjActivityNotes.trim() || undefined,
+        next_action: editProjActivityNextAction.trim() || undefined,
+        next_action_date: editProjActivityNextDate || undefined,
+      });
+
+      // Update project next step if modified
+      if (editingProjectId && editProjActivityNextAction.trim()) {
+        await crmApi.updateProject(editingProjectId, {
+          next_step: editProjActivityNextAction.trim(),
+          next_step_owner: editProjActivityNextOwner,
+        });
+        setProjectForm((prev) => ({
+          ...prev,
+          next_step: editProjActivityNextAction.trim(),
+          next_step_owner: editProjActivityNextOwner,
+        }));
+      }
+
+      setEditingProjActivityId(null);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al actualizar la actividad: ${err.message}`);
+    } finally {
+      setIsUpdatingProjActivity(false);
+    }
+  };
+
+  // Delete Activity
+  const handleDeleteProjectActivity = async (actId: string) => {
+    if (!actId) return;
+    if (!window.confirm('¿Seguro que deseas eliminar este registro de la bitácora? Esta acción no se puede deshacer.')) return;
+
+    try {
+      setIsDeletingProjActivityId(actId);
+      await crmApi.deleteActivity(actId);
+      await loadData();
+    } catch (err: any) {
+      alert(`Error al eliminar el registro de la bitácora: ${err.message}`);
+    } finally {
+      setIsDeletingProjActivityId(null);
     }
   };
 
@@ -5350,6 +5421,131 @@ Equipo Método AI`;
                           minute: '2-digit',
                         });
 
+                        // Inline Edit Form for this activity
+                        if (editingProjActivityId === act.id) {
+                          return (
+                            <div
+                              key={act.id || idx}
+                              style={{
+                                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                                border: '1.5px solid var(--primary)',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '14px',
+                                marginTop: '4px',
+                              }}
+                            >
+                              <form onSubmit={(e) => handleSaveEditedProjectActivity(e, act.id)}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary-light)' }}>
+                                    ✏️ Modificar Entrada de Bitácora
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingProjActivityId(null)}
+                                    className="btn-icon"
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                                  >
+                                    <X size={16} />
+                                  </button>
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '8px', marginBottom: '8px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Tipo</label>
+                                    <select
+                                      value={editProjActivityType}
+                                      onChange={(e) => setEditProjActivityType(e.target.value)}
+                                      style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    >
+                                      <option value="meeting">🤝 Reunión</option>
+                                      <option value="call">📞 Llamada</option>
+                                      <option value="whatsapp">💬 WhatsApp</option>
+                                      <option value="email">✉️ Correo</option>
+                                      <option value="demo">💻 Demo / Revisión</option>
+                                      <option value="follow_up">🔄 Seguimiento</option>
+                                      <option value="note">📝 Nota Interna</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Título / Asunto *</label>
+                                    <input
+                                      type="text"
+                                      required
+                                      value={editProjActivityResult}
+                                      onChange={(e) => setEditProjActivityResult(e.target.value)}
+                                      style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div style={{ marginBottom: '8px' }}>
+                                  <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Resumen / Acuerdos</label>
+                                  <textarea
+                                    rows={2}
+                                    value={editProjActivityNotes}
+                                    onChange={(e) => setEditProjActivityNotes(e.target.value)}
+                                    style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                  />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--primary-light)', display: 'block', marginBottom: '2px', fontWeight: 600 }}>🎯 Próximo Paso</label>
+                                    <input
+                                      type="text"
+                                      value={editProjActivityNextAction}
+                                      onChange={(e) => setEditProjActivityNextAction(e.target.value)}
+                                      placeholder="Ej: Enviar revisión"
+                                      style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Responsable</label>
+                                    <select
+                                      value={editProjActivityNextOwner}
+                                      onChange={(e: any) => setEditProjActivityNextOwner(e.target.value)}
+                                      style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    >
+                                      <option value="Agencia">Agencia</option>
+                                      <option value="Cliente">Cliente</option>
+                                      <option value="Tercero">Tercero</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '2px' }}>Fecha Límite</label>
+                                    <input
+                                      type="date"
+                                      value={editProjActivityNextDate}
+                                      onChange={(e) => setEditProjActivityNextDate(e.target.value)}
+                                      style={{ width: '100%', padding: '6px 8px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingProjActivityId(null)}
+                                    className="btn btn-ghost btn-sm"
+                                    style={{ fontSize: '0.75rem', padding: '4px 10px' }}
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    disabled={isUpdatingProjActivity}
+                                    className="btn btn-primary btn-sm"
+                                    style={{ fontSize: '0.75rem', padding: '4px 12px' }}
+                                  >
+                                    <Check size={13} />
+                                    {isUpdatingProjActivity ? 'Guardando...' : 'Guardar Cambios'}
+                                  </button>
+                                </div>
+                              </form>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={act.id || idx}
@@ -5410,9 +5606,67 @@ Equipo Método AI`;
                                     {act.result}
                                   </span>
                                 </div>
-                                <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
-                                  {dateFormatted}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>
+                                    {dateFormatted}
+                                  </span>
+                                  {/* Botón Editar Actividad */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleStartEditProjectActivity(act)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--text-secondary)',
+                                      cursor: 'pointer',
+                                      padding: '3px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.color = 'var(--primary-light)';
+                                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.color = 'var(--text-secondary)';
+                                      e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                    title="Modificar esta entrada de bitácora"
+                                  >
+                                    <Edit3 size={13} />
+                                  </button>
+
+                                  {/* Botón Eliminar Actividad */}
+                                  <button
+                                    type="button"
+                                    disabled={isDeletingProjActivityId === act.id}
+                                    onClick={() => handleDeleteProjectActivity(act.id)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--text-muted)',
+                                      cursor: 'pointer',
+                                      padding: '3px',
+                                      borderRadius: '4px',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      transition: 'all 0.15s ease',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.color = '#ef4444';
+                                      e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.color = 'var(--text-muted)';
+                                      e.currentTarget.style.backgroundColor = 'transparent';
+                                    }}
+                                    title="Eliminar esta entrada de bitácora"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
                               </div>
 
                               {act.notes && (

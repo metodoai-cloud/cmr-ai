@@ -72,4 +72,6 @@ export const crmApi = {
   // Activities
   getActivities: () => fetchApi('/activities'),
   createActivity: (data: any) => fetchApi('/activities', { method: 'POST', body: JSON.stringify(data) }),
+  updateActivity: (id: string, data: any) => fetchApi(`/activities/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteActivity: (id: string) => fetchApi(`/activities/${id}`, { method: 'DELETE' }),
 };

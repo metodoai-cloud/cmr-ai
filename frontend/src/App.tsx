@@ -195,6 +195,8 @@ export default function App() {
   const [newProjActivityResult, setNewProjActivityResult] = useState('');
   const [newProjActivityNotes, setNewProjActivityNotes] = useState('');
   const [newProjActivityNextAction, setNewProjActivityNextAction] = useState('');
+  const [newProjActivityNextOwner, setNewProjActivityNextOwner] = useState<'Agencia' | 'Cliente' | 'Tercero'>('Agencia');
+  const [newProjActivityNextDate, setNewProjActivityNextDate] = useState('');
   const [isSavingProjActivity, setIsSavingProjActivity] = useState(false);
   const [editingProjActivityId, setEditingProjActivityId] = useState<string | null>(null);
   const [editProjActivityType, setEditProjActivityType] = useState('meeting');
@@ -720,7 +722,7 @@ export default function App() {
     setEditProjActivityNotes(act.notes || '');
     setEditProjActivityNextAction(act.next_action || '');
     setEditProjActivityNextDate(act.next_action_date ? act.next_action_date.substring(0, 10) : '');
-    setEditProjActivityNextOwner(projectForm.next_step_owner || 'Agencia');
+    setEditProjActivityNextOwner((projectForm.next_step_owner as 'Agencia' | 'Cliente' | 'Tercero') || 'Agencia');
   };
 
   // Save Edited Activity

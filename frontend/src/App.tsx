@@ -901,7 +901,11 @@ Equipo Método AI`;
       window.open(gmailUrl, '_blank');
     } else {
       const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(mailtoUrl, '_blank');
+      const a = document.createElement('a');
+      a.href = mailtoUrl;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
 
     // Optional: Log activity in background if contact/company is available

@@ -829,8 +829,8 @@ Te compartimos la actualización de avance y estado de tu proyecto con Método A
 • 𝗙𝗲𝗰𝗵𝗮 𝗱𝗲 𝗜𝗻𝗶𝗰𝗶𝗼: ${formattedStart}
 • 𝗙𝗲𝗰𝗵𝗮 𝗖𝗼𝗺𝗽𝗿𝗼𝗺𝗲𝘁𝗶𝗱𝗮 𝗱𝗲 𝗘𝗻𝘁𝗿𝗲𝗴𝗮: ${formattedDue}
 • 𝗜𝗻𝘃𝗲𝗿𝘀𝗶𝗼́𝗻 𝗔𝗰𝗼𝗿𝗱𝗮𝗱𝗮: ${formatMoney(p.sold_price)}
-• 🎯 𝗣𝗿𝗼́𝘅𝗶𝗺𝗼 𝗣𝗮𝘀𝗼: ${finalNextStep}
-• 👤 𝗔 𝗖𝗮𝗿𝗴𝗼 𝗱𝗲: ${finalNextOwner}
+• 𝗣𝗿𝗼́𝘅𝗶𝗺𝗼 𝗣𝗮𝘀𝗼: ${finalNextStep}
+• 𝗔 𝗖𝗮𝗿𝗴𝗼 𝗱𝗲: ${finalNextOwner}
 
 Quedamos a tu entera disposición ante cualquier duda o para coordinar la sesión de revisión.
 

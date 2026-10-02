@@ -217,6 +217,8 @@ export default function App() {
     opportunityId?: string;
     contactId?: string;
     companyId?: string;
+    availableContacts?: Array<{ id: string; name: string; email: string; job_title?: string }>;
+    selectedContactId?: string;
   } | null>(null);
 
   // AI Chat State
@@ -711,7 +713,17 @@ export default function App() {
     const companyObj = clientObj?.companies ? (Array.isArray(clientObj.companies) ? clientObj.companies[0] : clientObj.companies) : null;
     const companyId = companyObj?.id || oppObj?.company_id || clientObj?.company_id;
     
-    // Find contact
+    // Find all contacts for this company/opportunity
+    const companyContacts = contacts
+      .filter((c) => (companyId && c.company_id === companyId) || c.id === clientObj?.primary_contact_id || c.id === oppObj?.contact_id)
+      .map((c) => ({
+        id: c.id,
+        name: `${c.first_name} ${c.last_name || ''}`.trim() || 'Sin nombre',
+        email: c.email || '',
+        job_title: c.job_title || '',
+      }));
+
+    // Find primary contact or first contact
     const contact = contacts.find(c => c.id === clientObj?.primary_contact_id || c.id === oppObj?.contact_id || c.company_id === companyId);
     
     const contactEmail = contact?.email || '';
@@ -767,8 +779,43 @@ Equipo Método AI`;
       opportunityId: p.opportunity_id,
       contactId: contact?.id,
       companyId,
+      availableContacts: companyContacts,
+      selectedContactId: contact?.id || '',
     });
     setShowProjectEmailModal(true);
+  };
+
+  // Handle contact change in Project Email Modal
+  const handleSelectEmailContact = (contactId: string) => {
+    if (!projectEmailData) return;
+    if (!contactId) {
+      setProjectEmailData({
+        ...projectEmailData,
+        selectedContactId: '',
+      });
+      return;
+    }
+    const chosen = projectEmailData.availableContacts?.find((c) => c.id === contactId);
+    if (!chosen) return;
+
+    const newName = chosen.name.trim() || 'Estimado/a';
+    
+    // Replace "Hola [Nombre]," dynamically in the body
+    let updatedBody = projectEmailData.body;
+    if (updatedBody.startsWith('Hola ')) {
+      updatedBody = updatedBody.replace(/^Hola\s+[^,\n]+,/m, `Hola ${newName},`);
+    } else {
+      updatedBody = `Hola ${newName},\n\n` + updatedBody;
+    }
+
+    setProjectEmailData({
+      ...projectEmailData,
+      to: chosen.email || '',
+      contactName: newName,
+      contactId: chosen.id,
+      selectedContactId: chosen.id,
+      body: updatedBody,
+    });
   };
 
   // Launch Email Client (mailto or Gmail Web)
@@ -5484,6 +5531,40 @@ Equipo Método AI`;
                 flex: 1,
               }}
             >
+              {/* Selector de Contactos de la Empresa */}
+              {projectEmailData.availableContacts && projectEmailData.availableContacts.length > 0 && (
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: 'var(--primary-light)', display: 'block', marginBottom: '4px', fontWeight: 700 }}>
+                    👤 Contacto Destinatario ({projectEmailData.availableContacts.length} en la empresa)
+                  </label>
+                  <select
+                    value={projectEmailData.selectedContactId || ''}
+                    onChange={(e) => handleSelectEmailContact(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      backgroundColor: 'var(--input-bg)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      borderRadius: 'var(--radius-sm)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {projectEmailData.availableContacts.map((c) => (
+                      <option key={c.id} value={c.id} style={{ backgroundColor: 'var(--bg-card-solid)', color: 'var(--text-primary)' }}>
+                        {c.name} {c.job_title ? `(${c.job_title})` : ''} {c.email ? `• ${c.email}` : '• (Sin correo)'}
+                      </option>
+                    ))}
+                    <option value="" style={{ backgroundColor: 'var(--bg-card-solid)', color: 'var(--text-primary)' }}>
+                      ✏️ Personalizado / Escribir otro correo manual
+                    </option>
+                  </select>
+                </div>
+              )}
+
               <div>
                 <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                   Destinatario (Correo del Cliente) *

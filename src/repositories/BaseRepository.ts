@@ -112,6 +112,14 @@ export class BaseRepository<T extends Record<string, any>> {
     return data as T;
   }
 
+  async delete(id: string, deletedBy?: string): Promise<void> {
+    if (this.hasSoftDelete) {
+      await this.softDelete(id, deletedBy);
+    } else {
+      await this.hardDelete(id);
+    }
+  }
+
   async softDelete(id: string, deletedBy?: string): Promise<void> {
     if (!this.hasSoftDelete) {
       throw new Error(`Table ${this.tableName} does not support soft delete`);

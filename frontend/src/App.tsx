@@ -822,14 +822,14 @@ export default function App() {
 
 Te compartimos la actualización de avance y estado de tu proyecto con Método AI:
 
-• Proyecto: ${projectName}
-• Empresa: ${companyName}
-• Estado Operativo: ${statusLabel}
-• Fecha de Inicio: ${formattedStart}
-• Fecha Comprometida de Entrega: ${formattedDue}
-• Inversión Acordada: ${formatMoney(p.sold_price)}
-• Próximo Paso: ${finalNextStep}
-• A Cargo de: ${finalNextOwner}
+• **Proyecto:** ${projectName}
+• **Empresa:** ${companyName}
+• **Estado:** ${statusLabel}
+• **Fecha de Inicio:** ${formattedStart}
+• **Fecha Comprometida de Entrega:** ${formattedDue}
+• **Inversión Acordada:** ${formatMoney(p.sold_price)}
+• **Próximo Paso:** ${finalNextStep}
+• **A Cargo de:** ${finalNextOwner}
 
 Quedamos a tu entera disposición ante cualquier duda o para coordinar la sesión de revisión.
 

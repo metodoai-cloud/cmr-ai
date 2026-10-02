@@ -212,6 +212,7 @@ export default function App() {
   const [showProjectEmailModal, setShowProjectEmailModal] = useState(false);
   const [projectEmailData, setProjectEmailData] = useState<{
     to: string;
+    cc?: string;
     contactName: string;
     companyName: string;
     projectName: string;
@@ -838,6 +839,7 @@ Equipo Método AI`;
 
     setProjectEmailData({
       to: contactEmail,
+      cc: 'david@metodoai.tech',
       contactName,
       companyName,
       projectName,
@@ -891,22 +893,17 @@ Equipo Método AI`;
     });
   };
 
-  // Launch Email Client (mailto or Gmail Web)
-  const handleLaunchEmailClient = async (target: 'default' | 'gmail') => {
+  // Launch Email in Gmail Web
+  const handleLaunchEmailClient = async () => {
     if (!projectEmailData) return;
-    const { to, subject, body } = projectEmailData;
+    const { to, cc, subject, body } = projectEmailData;
     
-    if (target === 'gmail') {
-      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.open(gmailUrl, '_blank');
-    } else {
-      const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      const a = document.createElement('a');
-      a.href = mailtoUrl;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    let gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}`;
+    if (cc && cc.trim()) {
+      gmailUrl += `&cc=${encodeURIComponent(cc.trim())}`;
     }
+    gmailUrl += `&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
 
     // Optional: Log activity in background if contact/company is available
     if (projectEmailData.contactId || projectEmailData.opportunityId) {
@@ -915,7 +912,7 @@ Equipo Método AI`;
         contact_id: projectEmailData.contactId,
         company_id: projectEmailData.companyId,
         opportunity_id: projectEmailData.opportunityId,
-        notes: `Status Report enviado por correo al cliente: ${projectEmailData.subject}`,
+        notes: `Status Report enviado por Gmail al cliente: ${projectEmailData.subject} (CC: ${projectEmailData.cc || 'david@metodoai.tech'})`,
         result: `Enviado a ${projectEmailData.to || 'cliente'}`,
       }).catch(console.error);
     }
@@ -5855,11 +5852,11 @@ Equipo Método AI`;
                 </div>
               )}
 
-              {/* 3. Destinatario & Asunto en cuadrícula organizada */}
+              {/* 3. Destinatarios (Para & CC) */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                    Destinatario (Correo del Cliente) *
+                    Destinatario (Para) *
                   </label>
                   <input
                     type="email"
@@ -5872,15 +5869,28 @@ Equipo Método AI`;
                 </div>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                    Asunto
+                    Con Copia (CC)
                   </label>
                   <input
                     type="text"
-                    value={projectEmailData.subject}
-                    onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
+                    placeholder="correo@ejemplo.com"
+                    value={projectEmailData.cc || ''}
+                    onChange={(e) => setProjectEmailData({ ...projectEmailData, cc: e.target.value })}
                     style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  Asunto
+                </label>
+                <input
+                  type="text"
+                  value={projectEmailData.subject}
+                  onChange={(e) => setProjectEmailData({ ...projectEmailData, subject: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-glass)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.85rem', outline: 'none' }}
+                />
               </div>
 
               {/* 4. Cuerpo del Mensaje */}
@@ -5919,28 +5929,16 @@ Equipo Método AI`;
               >
                 Cancelar
               </button>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleLaunchEmailClient('gmail')}
-                  className="btn btn-secondary"
-                  style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  title="Abrir en pestaña de Gmail Web"
-                >
-                  <ExternalLink size={14} />
-                  Abrir en Gmail Web
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLaunchEmailClient('default')}
-                  className="btn btn-primary"
-                  style={{ fontSize: '0.825rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  title="Abrir en tu cliente de correo predeterminado (Outlook, Apple Mail, etc.)"
-                >
-                  <Send size={14} />
-                  Abrir en Mi Correo
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={handleLaunchEmailClient}
+                className="btn btn-primary"
+                style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', fontWeight: 600 }}
+                title="Abrir en pestaña de Gmail Web con destinatario, CC y mensaje precargados"
+              >
+                <ExternalLink size={15} />
+                <span>Abrir en Gmail Web</span>
+              </button>
             </div>
           </div>
         </div>

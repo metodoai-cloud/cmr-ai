@@ -257,7 +257,34 @@ export const OpportunityService = {
     const before = await oppRepo.findById(id);
     if (!before) throw new Error(`Opportunity ${id} not found`);
 
-    const opp = await oppRepo.update(id, { stage: newStage });
+    const updateData: any = { stage: newStage };
+    if (newStage === 'pilot' && (!before.probability || before.probability < 0.70)) {
+      updateData.probability = 0.75;
+    }
+
+    const opp = await oppRepo.update(id, updateData);
+
+    // If moved to pilot, ensure a project exists to track all implementation activities/milestones
+    if (newStage === 'pilot') {
+      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+      if (!existingProjects || existingProjects.length === 0) {
+        let clientId = null;
+        if (opp.company_id) {
+          const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
+          if (clients && clients.length > 0) clientId = clients[0].id;
+        }
+        await projectRepo.create({
+          client_id: clientId,
+          opportunity_id: id,
+          service_id: opp.service_id,
+          owner_id: opp.owner_id,
+          name: opp.name,
+          start_date: new Date().toISOString().split('T')[0],
+          status: 'in_progress',
+          sold_price: opp.setup_value || 0,
+        });
+      }
+    }
 
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
@@ -282,6 +309,28 @@ export const OpportunityService = {
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
     const before = await oppRepo.findById(id);
     const opp = await oppRepo.update(id, data);
+
+    if (data.stage === 'pilot' && before?.stage !== 'pilot') {
+      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+      if (!existingProjects || existingProjects.length === 0) {
+        let clientId = null;
+        if (opp.company_id) {
+          const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
+          if (clients && clients.length > 0) clientId = clients[0].id;
+        }
+        await projectRepo.create({
+          client_id: clientId,
+          opportunity_id: id,
+          service_id: opp.service_id,
+          owner_id: opp.owner_id,
+          name: opp.name,
+          start_date: new Date().toISOString().split('T')[0],
+          status: 'in_progress',
+          sold_price: opp.setup_value || 0,
+        });
+      }
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -348,6 +397,13 @@ export const OpportunityService = {
     });
 
     if (outcome === 'lost') {
+      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+      if (existingProjects && existingProjects.length > 0) {
+        await projectRepo.update(existingProjects[0].id, {
+          status: 'cancelled',
+        });
+      }
+
       await eventRepo.create({
         event_type: 'opportunity.lost',
         entity_type: 'opportunity',
@@ -406,8 +462,16 @@ export const OpportunityService = {
       await contactRepo.update(opp.contact_id, { status: 'client' });
     }
 
-    // 3. Create project if setup_value > 0
-    if (Number(opp.setup_value) > 0) {
+    // 3. Create or update project (reusing existing pilot project if one exists)
+    const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+    if (existingProjects && existingProjects.length > 0) {
+      const existingProj = existingProjects[0];
+      result.project = await projectRepo.update(existingProj.id, {
+        client_id: result.client.id,
+        sold_price: Number(opp.setup_value) > 0 ? opp.setup_value : existingProj.sold_price,
+        status: existingProj.status === 'completed' ? 'completed' : 'in_progress',
+      });
+    } else if (Number(opp.setup_value) > 0) {
       result.project = await projectRepo.create({
         client_id: result.client.id,
         opportunity_id: id,

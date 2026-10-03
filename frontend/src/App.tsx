@@ -955,6 +955,7 @@ Equipo Método AI`;
     { id: 'meeting_scheduled', label: 'Reunión' },
     { id: 'proposal_sent', label: 'Propuesta' },
     { id: 'negotiation', label: 'Negociación' },
+    { id: 'pilot', label: 'Piloto' },
     { id: 'won', label: 'Ganado' },
   ];
 
@@ -1919,8 +1920,11 @@ Equipo Método AI`;
                   >
                     {/* Column Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', paddingBottom: '8px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>{stage.label}</span>
-                      <span className="badge badge-muted">{stageOpps.length}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {stage.id === 'pilot' && <Zap size={14} fill="#facc15" color="#facc15" />}
+                        <span style={{ fontWeight: 700, fontSize: '0.875rem', color: stage.id === 'pilot' ? '#facc15' : 'var(--text-primary)' }}>{stage.label}</span>
+                      </div>
+                      <span className={`badge ${stage.id === 'pilot' ? 'badge-warning' : 'badge-muted'}`}>{stageOpps.length}</span>
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       Total Neto: {formatMoney(totalValue)} <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>(+ IVA)</span>
@@ -2914,6 +2918,8 @@ Equipo Método AI`;
                         ) : displayedProjects.map((p) => {
                           const companyName = getProjectCompanyName(p);
                           const isEditable = projectStatusView === 'active';
+                          const linkedOpp = allOpps.find((o) => o.id === p.opportunity_id);
+                          const isPilot = p.status === 'pilot' || linkedOpp?.stage === 'pilot' || p.name?.toLowerCase().startsWith('piloto:');
 
                           const projectName = p.name?.includes('—') && p.name.split('—')[1]?.trim()
                             ? p.name.split('—')[1].trim()
@@ -2930,6 +2936,8 @@ Equipo Método AI`;
                             ? 'ONBOARDING'
                             : p.status === 'in_progress'
                             ? 'EN PROCESO'
+                            : p.status === 'pilot'
+                            ? 'PILOTO'
                             : p.status === 'review'
                             ? 'EN REVISIÓN'
                             : p.status === 'completed'
@@ -3090,6 +3098,29 @@ Equipo Método AI`;
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Abajo a la derecha) */}
+                                  {isPilot && (
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                        border: '1px solid rgba(234, 179, 8, 0.45)',
+                                        color: '#facc15',
+                                        padding: '4px 10px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        fontSize: '0.725rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.04em',
+                                      }}
+                                      title="Proyecto en etapa de Piloto / Validación previa a cierre"
+                                    >
+                                      <Zap size={13} fill="#facc15" color="#facc15" />
+                                      <span>PILOTO</span>
+                                    </div>
+                                  )}
+
                                   {/* Botón Acción Rápida: Bitácora & Reuniones */}
                                   <button
                                     type="button"

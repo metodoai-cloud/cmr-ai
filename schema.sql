@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS opportunities (
   stage TEXT DEFAULT 'new'
     CHECK (stage IN (
       'new','contacted','qualified','meeting_scheduled',
-      'meeting_completed','proposal_sent','negotiation','won','lost'
+      'meeting_completed','proposal_sent','negotiation','pilot','won','lost'
     )),
   setup_value NUMERIC(12,2) DEFAULT 0,
   recurring_value NUMERIC(12,2) DEFAULT 0,

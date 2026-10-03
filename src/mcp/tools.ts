@@ -26,6 +26,8 @@ function normalizeStage(stage?: string): string | undefined {
     'reunion': 'meeting_scheduled',
     'propuesta': 'proposal_sent',
     'negociacion': 'negotiation',
+    'piloto': 'pilot',
+    'pilot': 'pilot',
     'ganado': 'won',
     'perdido': 'lost',
   };
@@ -223,7 +225,7 @@ export function registerTools(srv: McpServer) {
       estimated_value: z.number().optional().describe('Valor estimado del setup / venta'),
       setup_value: z.number().optional().describe('Valor de setup inicial'),
       recurring_value: z.number().optional().describe('Valor mensual recurrente (MRR)'),
-      stage: z.enum(['new', 'contacted', 'qualified', 'meeting_scheduled', 'proposal_sent', 'negotiation', 'won', 'lost', 'nuevo', 'contactado', 'calificado', 'reunion', 'propuesta', 'negociacion', 'ganado', 'perdido']).optional().describe('Etapa del pipeline'),
+      stage: z.enum(['new', 'contacted', 'qualified', 'meeting_scheduled', 'proposal_sent', 'negotiation', 'pilot', 'won', 'lost', 'nuevo', 'contactado', 'calificado', 'reunion', 'propuesta', 'negociacion', 'piloto', 'ganado', 'perdido']).optional().describe('Etapa del pipeline'),
       notes: z.string().optional().describe('Notas adicionales'),
       // Snapshot Estratégico
       agency_profile_id: z.string().optional().describe('ID de la estrategia/perfil de agencia activa'),
@@ -298,7 +300,7 @@ export function registerTools(srv: McpServer) {
     'Actualizar el estado, información o snapshot estratégico de una oportunidad en el pipeline.',
     {
       id: z.string().describe('ID de la oportunidad a actualizar'),
-      stage: z.string().optional().describe('Nueva etapa del pipeline (new, contacted, qualified, meeting_scheduled, proposal_sent, negotiation, won, lost)'),
+      stage: z.string().optional().describe('Nueva etapa del pipeline (new, contacted, qualified, meeting_scheduled, proposal_sent, negotiation, pilot, won, lost)'),
       setup_value: z.number().optional().describe('Valor de setup actualizado'),
       recurring_value: z.number().optional().describe('Valor recurrente mensual actualizado'),
       estimated_value: z.number().optional().describe('Alias para setup_value'),

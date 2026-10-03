@@ -3070,8 +3070,8 @@ Equipo Método AI`;
                                 </span>
                               </div>
 
-                              {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega | Botón Enviar Correo) */}
-                              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
+                              {/* Bottom: Metadatos (Precio | Inicio | Fecha de Entrega) & Acciones (Bitácora | Correo | Piloto) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.775rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '10px', marginTop: '2px' }}>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
                                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                     <span style={{ color: 'var(--text-muted)' }}>Precio:</span>
@@ -3093,75 +3093,77 @@ Equipo Método AI`;
                                   </div>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {/* Botón Acción Rápida: Bitácora & Reuniones */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditProjectModal(p, companyName, 'activities');
-                                    }}
-                                    style={{
-                                      padding: '4px 10px',
-                                      fontSize: '0.725rem',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      borderRadius: 'var(--radius-sm)',
-                                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                                      color: 'var(--text-primary)',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      transition: 'all 0.15s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-                                    }}
-                                    title="Abrir bitácora y registrar reunión o avance de este proyecto"
-                                  >
-                                    <Clock size={12} color="var(--primary-light)" />
-                                    <span>Bitácora</span>
-                                  </button>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', marginTop: '2px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    {/* Botón Acción Rápida: Bitácora & Reuniones */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openEditProjectModal(p, companyName, 'activities');
+                                      }}
+                                      style={{
+                                        padding: '4px 10px',
+                                        fontSize: '0.725rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                                        color: 'var(--text-primary)',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+                                      }}
+                                      title="Abrir bitácora y registrar reunión o avance de este proyecto"
+                                    >
+                                      <Clock size={12} color="var(--primary-light)" />
+                                      <span>Bitácora</span>
+                                    </button>
 
-                                  {/* Botón Acción Rápida: Enviar Estado por Correo */}
-                                  <button
-                                    type="button"
-                                    onClick={(e) => handleOpenProjectEmail(e, p, companyName, statusLabel)}
-                                    style={{
-                                      padding: '4px 10px',
-                                      fontSize: '0.725rem',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '5px',
-                                      borderRadius: 'var(--radius-sm)',
-                                      backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                                      border: '1px solid rgba(99, 102, 241, 0.35)',
-                                      color: 'var(--primary-light)',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      transition: 'all 0.15s ease',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.25)';
-                                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
-                                      e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
-                                    }}
-                                    title="Previsualizar y enviar actualización de estado por correo al cliente"
-                                  >
-                                    <Mail size={12} />
-                                    <span>Enviar Correo</span>
-                                  </button>
+                                    {/* Botón Acción Rápida: Enviar Estado por Correo */}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => handleOpenProjectEmail(e, p, companyName, statusLabel)}
+                                      style={{
+                                        padding: '4px 10px',
+                                        fontSize: '0.725rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                        border: '1px solid rgba(99, 102, 241, 0.35)',
+                                        color: 'var(--primary-light)',
+                                        cursor: 'pointer',
+                                        fontWeight: 600,
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                      onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.25)';
+                                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+                                      }}
+                                      onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
+                                        e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
+                                      }}
+                                      title="Previsualizar y enviar actualización de estado por correo al cliente"
+                                    >
+                                      <Mail size={12} />
+                                      <span>Enviar Correo</span>
+                                    </button>
+                                  </div>
 
-                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Extremo inferior derecho) */}
+                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Extremo inferior derecho, alineado con EN PROCESO) */}
                                   {isPilot && (
                                     <div
                                       style={{
@@ -3176,6 +3178,8 @@ Equipo Método AI`;
                                         fontSize: '0.725rem',
                                         fontWeight: 800,
                                         letterSpacing: '0.04em',
+                                        marginLeft: 'auto',
+                                        flexShrink: 0,
                                       }}
                                       title="Proyecto en etapa de Piloto / Validación previa a cierre"
                                     >

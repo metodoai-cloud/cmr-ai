@@ -3163,27 +3163,27 @@ Equipo Método AI`;
                                     </button>
                                   </div>
 
-                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Extremo inferior derecho, alineado con EN PROCESO) */}
+                                  {/* Indicador Visual: Fondo Naranja/Ámbar Sólido + Texto e Ícono Blanco (PILOTO) */}
                                   {isPilot && (
                                     <div
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
                                         gap: '5px',
-                                        backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                                        border: '1px solid rgba(234, 179, 8, 0.45)',
-                                        color: '#facc15',
-                                        padding: '4px 10px',
-                                        borderRadius: 'var(--radius-sm)',
+                                        backgroundColor: '#f59e0b',
+                                        color: '#ffffff',
+                                        padding: '3px 10px',
+                                        borderRadius: '12px',
                                         fontSize: '0.725rem',
                                         fontWeight: 800,
                                         letterSpacing: '0.04em',
                                         marginLeft: 'auto',
                                         flexShrink: 0,
+                                        boxShadow: '0 2px 6px rgba(245, 158, 11, 0.35)',
                                       }}
                                       title="Proyecto en etapa de Piloto / Validación previa a cierre"
                                     >
-                                      <Zap size={13} fill="#facc15" color="#facc15" />
+                                      <Zap size={12} fill="#ffffff" color="#ffffff" />
                                       <span>PILOTO</span>
                                     </div>
                                   )}

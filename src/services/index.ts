@@ -1192,7 +1192,37 @@ export const SubscriptionService = {
 // PROJECT SERVICE
 // ============================================================================
 export const ProjectService = {
-  async getAll(filters: any = {}) { return projectRepo.findAll(filters); },
+  async getAll(filters: any = {}) {
+    try {
+      const pilotOpps = await oppRepo.findAll({ stage: 'pilot' } as any);
+      if (pilotOpps && pilotOpps.length > 0) {
+        const existingProjs = await projectRepo.findAll();
+        for (const opp of pilotOpps) {
+          const exists = existingProjs.some((p: any) => p.opportunity_id === opp.id);
+          if (!exists) {
+            let clientId = null;
+            if (opp.company_id) {
+              const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
+              if (clients && clients.length > 0) clientId = clients[0].id;
+            }
+            await projectRepo.create({
+              client_id: clientId,
+              opportunity_id: opp.id,
+              service_id: opp.service_id,
+              owner_id: opp.owner_id,
+              name: opp.name,
+              start_date: new Date().toISOString().split('T')[0],
+              status: 'in_progress',
+              sold_price: opp.setup_value || 0,
+            });
+          }
+        }
+      }
+    } catch {
+      // Non-blocking
+    }
+    return projectRepo.findAll(filters);
+  },
   async getById(id: string) { return projectRepo.findById(id); },
   async create(data: any, source: 'web' | 'mcp' = 'web') {
     const project = await projectRepo.create(data);

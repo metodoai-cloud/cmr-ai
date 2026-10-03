@@ -2845,16 +2845,12 @@ Equipo Método AI`;
 
                   const displayedProjects = (() => {
                     if (projectStatusView === 'active') {
-                      const statusWeight: Record<string, number> = {
-                        onboarding: 1,
-                        in_progress: 2,
-                        review: 3,
-                      };
                       return [...activeProjects].sort((a, b) => {
-                        const weightA = statusWeight[a.status] || 99;
-                        const weightB = statusWeight[b.status] || 99;
-                        if (weightA !== weightB) return weightA - weightB;
-                        return new Date(b.created_at || b.start_date || 0).getTime() - new Date(a.created_at || a.start_date || 0).getTime();
+                        const compA = getProjectCompanyName(a);
+                        const compB = getProjectCompanyName(b);
+                        const cmp = compA.localeCompare(compB, 'es', { sensitivity: 'base' });
+                        if (cmp !== 0) return cmp;
+                        return (a.name || '').localeCompare(b.name || '', 'es', { sensitivity: 'base' });
                       });
                     }
 
@@ -3098,29 +3094,6 @@ Equipo Método AI`;
                                 </div>
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Abajo a la derecha) */}
-                                  {isPilot && (
-                                    <div
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '5px',
-                                        backgroundColor: 'rgba(234, 179, 8, 0.15)',
-                                        border: '1px solid rgba(234, 179, 8, 0.45)',
-                                        color: '#facc15',
-                                        padding: '4px 10px',
-                                        borderRadius: 'var(--radius-sm)',
-                                        fontSize: '0.725rem',
-                                        fontWeight: 800,
-                                        letterSpacing: '0.04em',
-                                      }}
-                                      title="Proyecto en etapa de Piloto / Validación previa a cierre"
-                                    >
-                                      <Zap size={13} fill="#facc15" color="#facc15" />
-                                      <span>PILOTO</span>
-                                    </div>
-                                  )}
-
                                   {/* Botón Acción Rápida: Bitácora & Reuniones */}
                                   <button
                                     type="button"
@@ -3187,6 +3160,29 @@ Equipo Método AI`;
                                     <Mail size={12} />
                                     <span>Enviar Correo</span>
                                   </button>
+
+                                  {/* Indicador Visual: Rayo Amarillo + PILOTO (Extremo inferior derecho) */}
+                                  {isPilot && (
+                                    <div
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        backgroundColor: 'rgba(234, 179, 8, 0.15)',
+                                        border: '1px solid rgba(234, 179, 8, 0.45)',
+                                        color: '#facc15',
+                                        padding: '4px 10px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        fontSize: '0.725rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.04em',
+                                      }}
+                                      title="Proyecto en etapa de Piloto / Validación previa a cierre"
+                                    >
+                                      <Zap size={13} fill="#facc15" color="#facc15" />
+                                      <span>PILOTO</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>

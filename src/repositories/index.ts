@@ -75,7 +75,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findAll(filters: any = {}) {
     let query = this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .is('deleted_at', null);
 
     if (filters.stage) query = query.eq('stage', filters.stage);
@@ -95,7 +95,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findPipeline() {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .is('deleted_at', null)
       .not('stage', 'in', '("won","lost")')
       .order('created_at', { ascending: false });
@@ -106,7 +106,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findByStage(stage: string) {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .eq('stage', stage)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -117,7 +117,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findOverdue() {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .not('stage', 'in', '("won","lost")')
       .lt('next_action_date', new Date().toISOString().split('T')[0])
       .is('deleted_at', null);
@@ -128,7 +128,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findByIdWithRelations(id: string) {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email, phone), companies(id, name, rut, industry), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .eq('id', id)
       .is('deleted_at', null)
       .single();
@@ -142,7 +142,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async searchByName(name: string) {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .select('*, contacts(id, first_name, last_name, email, phone), companies(id, name, tax_id, industry), services(id, name, category, standard_setup_price, standard_recurring_price)')
       .ilike('name', `%${name}%`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })

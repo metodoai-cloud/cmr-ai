@@ -230,6 +230,14 @@ export const OpportunityService = {
     return oppRepo.findById(id);
   },
 
+  async getWithRelations(id: string) {
+    return oppRepo.findByIdWithRelations(id);
+  },
+
+  async search(name: string) {
+    return oppRepo.searchByName(name);
+  },
+
   async getOverdue() {
     return oppRepo.findOverdue();
   },

@@ -202,3 +202,20 @@ El frontend del CRM clasifica y renderiza automáticamente las ofertas en **4 Pi
 
 3. **Para actualizar un servicio existente:**
    Usa `actualizar_servicio` con el `id` y los campos a modificar.
+
+---
+
+## 🔗 4. Vinculación de Servicios a Oportunidades de Venta
+
+Claude puede vincular un servicio del catálogo directamente a una oportunidad de venta de dos formas:
+
+1. **Al crear una oportunidad (`crear_oportunidad`):**
+   - Puedes pasar `service_id` con el UUID del servicio.
+   - O bien puedes pasar `service_name` (ej: `"Creación de Empresa desde Cero — Starter"`, `"1 Automatización Puntual"`, etc.) y el CRM lo buscará y vinculará automáticamente, autocompletando también los precios estándar si no se especifican.
+
+2. **Al actualizar una oportunidad existente (`actualizar_oportunidad`):**
+   - Pasa el `id` de la oportunidad y `service_id` o `service_name` para asociar o cambiar el servicio cotizado.
+
+3. **Al consultar el pipeline (`listar_oportunidades` / `obtener_oportunidad`):**
+   - Se muestra el servicio vinculado con su nombre y categoría para cada oportunidad.
+

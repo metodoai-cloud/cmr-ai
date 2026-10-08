@@ -72,10 +72,30 @@ export class LeadRepository extends BaseRepository<any> {
 export class OpportunityRepository extends BaseRepository<any> {
   constructor() { super('opportunities'); }
 
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('opportunities')
+      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .is('deleted_at', null);
+
+    if (filters.stage) query = query.eq('stage', filters.stage);
+    if (filters.company_id) query = query.eq('company_id', filters.company_id);
+    if (filters.contact_id) query = query.eq('contact_id', filters.contact_id);
+    if (filters.service_id) query = query.eq('service_id', filters.service_id);
+
+    query = query.order('created_at', { ascending: false });
+
+    if (filters.limit) query = query.limit(filters.limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
   async findPipeline() {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name), companies(name), services(name)')
+      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
       .is('deleted_at', null)
       .not('stage', 'in', '("won","lost")')
       .order('created_at', { ascending: false });
@@ -86,7 +106,7 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findByStage(stage: string) {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name), companies(name)')
+      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
       .eq('stage', stage)
       .is('deleted_at', null)
       .order('created_at', { ascending: false });
@@ -97,10 +117,36 @@ export class OpportunityRepository extends BaseRepository<any> {
   async findOverdue() {
     const { data, error } = await this.db
       .from('opportunities')
-      .select('*, contacts(first_name, last_name), companies(name)')
+      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
       .not('stage', 'in', '("won","lost")')
       .lt('next_action_date', new Date().toISOString().split('T')[0])
       .is('deleted_at', null);
+    if (error) throw error;
+    return data || [];
+  }
+
+  async findByIdWithRelations(id: string) {
+    const { data, error } = await this.db
+      .from('opportunities')
+      .select('*, contacts(first_name, last_name, email, phone), companies(id, name, rut, industry), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    return data;
+  }
+
+  async searchByName(name: string) {
+    const { data, error } = await this.db
+      .from('opportunities')
+      .select('*, contacts(first_name, last_name, email), companies(id, name), services(id, name, code, category, standard_setup_price, standard_recurring_price)')
+      .ilike('name', `%${name}%`)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(10);
     if (error) throw error;
     return data || [];
   }

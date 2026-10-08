@@ -57,6 +57,36 @@ function formatDateCL(dateStr?: string | null): string {
   return dateStr;
 }
 
+// Helper to resolve service by ID or fuzzy name search
+async function resolveServiceId(serviceId?: string, serviceName?: string): Promise<{ id: string; name: string; setup_price?: number; recurring_price?: number } | null> {
+  if (serviceId) {
+    try {
+      const srv = await ServiceCatalog.getById(serviceId);
+      if (srv) return { id: srv.id, name: srv.name, setup_price: srv.standard_setup_price, recurring_price: srv.standard_recurring_price };
+    } catch {
+      // Fallback to ID directly
+    }
+    return { id: serviceId, name: 'Servicio' };
+  }
+  if (serviceName) {
+    try {
+      const all = await ServiceCatalog.getAll({ active: true });
+      const term = serviceName.trim().toLowerCase();
+      const match = all.find((s: any) =>
+        s.name.toLowerCase() === term ||
+        s.name.toLowerCase().includes(term) ||
+        (s.code && s.code.toLowerCase() === term)
+      );
+      if (match) {
+        return { id: match.id, name: match.name, setup_price: match.standard_setup_price, recurring_price: match.standard_recurring_price };
+      }
+    } catch {
+      // Ignore error
+    }
+  }
+  return null;
+}
+
 export function registerTools(srv: McpServer) {
 
   // --- buscar_contacto ---
@@ -214,14 +244,15 @@ export function registerTools(srv: McpServer) {
   // --- crear_oportunidad ---
   srv.tool(
     'crear_oportunidad',
-    'Crear una nueva oportunidad de venta en el pipeline del CRM, incluyendo opcionalmente el snapshot estratégico.',
+    'Crear una nueva oportunidad de venta en el pipeline del CRM, incluyendo opcionalmente el servicio cotizado (por ID o nombre) y el snapshot estratégico.',
     {
-      name: z.string().optional().describe('Nombre u objetivo del trato'),
+      name: z.string().optional().describe('Nombre u objetivo del trato (ej: Implementación CRM para Cliente X)'),
       title: z.string().optional().describe('Alias de nombre para el trato'),
       contact_id: z.string().optional().describe('ID del contacto asociado'),
       company_id: z.string().optional().describe('ID de la empresa asociada'),
       lead_id: z.string().optional().describe('ID del lead de origen si existe'),
-      service_id: z.string().optional().describe('ID del servicio principal cotizado'),
+      service_id: z.string().optional().describe('ID del servicio principal cotizado del catálogo'),
+      service_name: z.string().optional().describe('Nombre del servicio del catálogo a vincular (si no tienes el ID, se buscará automáticamente)'),
       estimated_value: z.number().optional().describe('Valor estimado del setup / venta'),
       setup_value: z.number().optional().describe('Valor de setup inicial'),
       recurring_value: z.number().optional().describe('Valor mensual recurrente (MRR)'),
@@ -236,8 +267,28 @@ export function registerTools(srv: McpServer) {
     },
     async (data) => {
       try {
-        const oppName = data.name || data.title || 'Nueva Oportunidad';
-        const setupVal = data.setup_value ?? data.estimated_value ?? 0;
+        let finalServiceId = data.service_id;
+        let serviceInfo: any = null;
+        if (data.service_id || data.service_name) {
+          serviceInfo = await resolveServiceId(data.service_id, data.service_name);
+          if (serviceInfo) {
+            finalServiceId = serviceInfo.id;
+          }
+        }
+
+        const oppName = data.name || data.title || (serviceInfo ? `Oportunidad: ${serviceInfo.name}` : 'Nueva Oportunidad');
+        let setupVal = data.setup_value ?? data.estimated_value;
+        if (setupVal === undefined && serviceInfo?.setup_price !== undefined) {
+          setupVal = serviceInfo.setup_price;
+        }
+        setupVal = setupVal ?? 0;
+
+        let recVal = data.recurring_value;
+        if (recVal === undefined && serviceInfo?.recurring_price !== undefined) {
+          recVal = serviceInfo.recurring_price;
+        }
+        recVal = recVal ?? 0;
+
         const normStage = normalizeStage(data.stage) || 'new';
 
         const payload: any = {
@@ -245,9 +296,9 @@ export function registerTools(srv: McpServer) {
           contact_id: data.contact_id,
           company_id: data.company_id,
           lead_id: data.lead_id,
-          service_id: data.service_id,
+          service_id: finalServiceId,
           setup_value: setupVal,
-          recurring_value: data.recurring_value ?? 0,
+          recurring_value: recVal,
           stage: normStage,
           notes: data.notes,
           agency_profile_id: data.agency_profile_id,
@@ -258,8 +309,9 @@ export function registerTools(srv: McpServer) {
         };
 
         const opp = await OpportunityService.create(payload);
+        const srvText = serviceInfo ? ` | Servicio: "${serviceInfo.name}"` : (finalServiceId ? ` | Service ID: ${finalServiceId}` : '');
         return {
-          content: [{ type: 'text' as const, text: `✅ Oportunidad creada: "${opp.name}" (ID: ${opp.id}) en etapa "${opp.stage}" | Setup: $${opp.setup_value} | Recurrente: $${opp.recurring_value}/mes` }],
+          content: [{ type: 'text' as const, text: `✅ Oportunidad creada: "${opp.name}" (ID: ${opp.id}) en etapa "${opp.stage}"${srvText} | Setup: $${opp.setup_value} | Recurrente: $${opp.recurring_value}/mes` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al crear oportunidad: ${err.message}` }] };
@@ -270,9 +322,11 @@ export function registerTools(srv: McpServer) {
   // --- listar_oportunidades ---
   srv.tool(
     'listar_oportunidades',
-    'Ver las oportunidades actuales en el pipeline de ventas.',
+    'Ver las oportunidades actuales en el pipeline de ventas con sus servicios y empresas vinculadas.',
     {
       stage: z.string().optional().describe('Filtrar por etapa del pipeline'),
+      service_id: z.string().optional().describe('Filtrar por ID del servicio vinculado'),
+      company_id: z.string().optional().describe('Filtrar por ID de la empresa'),
       limit: z.number().optional().describe('Máximo de resultados (default 20)'),
     },
     async (filters) => {
@@ -282,9 +336,11 @@ export function registerTools(srv: McpServer) {
           stage: normalizeStage(filters.stage),
         };
         const opps = await OpportunityService.getAll(normFilters);
-        const list = opps.map((o: any) =>
-          `• [${(o.stage || 'new').toUpperCase()}] ${o.name || o.title || 'Sin nombre'} | Setup: $${o.setup_value || 0} | MRR: $${o.recurring_value || 0}/mes | ID: ${o.id}`
-        ).join('\n');
+        const list = opps.map((o: any) => {
+          const srvName = o.services?.name ? ` | Servicio: ${o.services.name}` : (o.service_id ? ` | Service ID: ${o.service_id}` : '');
+          const companyName = o.companies?.name ? ` | Empresa: ${o.companies.name}` : '';
+          return `• [${(o.stage || 'new').toUpperCase()}] ${o.name || o.title || 'Sin nombre'}${companyName}${srvName} | Setup: $${o.setup_value || 0} | MRR: $${o.recurring_value || 0}/mes | ID: ${o.id}`;
+        }).join('\n');
         return {
           content: [{ type: 'text' as const, text: opps.length > 0 ? `📊 Pipeline (${opps.length}):\n\n${list}` : 'No hay oportunidades activas.' }],
         };
@@ -294,12 +350,52 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- obtener_oportunidad ---
+  srv.tool(
+    'obtener_oportunidad',
+    'Obtener el detalle completo de una oportunidad del CRM por su ID (incluyendo servicio vinculado, empresa, contacto y snapshot estratégico).',
+    {
+      id: z.string().describe('ID de la oportunidad a consultar'),
+    },
+    async ({ id }) => {
+      try {
+        const opp = await OpportunityService.getWithRelations(id);
+        if (!opp) {
+          return { content: [{ type: 'text' as const, text: `❌ Oportunidad no encontrada con ID: ${id}` }] };
+        }
+
+        const contactName = opp.contacts ? `${opp.contacts.first_name || ''} ${opp.contacts.last_name || ''}`.trim() : 'N/A';
+        const companyName = opp.companies?.name || 'N/A';
+        const serviceName = opp.services?.name ? `${opp.services.name} (${opp.services.category || 'General'})` : (opp.service_id ? `ID: ${opp.service_id}` : 'Sin vincular');
+
+        const detail = `📋 **Detalle de Oportunidad**\n` +
+          `- **Nombre:** ${opp.name}\n` +
+          `- **ID:** ${opp.id}\n` +
+          `- **Etapa:** ${(opp.stage || 'new').toUpperCase()}\n` +
+          `- **Empresa:** ${companyName}\n` +
+          `- **Contacto:** ${contactName}\n` +
+          `- **Servicio Vinculado:** ${serviceName}\n` +
+          `- **Setup:** $${opp.setup_value || 0}\n` +
+          `- **Recurrente (MRR):** $${opp.recurring_value || 0}/mes\n` +
+          `- **Probabilidad:** ${((opp.probability || 0) * 100).toFixed(0)}%\n` +
+          `- **Siguiente Acción:** ${opp.next_action || 'N/A'} (Fecha: ${opp.next_action_date || 'N/A'})\n` +
+          `- **Notas:** ${opp.notes || 'N/A'}`;
+
+        return { content: [{ type: 'text' as const, text: detail }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener oportunidad: ${err.message}` }] };
+      }
+    }
+  );
+
   // --- actualizar_oportunidad ---
   srv.tool(
     'actualizar_oportunidad',
-    'Actualizar el estado, información o snapshot estratégico de una oportunidad en el pipeline.',
+    'Actualizar el estado, información, servicio vinculado o snapshot estratégico de una oportunidad en el pipeline.',
     {
       id: z.string().describe('ID de la oportunidad a actualizar'),
+      service_id: z.string().optional().describe('ID del servicio a vincular a la oportunidad'),
+      service_name: z.string().optional().describe('Nombre del servicio del catálogo a vincular (lo busca y vincula automáticamente)'),
       stage: z.string().optional().describe('Nueva etapa del pipeline (new, contacted, qualified, meeting_scheduled, proposal_sent, negotiation, pilot, won, lost)'),
       setup_value: z.number().optional().describe('Valor de setup actualizado'),
       recurring_value: z.number().optional().describe('Valor recurrente mensual actualizado'),
@@ -325,6 +421,18 @@ export function registerTools(srv: McpServer) {
         if (data.recurring_value !== undefined) payload.recurring_value = data.recurring_value;
         if (data.probability !== undefined) payload.probability = data.probability;
         if (data.notes !== undefined) payload.notes = data.notes;
+
+        let linkedServiceName = '';
+        if (data.service_id || data.service_name) {
+          const srv = await resolveServiceId(data.service_id, data.service_name);
+          if (srv) {
+            payload.service_id = srv.id;
+            linkedServiceName = srv.name;
+          } else if (data.service_id) {
+            payload.service_id = data.service_id;
+          }
+        }
+
         if (data.agency_profile_id !== undefined) payload.agency_profile_id = data.agency_profile_id;
         if (data.entry_offer_id !== undefined) payload.entry_offer_id = data.entry_offer_id;
         if (data.customer_profile_id !== undefined) payload.customer_profile_id = data.customer_profile_id;
@@ -332,8 +440,9 @@ export function registerTools(srv: McpServer) {
         if (data.sales_playbook_id !== undefined) payload.sales_playbook_id = data.sales_playbook_id;
 
         const opp = await OpportunityService.update(id, payload);
+        const srvNote = linkedServiceName ? ` | Servicio vinculado: "${linkedServiceName}"` : (payload.service_id ? ` | Service ID: ${payload.service_id}` : '');
         return {
-          content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" → etapa "${opp.stage}"` }],
+          content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" → etapa "${opp.stage}"${srvNote}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar oportunidad: ${err.message}` }] };

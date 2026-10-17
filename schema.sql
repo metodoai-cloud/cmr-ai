@@ -196,6 +196,8 @@ CREATE TABLE IF NOT EXISTS activities (
   opportunity_id UUID REFERENCES opportunities(id),
   owner_id UUID REFERENCES users(id),
   occurred_at TIMESTAMPTZ DEFAULT now(),
+  status TEXT DEFAULT 'pending'
+    CHECK (status IN ('pending','in_progress','completed','cancelled')),
   result TEXT,
   notes TEXT,
   next_action TEXT,
@@ -292,6 +294,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   currency TEXT DEFAULT 'USD',
   status TEXT DEFAULT 'draft'
     CHECK (status IN ('draft','issued','partial','paid','overdue','cancelled')),
+  notes TEXT,
   document_url TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),

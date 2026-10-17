@@ -159,11 +159,58 @@ export class ActivityRepository extends BaseRepository<any> {
   async findByOpportunity(opportunityId: string) {
     const { data, error } = await this.db
       .from('activities')
-      .select('*, contacts(first_name, last_name)')
+      .select('*, contacts(first_name, last_name), companies(id, name)')
       .eq('opportunity_id', opportunityId)
       .order('occurred_at', { ascending: false });
     if (error) throw error;
     return data || [];
+  }
+
+  async findTasks(filters: any = {}) {
+    let query = this.db
+      .from('activities')
+      .select('*, companies(id, name), contacts(id, first_name, last_name), opportunities(id, name)')
+      .eq('type', 'task')
+      .order('next_action_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    if (filters.company_id) query = query.eq('company_id', filters.company_id);
+    if (filters.limit) query = query.limit(filters.limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let list = data || [];
+    
+    // Normalizar estado según columna status o derivado de result
+    list = list.map((a: any) => {
+      let st = a.status;
+      if (!st && a.result) {
+        const rLower = a.result.toLowerCase().trim();
+        if (['completada', 'completado', 'done', 'finalizada', 'hecha'].includes(rLower)) {
+          st = 'completed';
+        } else if (['en proceso', 'in progress', 'en curso'].includes(rLower)) {
+          st = 'in_progress';
+        }
+      }
+      if (!st) st = 'pending';
+      return { ...a, status: st };
+    });
+
+    if (filters.status && filters.status !== 'todas') {
+      let targetStatus = filters.status;
+      if (targetStatus === 'pendiente') targetStatus = 'pending';
+      if (targetStatus === 'en_proceso' || targetStatus === 'en_curso') targetStatus = 'in_progress';
+      if (targetStatus === 'completada') targetStatus = 'completed';
+      list = list.filter((a: any) => a.status === targetStatus);
+    }
+
+    if (filters.company_name) {
+      const q = filters.company_name.toLowerCase().trim();
+      list = list.filter((a: any) => a.companies?.name?.toLowerCase().includes(q));
+    }
+
+    return list;
   }
 }
 
@@ -237,23 +284,77 @@ export class InvoiceRepository extends BaseRepository<any> {
   async findAll(filters: any = {}) {
     let query = this.db
       .from('invoices')
-      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), payments(id, payment_date, amount)')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), projects(id, name), payments(id, payment_date, amount, payment_method)')
       .is('deleted_at', null)
       .order('issue_date', { ascending: false });
 
-    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.status && filters.status !== 'todas') {
+      let st = filters.status;
+      if (st === 'pagada') st = 'paid';
+      if (st === 'pendiente') st = 'issued';
+      if (st === 'vencida') st = 'overdue';
+      if (st === 'anulada') st = 'cancelled';
+      query = query.eq('status', st);
+    }
     if (filters.client_id) query = query.eq('client_id', filters.client_id);
+    if (filters.project_id) query = query.eq('project_id', filters.project_id);
+    if (filters.invoice_number) query = query.eq('invoice_number', String(filters.invoice_number).trim());
 
     const { data, error } = await query;
     if (error) throw error;
-    return data || [];
+
+    let result = data || [];
+    if (filters.company_id) {
+      result = result.filter((inv: any) =>
+        inv.clients?.company_id === filters.company_id ||
+        inv.clients?.companies?.id === filters.company_id
+      );
+    }
+    if (filters.company_name) {
+      const q = filters.company_name.toLowerCase().trim();
+      result = result.filter((inv: any) =>
+        inv.clients?.companies?.name?.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }
+
+  async findByNumber(folio: string | number) {
+    const num = String(folio).trim();
+    const { data, error } = await this.db
+      .from('invoices')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), projects(id, name), payments(id, payment_date, amount, payment_method)')
+      .eq('invoice_number', num)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async findById(id: string) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!isUuid) {
+      const byNum = await this.findByNumber(id);
+      if (byNum) return byNum;
+    }
+
+    const { data, error } = await this.db
+      .from('invoices')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), projects(id, name), payments(id, payment_date, amount, payment_method)')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
   }
 
   async findOverdue() {
     const today = new Date().toISOString().split('T')[0];
     const { data, error } = await this.db
       .from('invoices')
-      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), payments(id, payment_date, amount)')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), projects(id, name), payments(id, payment_date, amount)')
       .in('status', ['issued', 'partial'])
       .lt('due_date', today)
       .is('deleted_at', null);
@@ -264,7 +365,7 @@ export class InvoiceRepository extends BaseRepository<any> {
   async findByClient(clientId: string) {
     const { data, error } = await this.db
       .from('invoices')
-      .select('*, payments(id, payment_date, amount)')
+      .select('*, clients(*, companies(*), contacts:primary_contact_id(*)), projects(id, name), payments(id, payment_date, amount)')
       .eq('client_id', clientId)
       .is('deleted_at', null)
       .order('issue_date', { ascending: false });

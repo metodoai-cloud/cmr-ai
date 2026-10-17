@@ -339,6 +339,15 @@ export const OpportunityService = {
       }
     }
 
+    if (data.stage === 'lost' && before?.stage !== 'lost') {
+      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+      for (const proj of linkedProjects || []) {
+        if (proj.status !== 'cancelled' && proj.status !== 'completed') {
+          await projectRepo.update(proj.id, { status: 'cancelled' });
+        }
+      }
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -406,10 +415,12 @@ export const OpportunityService = {
 
     if (outcome === 'lost') {
       const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      if (existingProjects && existingProjects.length > 0) {
-        await projectRepo.update(existingProjects[0].id, {
-          status: 'cancelled',
-        });
+      for (const proj of existingProjects || []) {
+        if (proj.status !== 'cancelled' && proj.status !== 'completed') {
+          await projectRepo.update(proj.id, {
+            status: 'cancelled',
+          });
+        }
       }
 
       await eventRepo.create({
@@ -611,6 +622,35 @@ export const ActivityService = {
     return activityRepo.findAll(filters);
   },
 
+  async getTasks(filters: any = {}) {
+    return activityRepo.findTasks(filters);
+  },
+
+  async completeTask(id: string, result?: string, notes?: string, source: 'web' | 'mcp' = 'mcp') {
+    const payload: any = { status: 'completed' };
+    if (result) payload.result = result;
+    if (notes) payload.notes = notes;
+    return this.update(id, payload, source);
+  },
+
+  async updateTask(id: string, data: any, source: 'web' | 'mcp' = 'mcp') {
+    const payload: any = {};
+    if (data.status) {
+      let st = data.status;
+      if (st === 'pendiente') st = 'pending';
+      if (st === 'en_proceso' || st === 'en_curso') st = 'in_progress';
+      if (st === 'completada') st = 'completed';
+      payload.status = st;
+    }
+    if (data.next_action_date !== undefined) payload.next_action_date = data.next_action_date;
+    if (data.next_action !== undefined) payload.next_action = data.next_action;
+    if (data.result !== undefined) payload.result = data.result;
+    if (data.notes !== undefined) payload.notes = data.notes;
+    if (data.desired_outcome !== undefined) payload.desired_outcome = data.desired_outcome;
+    if (data.company_id !== undefined) payload.company_id = data.company_id;
+    return this.update(id, payload, source);
+  },
+
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
     const before = await activityRepo.findById(id);
     const updated = await activityRepo.update(id, data);
@@ -675,10 +715,32 @@ function enrichInvoice(inv: any) {
   const payments = Array.isArray(inv.payments) ? inv.payments : (inv.payments ? [inv.payments] : []);
   const paid_amount = payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
   const total = Number(inv.total) || 0;
+  const pending_amount = Math.max(0, total - paid_amount);
+
+  let estado = 'pendiente';
+  if (inv.status === 'paid' || (total > 0 && pending_amount === 0)) {
+    estado = 'pagada';
+  } else if (inv.status === 'cancelled') {
+    estado = 'anulada';
+  } else if (inv.due_date && new Date(inv.due_date) < new Date() && pending_amount > 0) {
+    estado = 'vencida';
+  } else {
+    estado = 'pendiente';
+  }
+
+  const company_name = inv.clients?.companies?.name || inv.clients?.companies?.legal_name || 'Sin Empresa';
+  const company_id = inv.clients?.companies?.id || inv.clients?.company_id || null;
+  const project_name = inv.projects?.name || 'Sin Proyecto';
+
   return {
     ...inv,
+    company_name,
+    company_id,
+    project_name,
+    estado,
+    estado_legible: estado.toUpperCase(),
     paid_amount,
-    pending_amount: Math.max(0, total - paid_amount),
+    pending_amount,
   };
 }
 
@@ -698,13 +760,22 @@ export const InvoiceService = {
     return (list || []).map(enrichInvoice);
   },
 
-  async getById(id: string) {
-    const invoice = await invoiceRepo.findById(id);
+  async getByNumber(folio: string | number) {
+    const invoice = await invoiceRepo.findByNumber(folio);
+    return enrichInvoice(invoice);
+  },
+
+  async getById(idOrFolio: string | number) {
+    const invoice = await invoiceRepo.findById(String(idOrFolio));
     return enrichInvoice(invoice);
   },
 
   async create(data: any, source: 'web' | 'mcp' = 'web') {
     let status = data.status || 'draft';
+    if (status === 'pagada') status = 'paid';
+    if (status === 'pendiente') status = 'issued';
+    if (status === 'vencida') status = 'overdue';
+    if (status === 'anulada') status = 'cancelled';
     if (status === 'sent') status = 'issued';
     if (status === 'void') status = 'cancelled';
 
@@ -742,8 +813,20 @@ export const InvoiceService = {
       status,
     };
     if (data.document_url) payload.document_url = data.document_url;
+    if (data.notes) payload.notes = data.notes;
 
-    const invoice = await invoiceRepo.create(payload);
+    let invoice;
+    try {
+      invoice = await invoiceRepo.create(payload);
+    } catch (err: any) {
+      if (payload.notes && (err.message?.includes('notes') || err.code === '42703')) {
+        delete payload.notes;
+        invoice = await invoiceRepo.create(payload);
+      } else {
+        throw err;
+      }
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -755,11 +838,12 @@ export const InvoiceService = {
     return enrichInvoice(invoice);
   },
 
-  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
-    const existing = await invoiceRepo.findById(id);
+  async update(idOrFolio: string | number, data: any, source: 'web' | 'mcp' = 'web') {
+    const existing = await invoiceRepo.findById(String(idOrFolio));
     if (!existing) {
-      throw new Error(`Factura no encontrada con ID: ${id}`);
+      throw new Error(`Factura no encontrada con Folio o ID: ${idOrFolio}`);
     }
+    const id = existing.id;
 
     const payload: any = {};
     if (data.client_id !== undefined) payload.client_id = data.client_id;
@@ -771,6 +855,10 @@ export const InvoiceService = {
     }
     if (data.status !== undefined) {
       let st = data.status;
+      if (st === 'pagada') st = 'paid';
+      if (st === 'pendiente') st = 'issued';
+      if (st === 'vencida') st = 'overdue';
+      if (st === 'anulada') st = 'cancelled';
       if (st === 'sent') st = 'issued';
       if (st === 'void') st = 'cancelled';
       payload.status = st;
@@ -796,7 +884,17 @@ export const InvoiceService = {
       payload.total = payload.subtotal + payload.tax_amount;
     }
 
-    const updated = await invoiceRepo.update(id, payload);
+    let updated;
+    try {
+      updated = await invoiceRepo.update(id, payload);
+    } catch (err: any) {
+      if (payload.notes !== undefined && (err.message?.includes('notes') || err.code === '42703')) {
+        delete payload.notes;
+        updated = await invoiceRepo.update(id, payload);
+      } else {
+        throw err;
+      }
+    }
 
     // === Two-Way Auto Sync with Payments Table ===
     if (payload.status === 'paid' && existing.status !== 'paid') {
@@ -1336,13 +1434,17 @@ export const AnalyticsService = {
       return s + Math.round(net * 1.19);
     }, 0) || 3249100;
 
-    const realOutstanding = Math.max(0, totalSoldGross - totalCollected);
+    const porCobrar = Math.max(0, totalInvoiced - totalCollected);
+    const porFacturar = Math.max(0, totalSoldGross - totalInvoiced);
 
     return {
       total_sold_gross: totalSoldGross,
       total_invoiced: totalInvoiced,
       total_collected: totalCollected,
-      outstanding: realOutstanding,
+      por_cobrar: porCobrar,
+      por_facturar: porFacturar,
+      outstanding: porCobrar,
+      unbilled_sold: porFacturar,
       overdue_amount: overdueAmount,
       overdue_count: overdueInvoices.length,
       total_expenses: totalExpenses,

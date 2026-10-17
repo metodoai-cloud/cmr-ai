@@ -441,8 +441,9 @@ export function registerTools(srv: McpServer) {
 
         const opp = await OpportunityService.update(id, payload);
         const srvNote = linkedServiceName ? ` | Servicio vinculado: "${linkedServiceName}"` : (payload.service_id ? ` | Service ID: ${payload.service_id}` : '');
+        const lostNote = payload.stage === 'lost' ? ' ⚠️ (Proyectos asociados cancelados automáticamente para consistencia)' : '';
         return {
-          content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" → etapa "${opp.stage}"${srvNote}` }],
+          content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" → etapa "${opp.stage}"${srvNote}${lostNote}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar oportunidad: ${err.message}` }] };
@@ -540,6 +541,103 @@ export function registerTools(srv: McpServer) {
     }
   );
 
+  // --- listar_tareas ---
+  srv.tool(
+    'listar_tareas',
+    'Listar tareas comerciales y operativas pendientes o en curso, con empresa asociada y fecha límite.',
+    {
+      estado: z.enum(['pendiente', 'en_proceso', 'completada', 'todas']).optional().describe('Filtrar por estado: pendiente, en_proceso, completada, todas (por defecto: pendiente)'),
+      empresa: z.string().optional().describe('Filtrar por nombre o ID de empresa'),
+      limit: z.number().optional().describe('Máximo de resultados a devolver (por defecto 30)'),
+    },
+    async (filters) => {
+      try {
+        const repoFilters: any = {
+          status: filters.estado || 'pendiente',
+          limit: filters.limit || 30,
+        };
+        if (filters.empresa) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.empresa);
+          if (isUuid) repoFilters.company_id = filters.empresa;
+          else repoFilters.company_name = filters.empresa;
+        }
+
+        const tasks = await ActivityService.getTasks(repoFilters);
+        if (tasks.length === 0) {
+          return { content: [{ type: 'text' as const, text: `No se encontraron tareas con estado "${repoFilters.status}".` }] };
+        }
+
+        const list = tasks.map((t: any) => {
+          const stBadge = t.status === 'completed' ? '✅ COMPLETADA' : (t.status === 'in_progress' ? '🔄 EN PROCESO' : '⏳ PENDIENTE');
+          const empresa = t.companies?.name || 'MetodoAI (Interno)';
+          const fechaLimite = t.next_action_date ? formatDateCL(t.next_action_date) : 'Sin fecha asignada';
+          const titulo = t.notes || t.next_action || 'Sin descripción';
+          const resultado = t.result ? `\n    Resultado: ${t.result}` : '';
+          const entregable = t.desired_outcome ? `\n    Entregable esperado: ${t.desired_outcome}` : '';
+          return `• [${stBadge}] **${titulo}**\n  - Empresa: ${empresa} | Fecha Límite: ${fechaLimite} | ID: \`${t.id}\`${entregable}${resultado}`;
+        }).join('\n\n');
+
+        return {
+          content: [{ type: 'text' as const, text: `📋 Tareas (${tasks.length}):\n\n${list}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar tareas: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- completar_tarea ---
+  srv.tool(
+    'completar_tarea',
+    'Marcar una tarea como completada en el CRM, registrando el resultado o entregable obtenido.',
+    {
+      id: z.string().describe('ID UUID de la tarea a completar'),
+      resultado: z.string().optional().describe('Resultado, entregable o conclusión de la tarea completada'),
+      notas: z.string().optional().describe('Notas o comentarios finales adicionales'),
+    },
+    async ({ id, resultado, notas }) => {
+      try {
+        const updated = await ActivityService.completeTask(id, resultado, notas, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `✅ Tarea completada exitosamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: COMPLETADA\n- Resultado: ${updated.result || 'Registrada como completada'}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al completar tarea: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- actualizar_tarea ---
+  srv.tool(
+    'actualizar_tarea',
+    'Actualizar estado, fecha límite, notas o entregable de una tarea operativa.',
+    {
+      id: z.string().describe('ID UUID de la tarea a actualizar'),
+      estado: z.enum(['pendiente', 'en_proceso', 'completada', 'cancelled']).optional().describe('Nuevo estado de la tarea'),
+      fecha_limite: z.string().optional().describe('Nueva fecha límite (YYYY-MM-DD)'),
+      siguiente_paso: z.string().optional().describe('Siguiente acción o paso posterior'),
+      resultado_esperado: z.string().optional().describe('Resultado esperado o entregable concreto que valida el éxito'),
+      notas: z.string().optional().describe('Notas o comentarios de avance'),
+    },
+    async ({ id, estado, fecha_limite, siguiente_paso, resultado_esperado, notas }) => {
+      try {
+        const payload: any = {};
+        if (estado) payload.status = estado;
+        if (fecha_limite !== undefined) payload.next_action_date = fecha_limite;
+        if (siguiente_paso !== undefined) payload.next_action = siguiente_paso;
+        if (resultado_esperado !== undefined) payload.desired_outcome = resultado_esperado;
+        if (notas !== undefined) payload.notes = notas;
+
+        const updated = await ActivityService.updateTask(id, payload, 'mcp');
+        return {
+          content: [{ type: 'text' as const, text: `✅ Tarea actualizada correctamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: ${updated.status}\n- Fecha límite: ${updated.next_action_date || 'Sin fecha'}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar tarea: ${err.message}` }] };
+      }
+    }
+  );
+
   // --- dashboard_resumen ---
   srv.tool(
     'dashboard_resumen',
@@ -548,10 +646,34 @@ export function registerTools(srv: McpServer) {
     async () => {
       try {
         const data = await AnalyticsService.getDashboard();
+        const fin = data.finance || {};
+        const sales = data.sales || {};
+
+        const sold = (Number(fin.total_sold_gross) || 0).toLocaleString('es-CL');
+        const invoiced = (Number(fin.total_invoiced) || 0).toLocaleString('es-CL');
+        const collected = (Number(fin.total_collected) || 0).toLocaleString('es-CL');
+        const porCobrar = (Number(fin.por_cobrar) || 0).toLocaleString('es-CL');
+        const porFacturar = (Number(fin.por_facturar) || 0).toLocaleString('es-CL');
+        const netCash = (Number(fin.net_cash) || 0).toLocaleString('es-CL');
+
+        const text = `📊 **DASHBOARD EJECUTIVO CRM**\n\n` +
+          `💰 **ESTADO FINANCIERO:**\n` +
+          `• Total Vendido Ganado (IVA incl.): $${sold}\n` +
+          `• Total Facturado Emitido: $${invoiced}\n` +
+          `• Total Cobrado Real en Banco: $${collected}\n` +
+          `• Caja Neta Disponible: $${netCash}\n\n` +
+          `⚖️ **CONTROL DE COBRO Y FACTURACIÓN:**\n` +
+          `• 💳 **Cuentas por Cobrar (Facturado no pagado):** $${porCobrar} (Facturas vencidas: ${fin.overdue_count || 0})\n` +
+          `• ⏳ **Pendiente de Facturar (Vendido sin factura):** $${porFacturar}\n\n` +
+          `📈 **PIPELINE COMERCIAL:**\n` +
+          `• Oportunidades Abiertas: ${sales.open_opportunities || 0}\n` +
+          `• Oportunidades Ganadas: ${sales.won_total || 0}\n` +
+          `• Tasa de Cierre (Win Rate): ${sales.win_rate || 0}%`;
+
         return {
           content: [{
             type: 'text' as const,
-            text: `📊 DASHBOARD CRM:\n\n${JSON.stringify(data, null, 2)}`,
+            text,
           }],
         };
       } catch (err: any) {
@@ -725,33 +847,90 @@ export function registerTools(srv: McpServer) {
   // --- actualizar_factura ---
   srv.tool(
     'actualizar_factura',
-    'Actualizar datos de una factura existente, incluyendo folio (invoice_number), estado, fechas o montos.',
+    'Actualizar datos de una factura existente por su número de folio (ej: 84) o ID, incluyendo estado, fechas, notas o montos.',
     {
-      id: z.string().describe('ID de la factura a actualizar'),
-      client_id: z.string().optional().describe('ID del cliente asociado a la factura (para reasignar de empresa)'),
+      numero: z.union([z.string(), z.number()]).optional().describe('Número o folio de la factura a actualizar (ej: 84, 68)'),
+      id: z.string().optional().describe('ID UUID de la factura si no se cuenta con el número'),
+      client_id: z.string().optional().describe('ID del cliente o empresa asociado a la factura'),
       project_id: z.string().optional().describe('ID del proyecto asociado a la factura'),
       subscription_id: z.string().optional().describe('ID de la suscripción asociada a la factura'),
-      invoice_number: z.string().optional().describe('Número o folio de la factura'),
-      status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Estado de la factura'),
-      issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD o DD-MM-YYYY)'),
-      due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD o DD-MM-YYYY)'),
-      subtotal: z.number().optional().describe('Monto subtotal'),
-      tax_amount: z.number().optional().describe('Monto de impuestos'),
-      total: z.number().optional().describe('Monto total'),
+      invoice_number: z.string().optional().describe('Nuevo número o folio de la factura si cambia'),
+      estado: z.enum(['pagada', 'pendiente', 'vencida', 'anulada']).optional().describe('Estado de la factura: pagada, pendiente, vencida, anulada'),
+      status: z.string().optional().describe('Alias para estado'),
+      issue_date: z.string().optional().describe('Fecha de emisión (YYYY-MM-DD)'),
+      due_date: z.string().optional().describe('Fecha de vencimiento (YYYY-MM-DD)'),
+      subtotal: z.number().optional().describe('Monto neto o subtotal'),
+      tax_amount: z.number().optional().describe('Monto de IVA (19%)'),
+      total: z.number().optional().describe('Monto total bruto'),
       notes: z.string().optional().describe('Notas o concepto de la factura'),
     },
-    async ({ id, ...data }) => {
+    async ({ numero, id, estado, status, ...data }) => {
       try {
-        const invoice = await InvoiceService.update(id, data, 'mcp');
-        const folioText = invoice.invoice_number ? `N° ${invoice.invoice_number}` : 'Sin Folio';
+        const identifier = numero !== undefined ? String(numero).trim() : id;
+        if (!identifier) {
+          return { content: [{ type: 'text' as const, text: '❌ Debe indicar el número de factura (ej: 84) o su ID.' }] };
+        }
+        const updatePayload: any = { ...data };
+        if (estado) updatePayload.status = estado;
+        else if (status) updatePayload.status = status;
+
+        const invoice = await InvoiceService.update(identifier, updatePayload, 'mcp');
+        const folioText = invoice.invoice_number ? `Factura N° ${invoice.invoice_number}` : `Factura ID: ${invoice.id.slice(0, 8)}`;
         return {
           content: [{
             type: 'text' as const,
-            text: `✅ Factura ${folioText} actualizada correctamente (ID: ${invoice.id})\n- Monto Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')} / Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)} | Vence: ${formatDateCL(invoice.due_date)}\n- Estado: ${invoice.status}`,
+            text: `✅ ${folioText} actualizada correctamente:\n- Empresa: ${invoice.company_name}\n- Estado: [${invoice.estado_legible}]\n- Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')} | Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)} | Vencimiento: ${formatDateCL(invoice.due_date)}${invoice.notes ? `\n- Concepto: ${invoice.notes}` : ''}`,
           }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar factura: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- obtener_factura ---
+  srv.tool(
+    'obtener_factura',
+    'Consultar el detalle completo de una factura por su número de folio (ej: 84) o ID.',
+    {
+      numero: z.union([z.string(), z.number()]).optional().describe('Número o folio de la factura a consultar (ej: 84, 68)'),
+      id: z.string().optional().describe('ID UUID de la factura si no se cuenta con el folio'),
+    },
+    async ({ numero, id }) => {
+      try {
+        const identifier = numero !== undefined ? String(numero).trim() : id;
+        if (!identifier) {
+          return { content: [{ type: 'text' as const, text: '❌ Debe indicar el número de factura (ej: 84) o su ID.' }] };
+        }
+        const inv = await InvoiceService.getById(identifier);
+        if (!inv) {
+          return { content: [{ type: 'text' as const, text: `❌ No se encontró la factura N° ${identifier}` }] };
+        }
+
+        const folio = inv.invoice_number ? `Factura N° ${inv.invoice_number}` : `Factura ID: ${inv.id.slice(0, 8)}`;
+        const total = (Number(inv.total) || 0).toLocaleString('es-CL');
+        const subtotal = (Number(inv.subtotal) || 0).toLocaleString('es-CL');
+        const iva = (Number(inv.tax_amount) || 0).toLocaleString('es-CL');
+        const paid = (inv.paid_amount || 0).toLocaleString('es-CL');
+        const pending = (inv.pending_amount || 0).toLocaleString('es-CL');
+
+        let text = `📄 **${folio}**\n` +
+          `• **Empresa:** ${inv.company_name}\n` +
+          `• **Proyecto:** ${inv.project_name}\n` +
+          `• **Estado:** [${inv.estado_legible}]\n` +
+          `• **Monto Total:** $${total} (Neto: $${subtotal} + IVA 19%: $${iva})\n` +
+          `• **Monto Pagado:** $${paid} | **Saldo Pendiente:** $${pending}\n` +
+          `• **Fecha Emisión:** ${formatDateCL(inv.issue_date)} | **Vencimiento:** ${formatDateCL(inv.due_date)}\n` +
+          `• **Concepto / Notas:** ${inv.notes || 'Sin concepto registrado'}`;
+
+        if (inv.payments && inv.payments.length > 0) {
+          text += `\n\n💳 **Historial de Pagos:**\n` +
+            inv.payments.map((p: any) => `  - ${formatDateCL(p.payment_date)}: $${Number(p.amount).toLocaleString('es-CL')} (${p.payment_method || 'Transferencia'})`).join('\n');
+        }
+
+        return { content: [{ type: 'text' as const, text }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al obtener factura: ${err.message}` }] };
       }
     }
   );
@@ -837,23 +1016,44 @@ export function registerTools(srv: McpServer) {
   // --- listar_facturas ---
   srv.tool(
     'listar_facturas',
-    'Ver facturas generadas, con filtro por estado.',
+    'Ver facturas generadas en el CRM con detalle de empresa, proyecto, montos y estado.',
     {
-      status: z.enum(['draft', 'issued', 'sent', 'partial', 'paid', 'overdue', 'cancelled', 'void']).optional().describe('Filtrar por estado de factura'),
+      empresa: z.string().optional().describe('Filtrar por nombre o ID de empresa'),
+      proyecto_id: z.string().optional().describe('Filtrar por ID de proyecto'),
+      estado: z.enum(['pagada', 'pendiente', 'vencida', 'anulada', 'todas']).optional().describe('Filtrar por estado: pagada, pendiente, vencida, anulada (o todas)'),
+      status: z.string().optional().describe('Alias para estado'),
     },
     async (filters) => {
       try {
-        const invoices = await InvoiceService.getAll(filters);
+        const repoFilters: any = {};
+        if (filters.estado && filters.estado !== 'todas') repoFilters.status = filters.estado;
+        else if (filters.status && filters.status !== 'todas') repoFilters.status = filters.status;
+        if (filters.proyecto_id) repoFilters.project_id = filters.proyecto_id;
+        if (filters.empresa) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.empresa);
+          if (isUuid) repoFilters.company_id = filters.empresa;
+          else repoFilters.company_name = filters.empresa;
+        }
+
+        const invoices = await InvoiceService.getAll(repoFilters);
+        if (invoices.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No se encontraron facturas con los filtros indicados.' }] };
+        }
+
         const list = invoices.map((i: any) => {
-          const folio = i.invoice_number ? `N° ${i.invoice_number}` : `ID: ${i.id.slice(0, 8)} (Sin Folio)`;
+          const folio = i.invoice_number ? `Factura N° ${i.invoice_number}` : `Factura ID: ${i.id.slice(0, 8)}`;
           const paid = (i.paid_amount || 0).toLocaleString('es-CL');
           const total = (Number(i.total) || 0).toLocaleString('es-CL');
+          const subtotal = (Number(i.subtotal) || 0).toLocaleString('es-CL');
+          const iva = (Number(i.tax_amount) || 0).toLocaleString('es-CL');
           const emision = formatDateCL(i.issue_date);
           const vence = formatDateCL(i.due_date);
-          return `• ${folio} | Pagado: $${paid} / Total: $${total} | Emisión: ${emision} | Vence: ${vence} | Estado: ${i.status.toUpperCase()}`;
-        }).join('\n');
+          const concepto = i.notes ? `\n    Concepto: ${i.notes}` : '';
+          return `• **${folio}** | **Empresa:** ${i.company_name} | **Proyecto:** ${i.project_name}\n  - Estado: [${i.estado_legible}] | Total: $${total} (Neto: $${subtotal} + IVA: $${iva}) | Pagado: $${paid}\n  - Emisión: ${emision} | Vence: ${vence}${concepto}`;
+        }).join('\n\n');
+
         return {
-          content: [{ type: 'text' as const, text: invoices.length > 0 ? `📋 Facturas (${invoices.length}):\n\n${list}` : 'No se encontraron facturas.' }],
+          content: [{ type: 'text' as const, text: `📋 Facturas del CRM (${invoices.length}):\n\n${list}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al listar facturas: ${err.message}` }] };

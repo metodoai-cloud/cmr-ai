@@ -248,6 +248,7 @@ export class ProjectRepository extends BaseRepository<any> {
 
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.client_id) query = query.eq('client_id', filters.client_id);
+    if (filters.opportunity_id) query = query.eq('opportunity_id', filters.opportunity_id);
 
     const { data, error } = await query;
     if (error) throw error;

@@ -340,23 +340,8 @@ export const OpportunityService = {
     }
 
     if (data.stage === 'lost' && before?.stage !== 'lost') {
-      let linkedProjects: any[] = [];
-      const byOpp = await projectRepo.findAll({ opportunity_id: id } as any);
-      linkedProjects.push(...(byOpp || []));
-
-      if (opp.company_id) {
-        const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
-        for (const cl of clients || []) {
-          const byClient = await projectRepo.findAll({ client_id: cl.id } as any);
-          for (const cp of byClient || []) {
-            if (!linkedProjects.some(p => p.id === cp.id)) {
-              linkedProjects.push(cp);
-            }
-          }
-        }
-      }
-
-      for (const proj of linkedProjects) {
+      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+      for (const proj of linkedProjects || []) {
         if (proj.status !== 'cancelled' && proj.status !== 'completed') {
           await projectRepo.update(proj.id, { status: 'cancelled' });
         }
@@ -438,23 +423,9 @@ export const OpportunityService = {
     }
 
     if (outcome === 'lost') {
-      let allProjects: any[] = [];
-      const byOpp = await projectRepo.findAll({ opportunity_id: id } as any);
-      allProjects.push(...(byOpp || []));
+      const allProjects = await projectRepo.findAll({ opportunity_id: id } as any);
 
-      if (opp.company_id) {
-        const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
-        for (const cl of clients || []) {
-          const byClient = await projectRepo.findAll({ client_id: cl.id } as any);
-          for (const cp of byClient || []) {
-            if (!allProjects.some(p => p.id === cp.id)) {
-              allProjects.push(cp);
-            }
-          }
-        }
-      }
-
-      for (const proj of allProjects) {
+      for (const proj of allProjects || []) {
         if (proj.status !== 'cancelled' && proj.status !== 'completed') {
           result.openProjects.push(proj);
           if (cancelProjects) {

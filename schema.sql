@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS activities (
   opportunity_id UUID REFERENCES opportunities(id),
   owner_id UUID REFERENCES users(id),
   occurred_at TIMESTAMPTZ DEFAULT now(),
+  title TEXT,
   status TEXT DEFAULT 'pending'
     CHECK (status IN ('pending','in_progress','completed','cancelled')),
   result TEXT,

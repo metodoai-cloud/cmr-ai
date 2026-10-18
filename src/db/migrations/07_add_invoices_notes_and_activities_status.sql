@@ -21,7 +21,17 @@ ALTER TABLE activities
 
 COMMENT ON COLUMN activities.updated_at IS 'Fecha y hora de última modificación de la actividad';
 
--- 4. Backfill de estado en tareas existentes basándose en el campo result
+-- 4. Agregar columna title a la tabla activities
+ALTER TABLE activities 
+  ADD COLUMN IF NOT EXISTS title TEXT;
+
+COMMENT ON COLUMN activities.title IS 'Título o resumen de la tarea';
+
+UPDATE activities
+SET title = COALESCE(next_action, SPLIT_PART(notes, ' — ', 1))
+WHERE type = 'task' AND (title IS NULL OR title = '');
+
+-- 5. Backfill de estado en tareas existentes basándose en el campo result
 UPDATE activities
 SET status = 'completed'
 WHERE type = 'task' 

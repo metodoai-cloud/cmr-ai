@@ -575,10 +575,11 @@ export function registerTools(srv: McpServer) {
 
           const empresa = t.companies?.name || 'MetodoAI (Interno)';
           const fechaLimite = t.next_action_date ? formatDateCL(t.next_action_date) : 'Sin fecha asignada';
-          const titulo = t.notes || t.next_action || 'Sin descripción';
+          const titulo = t.title || t.next_action || 'Sin título';
+          const notas = (t.notes && t.notes !== titulo) ? `\n    Notas: ${t.notes}` : '';
           const resultado = t.result ? `\n    Resultado: ${t.result}` : '';
           const entregable = t.desired_outcome ? `\n    Entregable esperado: ${t.desired_outcome}` : '';
-          return `• [${stBadge}] **${titulo}**\n  - Empresa: ${empresa} | Fecha Límite: ${fechaLimite} | ID: \`${t.id}\`${entregable}${resultado}`;
+          return `• [${stBadge}] **${titulo}**\n  - Empresa: ${empresa} | Fecha Límite: ${fechaLimite} | ID: \`${t.id}\`${entregable}${notas}${resultado}`;
         }).join('\n\n');
 
         return {
@@ -602,8 +603,12 @@ export function registerTools(srv: McpServer) {
     async ({ id, resultado, notas }) => {
       try {
         const updated = await ActivityService.completeTask(id, resultado, notas, 'mcp');
+        const displayTitle = updated.title || updated.next_action || 'Tarea';
         return {
-          content: [{ type: 'text' as const, text: `✅ Tarea completada exitosamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: [✅ COMPLETADA]\n- Resultado: ${updated.result || 'Registrada como completada'}` }],
+          content: [{
+            type: 'text' as const,
+            text: `✅ Tarea completada exitosamente:\n• Título: **${displayTitle}**\n• Estado: [✅ COMPLETADA]\n• Resultado: ${updated.result || 'completada'}${updated.notes ? `\n• Notas: ${updated.notes}` : ''}`,
+          }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al completar tarea: ${err.message}` }] };
@@ -614,19 +619,26 @@ export function registerTools(srv: McpServer) {
   // --- actualizar_tarea ---
   srv.tool(
     'actualizar_tarea',
-    'Actualizar estado, fecha límite, notas o entregable de una tarea operativa.',
+    'Actualizar estado, fecha límite, notas o entregable de una tarea operativa. Las notas se guardan en el campo notas sin alterar el título de la tarea.',
     {
       id: z.string().describe('ID UUID de la tarea a actualizar'),
+      titulo: z.string().optional().describe('Nuevo título de la tarea (solo si se desea renombrar el título original; si no se envía, el título no se modifica)'),
       estado: z.enum(['pendiente', 'en_proceso', 'completada', 'cancelada', 'cancelled', 'pending', 'in_progress', 'completed']).optional().describe('Nuevo estado de la tarea: pendiente, en_proceso, completada, cancelada/cancelled'),
+      resultado: z.string().optional().describe('Resultado, conclusión o justificación del cambio de estado (ej: "Reunión cancelada por el cliente")'),
       fecha_limite: z.string().optional().describe('Nueva fecha límite (YYYY-MM-DD)'),
       siguiente_paso: z.string().optional().describe('Siguiente acción o paso posterior'),
       resultado_esperado: z.string().optional().describe('Resultado esperado o entregable concreto que valida el éxito'),
-      notas: z.string().optional().describe('Notas o comentarios de avance'),
+      notas: z.string().optional().describe('Notas, bitácora o comentarios adicionales (se guardan en notas sin modificar el título)'),
     },
-    async ({ id, estado, fecha_limite, siguiente_paso, resultado_esperado, notas }) => {
+    async ({ id, titulo, estado, resultado, fecha_limite, siguiente_paso, resultado_esperado, notas }) => {
       try {
         const payload: any = {};
+        if (titulo !== undefined) {
+          payload.title = titulo;
+          payload.next_action = titulo;
+        }
         if (estado) payload.status = estado;
+        if (resultado !== undefined) payload.result = resultado;
         if (fecha_limite !== undefined) payload.next_action_date = fecha_limite;
         if (siguiente_paso !== undefined) payload.next_action = siguiente_paso;
         if (resultado_esperado !== undefined) payload.desired_outcome = resultado_esperado;
@@ -639,8 +651,13 @@ export function registerTools(srv: McpServer) {
         else if (updated.status === 'in_progress') stBadge = '🔄 EN PROCESO';
         else if (updated.status === 'pending') stBadge = '⏳ PENDIENTE';
 
+        const displayTitle = updated.title || updated.next_action || 'Tarea';
+
         return {
-          content: [{ type: 'text' as const, text: `✅ Tarea actualizada correctamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: [${stBadge}]\n- Fecha límite: ${updated.next_action_date || 'Sin fecha'}` }],
+          content: [{
+            type: 'text' as const,
+            text: `✅ Tarea actualizada correctamente:\n• Título: **${displayTitle}**\n• Estado: [${stBadge}]\n• Resultado: ${updated.result || 'Sin resultado'}\n• Fecha límite: ${updated.next_action_date ? formatDateCL(updated.next_action_date) : 'Sin fecha'}${updated.notes ? `\n• Notas: ${updated.notes}` : ''}`,
+          }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar tarea: ${err.message}` }] };
@@ -1791,16 +1808,18 @@ export function registerTools(srv: McpServer) {
     },
     async (data) => {
       try {
-        const payload = {
+        const payload: any = {
           type: 'task',
-          notes: [data.title, data.description].filter(Boolean).join(' — '),
+          title: data.title,
           next_action: data.title,
+          notes: data.description || null,
           next_action_date: data.due_date || null,
           occurred_at: data.due_date ? `${data.due_date}T12:00:00Z` : new Date().toISOString(),
           company_id: data.company_id || null,
           contact_id: data.contact_id || null,
           opportunity_id: data.opportunity_id || null,
-          result: data.result || null,
+          result: data.result || 'pendiente',
+          status: 'pending',
         };
         const task = await ActivityService.create(payload);
         return {

@@ -196,7 +196,11 @@ export class ActivityRepository extends BaseRepository<any> {
         }
       }
       if (!st) st = 'pending';
-      return { ...a, status: st };
+
+      // El título proviene de title o next_action (o del prefijo original en notes antes de ' — ')
+      const taskTitle = a.title || a.next_action || (a.notes && a.notes.includes(' — ') ? a.notes.split(' — ')[0] : (a.notes || 'Sin título'));
+
+      return { ...a, title: taskTitle, status: st };
     });
 
     if (filters.status && filters.status !== 'todas') {

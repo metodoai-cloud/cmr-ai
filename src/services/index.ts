@@ -636,7 +636,19 @@ export const OpportunityService = {
 // ============================================================================
 export const ActivityService = {
   async create(data: any, source: 'web' | 'mcp' = 'web') {
-    const activity = await activityRepo.create(data);
+    let activity;
+    try {
+      activity = await activityRepo.create(data);
+    } catch (err: any) {
+      if (err.message?.includes('title') && data.title !== undefined) {
+        const retryData = { ...data };
+        if (!retryData.next_action) retryData.next_action = retryData.title;
+        delete retryData.title;
+        activity = await activityRepo.create(retryData);
+      } else {
+        throw err;
+      }
+    }
 
     // Update last_interaction_at on contact
     if (data.contact_id) {
@@ -670,8 +682,10 @@ export const ActivityService = {
   },
 
   async completeTask(id: string, result?: string, notes?: string, source: 'web' | 'mcp' = 'mcp') {
-    const payload: any = { status: 'completed' };
-    if (result) payload.result = result;
+    const payload: any = {
+      status: 'completed',
+      result: result || 'completada',
+    };
     if (notes) payload.notes = notes;
     return this.update(id, payload, source);
   },
@@ -685,10 +699,29 @@ export const ActivityService = {
       if (['completada', 'completado', 'completed'].includes(st)) st = 'completed';
       if (['cancelada', 'cancelado', 'cancelled', 'canceled', 'descartada'].includes(st)) st = 'cancelled';
       payload.status = st;
+
+      // Sincronizar automáticamente el campo result para que sea coherente con el nuevo estado y no quede "en proceso"
+      if (data.result !== undefined && data.result !== null) {
+        payload.result = data.result;
+      } else {
+        if (st === 'cancelled') payload.result = 'cancelada';
+        else if (st === 'completed') payload.result = 'completada';
+        else if (st === 'in_progress') payload.result = 'en proceso';
+        else if (st === 'pending') payload.result = 'pendiente';
+      }
+    } else if (data.result !== undefined) {
+      payload.result = data.result;
     }
+
+    // El título de la tarea solo se modifica si se especifica un título nuevo
+    if (data.title !== undefined) {
+      payload.title = data.title;
+      payload.next_action = data.title;
+    } else if (data.next_action !== undefined) {
+      payload.next_action = data.next_action;
+    }
+
     if (data.next_action_date !== undefined) payload.next_action_date = data.next_action_date;
-    if (data.next_action !== undefined) payload.next_action = data.next_action;
-    if (data.result !== undefined) payload.result = data.result;
     if (data.notes !== undefined) payload.notes = data.notes;
     if (data.desired_outcome !== undefined) payload.desired_outcome = data.desired_outcome;
     if (data.company_id !== undefined) payload.company_id = data.company_id;
@@ -701,17 +734,33 @@ export const ActivityService = {
     try {
       updated = await activityRepo.update(id, data);
     } catch (err: any) {
-      // Fallback defensivo si la columna status no existiera en la BD o caché de esquema
-      if (err.message?.includes('status') && data.status) {
-        const fallbackData = { ...data };
-        delete fallbackData.status;
-        if (!fallbackData.result) {
-          fallbackData.result = data.status === 'completed' ? 'completada' : (data.status === 'cancelled' ? 'cancelada' : data.status);
+      // Fallback defensivo si columnas como title o status no existieran en la BD o caché de esquema
+      let retryData = { ...data };
+      let shouldRetry = false;
+
+      if (err.message?.includes('title') && retryData.title !== undefined) {
+        if (!retryData.next_action) retryData.next_action = retryData.title;
+        delete retryData.title;
+        shouldRetry = true;
+      }
+      if (err.message?.includes('status') && retryData.status !== undefined) {
+        delete retryData.status;
+        if (!retryData.result) {
+          retryData.result = data.status === 'completed' ? 'completada' : (data.status === 'cancelled' ? 'cancelada' : data.status);
         }
-        updated = await activityRepo.update(id, fallbackData);
+        shouldRetry = true;
+      }
+
+      if (shouldRetry) {
+        updated = await activityRepo.update(id, retryData);
       } else {
         throw err;
       }
+    }
+
+    // Asegurar que el título siempre esté accesible y coherente
+    if (!updated.title) {
+      updated.title = updated.next_action || (updated.notes && updated.notes.includes(' — ') ? updated.notes.split(' — ')[0] : updated.notes);
     }
 
     await auditRepo.logAction({

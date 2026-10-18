@@ -45,7 +45,6 @@ import {
   UserCheck,
   ChevronDown,
   ChevronUp,
-  Receipt,
   Zap,
   Sparkles,
   Code2,
@@ -6046,6 +6045,8 @@ Equipo Método AI`;
             </div>
           </div>
         </div>
+      )}
+
       {/* ── MODAL DE CONFIRMACIÓN / FRENO DE MANO ── */}
       {confirmModalState && confirmModalState.isOpen && (
         <div

@@ -1539,6 +1539,20 @@ Equipo Método AI`;
 
                 const wonCount = isAll ? wonOpps.length : activeWonOpps.length;
 
+                // Gastos operativos / Egresos
+                const validExpenses = (expenses || []).filter((e) => !e.deleted_at);
+                const activeExpenses = isAll
+                  ? validExpenses
+                  : validExpenses.filter((e) => {
+                      const d = e.date || e.created_at || '';
+                      return d.startsWith(currentMonthKey);
+                    });
+
+                const totalExpensesAll = dashboardData?.finance?.total_expenses ?? validExpenses.reduce((sum, e) => sum + Number(e.total || 0), 0);
+                const displayExpenses = isAll
+                  ? totalExpensesAll
+                  : activeExpenses.reduce((sum, e) => sum + Number(e.total || 0), 0);
+
                 // Net Cash
                 const currentNetCash = dashboardData?.finance?.net_cash ?? 2320797;
 
@@ -1805,19 +1819,19 @@ Equipo Método AI`;
                         <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
                           {formatMoney(currentNetCash)}
                         </div>
-                        <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ color: 'var(--success)', fontWeight: 600 }}>
-                            {isAll ? `Cobrado total: ${formatMoney(totalCollectedAll)}` : `Cobrado mes: ${formatMoney(displayCollected)}`}
-                          </span>
-                          {Number(dashboardData?.finance?.pending_taxes || 0) > 0 && (
-                            <>
-                              <span style={{ color: 'var(--text-muted)' }}>·</span>
-                              <span style={{ color: 'var(--warning)' }}>
-                                IVA: {formatMoney(dashboardData.finance.pending_taxes)}
-                              </span>
-                            </>
-                          )}
+                        {/* Fila 3: Cobrado en su propia línea vertical */}
+                        <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, marginTop: '6px' }}>
+                          {isAll ? `Cobrado total: ${formatMoney(totalCollectedAll)}` : `Cobrado mes: ${formatMoney(displayCollected)}`}
                         </div>
+                        {/* Fila 4: Gastado en su propia línea vertical */}
+                        <div style={{ fontSize: '0.75rem', color: '#f43f5e', fontWeight: 600, marginTop: '3px' }}>
+                          {isAll ? `Gastado total: ${formatMoney(totalExpensesAll)}` : `Gastado mes: ${formatMoney(displayExpenses)}`}
+                        </div>
+                        {Number(dashboardData?.finance?.pending_taxes || 0) > 0 && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--warning)', marginTop: '3px' }}>
+                            IVA (F29): {formatMoney(dashboardData.finance.pending_taxes)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>

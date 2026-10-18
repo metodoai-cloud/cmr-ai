@@ -98,30 +98,87 @@ jobs:
             done
             echo "📂 Trabajando en: $(pwd)"
             git pull origin main
-            npm install --prefer-offline 2>/dev/null || npm install
+
+            # 1. Dependencias Backend
+            echo "📦 Instalando dependencias de backend..."
+            npm install --include=dev
+
+            # 2. Compilar Frontend
             if [ -d "frontend" ]; then
               echo "🔨 Compilando frontend..."
               cd frontend
-              npm install --prefer-offline 2>/dev/null || npm install
+              npm install --include=dev
               npm run build
               cd ..
-              mkdir -p dist
-              cp -rf frontend/dist/* dist/ 2>/dev/null || true
+
+              # Sincronizar frontend a Nginx webroot
               if [ -d "/var/www/html" ]; then
                 cp -rf frontend/dist/* /var/www/html/ 2>/dev/null || true
               fi
             fi
-            echo "🔄 Reiniciando procesos..."
+
+            # 3. Compilar Backend
+            echo "🔨 Compilando backend..."
+            npm run build || true
+
+            # 4. Auto-recuperación de procesos Backend
+            echo "🔄 Diagnosticando y reiniciando backend..."
+
+            # Manejo de PM2
             if command -v pm2 &> /dev/null; then
-              pm2 restart all --update-env || pm2 restart all || true
+              echo "📋 Estado actual de PM2:"
+              pm2 list || true
+
+              # Si no hay ningún proceso corriendo o crm no existe en PM2, iniciarlo
+              if ! pm2 describe crm &>/dev/null && ! pm2 describe crm-backend &>/dev/null && ! pm2 describe CRM_IA &>/dev/null && ! pm2 describe crm_ia &>/dev/null; then
+                echo "🚀 Iniciando CRM en PM2..."
+                pm2 start "npx tsx src/index.ts" --name "crm" || pm2 start npm --name "crm" -- run dev
+              else
+                echo "🔄 Reiniciando CRM en PM2..."
+                pm2 restart all --update-env || pm2 restart crm --update-env || pm2 restart CRM_IA --update-env || pm2 start "npx tsx src/index.ts" --name "crm" || true
+              fi
+              pm2 save || true
+              echo "📋 Estado de PM2 tras reinicio:"
+              pm2 list || true
             fi
-            if systemctl is-active --quiet crm 2>/dev/null; then
-              systemctl restart crm || true
+
+            # Manejo de Systemd (limpiar estado fallido y reiniciar)
+            for svc in crm crm_ia CRM_IA crm-ia crm-backend; do
+              if systemctl list-unit-files "$svc.service" 2>/dev/null | grep -q "$svc"; then
+                echo "🔄 Servicio systemd $svc detectado. Limpiando estado y reiniciando..."
+                systemctl reset-failed "$svc" 2>/dev/null || true
+                systemctl restart "$svc" 2>/dev/null || true
+                systemctl status "$svc" --no-pager -l 2>/dev/null || true
+              fi
+            done
+
+            # 5. Comprobar salud del puerto 3005
+            echo "🔍 Verificando respuesta del servidor..."
+            sleep 4
+            HEALTH_CHECK=0
+            for port in 3005 3000; do
+              if curl -s -f "http://127.0.0.1:$port/api/health" &>/dev/null; then
+                echo "✅ Backend respondiendo OK en http://127.0.0.1:$port/api/health"
+                HEALTH_CHECK=1
+                break
+              fi
+            done
+
+            if [ $HEALTH_CHECK -eq 0 ]; then
+              echo "⚠️ Alerta: El backend no respondió inmediatamente en puerto 3005. Mostrando diagnóstico:"
+              if command -v pm2 &> /dev/null; then
+                pm2 logs --lines 25 --nostream 2>/dev/null || true
+              fi
+              ss -tlpn 2>/dev/null | grep -E "3005|3000|node" || true
             fi
-            if systemctl is-active --quiet nginx 2>/dev/null; then
-              systemctl reload nginx || true
+
+            # 6. Recargar Nginx
+            echo "🔄 Verificando y recargando Nginx..."
+            if command -v nginx &> /dev/null; then
+              nginx -t && (systemctl reload nginx || systemctl restart nginx) || echo "⚠️ Revisa la configuración de Nginx"
             fi
-            echo "✨ ¡Despliegue completado exitosamente en el VPS!"
+
+            echo "✨ ¡Despliegue y verificación completados exitosamente!"
           '
           
           SUCCESS=0

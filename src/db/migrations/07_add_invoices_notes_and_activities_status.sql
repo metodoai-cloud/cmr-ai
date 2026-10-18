@@ -15,7 +15,13 @@ ALTER TABLE activities
 
 COMMENT ON COLUMN activities.status IS 'Estado operativo de la tarea: pending, in_progress, completed, cancelled';
 
--- 3. Backfill de estado en tareas existentes basándose en el campo result
+-- 3. Agregar columna updated_at a la tabla activities
+ALTER TABLE activities 
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+COMMENT ON COLUMN activities.updated_at IS 'Fecha y hora de última modificación de la actividad';
+
+-- 4. Backfill de estado en tareas existentes basándose en el campo result
 UPDATE activities
 SET status = 'completed'
 WHERE type = 'task' 
@@ -25,6 +31,11 @@ UPDATE activities
 SET status = 'in_progress'
 WHERE type = 'task' 
   AND LOWER(TRIM(COALESCE(result, ''))) IN ('en proceso', 'in progress', 'en curso');
+
+UPDATE activities
+SET status = 'cancelled'
+WHERE type = 'task' 
+  AND LOWER(TRIM(COALESCE(result, ''))) IN ('cancelada', 'cancelado', 'cancelled', 'descartada');
 
 UPDATE activities
 SET status = 'pending'

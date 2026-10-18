@@ -202,7 +202,8 @@ CREATE TABLE IF NOT EXISTS activities (
   notes TEXT,
   next_action TEXT,
   next_action_date DATE,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 10. CLIENTS

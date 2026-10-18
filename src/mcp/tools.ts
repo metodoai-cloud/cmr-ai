@@ -568,7 +568,11 @@ export function registerTools(srv: McpServer) {
         }
 
         const list = tasks.map((t: any) => {
-          const stBadge = t.status === 'completed' ? '✅ COMPLETADA' : (t.status === 'in_progress' ? '🔄 EN PROCESO' : '⏳ PENDIENTE');
+          let stBadge = '⏳ PENDIENTE';
+          if (t.status === 'completed') stBadge = '✅ COMPLETADA';
+          else if (t.status === 'in_progress') stBadge = '🔄 EN PROCESO';
+          else if (t.status === 'cancelled') stBadge = '🚫 CANCELADA';
+
           const empresa = t.companies?.name || 'MetodoAI (Interno)';
           const fechaLimite = t.next_action_date ? formatDateCL(t.next_action_date) : 'Sin fecha asignada';
           const titulo = t.notes || t.next_action || 'Sin descripción';
@@ -599,7 +603,7 @@ export function registerTools(srv: McpServer) {
       try {
         const updated = await ActivityService.completeTask(id, resultado, notas, 'mcp');
         return {
-          content: [{ type: 'text' as const, text: `✅ Tarea completada exitosamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: COMPLETADA\n- Resultado: ${updated.result || 'Registrada como completada'}` }],
+          content: [{ type: 'text' as const, text: `✅ Tarea completada exitosamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: [✅ COMPLETADA]\n- Resultado: ${updated.result || 'Registrada como completada'}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al completar tarea: ${err.message}` }] };
@@ -613,7 +617,7 @@ export function registerTools(srv: McpServer) {
     'Actualizar estado, fecha límite, notas o entregable de una tarea operativa.',
     {
       id: z.string().describe('ID UUID de la tarea a actualizar'),
-      estado: z.enum(['pendiente', 'en_proceso', 'completada', 'cancelled']).optional().describe('Nuevo estado de la tarea'),
+      estado: z.enum(['pendiente', 'en_proceso', 'completada', 'cancelada', 'cancelled', 'pending', 'in_progress', 'completed']).optional().describe('Nuevo estado de la tarea: pendiente, en_proceso, completada, cancelada/cancelled'),
       fecha_limite: z.string().optional().describe('Nueva fecha límite (YYYY-MM-DD)'),
       siguiente_paso: z.string().optional().describe('Siguiente acción o paso posterior'),
       resultado_esperado: z.string().optional().describe('Resultado esperado o entregable concreto que valida el éxito'),
@@ -629,8 +633,14 @@ export function registerTools(srv: McpServer) {
         if (notas !== undefined) payload.notes = notas;
 
         const updated = await ActivityService.updateTask(id, payload, 'mcp');
+        let stBadge = updated.status;
+        if (updated.status === 'completed') stBadge = '✅ COMPLETADA';
+        else if (updated.status === 'cancelled') stBadge = '🚫 CANCELADA';
+        else if (updated.status === 'in_progress') stBadge = '🔄 EN PROCESO';
+        else if (updated.status === 'pending') stBadge = '⏳ PENDIENTE';
+
         return {
-          content: [{ type: 'text' as const, text: `✅ Tarea actualizada correctamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: ${updated.status}\n- Fecha límite: ${updated.next_action_date || 'Sin fecha'}` }],
+          content: [{ type: 'text' as const, text: `✅ Tarea actualizada correctamente:\n- Tarea: ${updated.notes || updated.next_action || id}\n- Estado: [${stBadge}]\n- Fecha límite: ${updated.next_action_date || 'Sin fecha'}` }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar tarea: ${err.message}` }] };
@@ -732,16 +742,44 @@ export function registerTools(srv: McpServer) {
   // --- cerrar_oportunidad_perdida ---
   srv.tool(
     'cerrar_oportunidad_perdida',
-    'Marcar una oportunidad como perdida en el pipeline, registrando el motivo de pérdida.',
+    'Marcar una oportunidad como perdida en el pipeline, registrando el motivo de pérdida y gestionando sus proyectos asociados.',
     {
-      id: z.string().describe('ID de la oportunidad perdida'),
+      id: z.string().describe('ID UUID o nombre de la oportunidad perdida'),
       reason: z.string().optional().describe('Motivo de la pérdida (ej: Precio alto, Decidió esperar, Eligió a la competencia)'),
+      cancelar_proyectos: z.boolean().optional().default(true).describe('Si es true (por defecto), cancela automáticamente los proyectos asociados en curso para mantener consistencia'),
     },
-    async ({ id, reason }) => {
+    async ({ id, reason, cancelar_proyectos = true }) => {
       try {
-        const result = await OpportunityService.closeLost(id, reason);
+        let oppId = id.trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(oppId);
+        if (!isUuid) {
+          const found = await OpportunityService.search(oppId);
+          if (found && found.length > 0) {
+            oppId = found[0].id;
+          }
+        }
+
+        const result = await OpportunityService.closeLost(oppId, reason, cancelar_proyectos, 'mcp');
+        const opp = result.opportunity;
+
+        let msg = `📉 **Oportunidad marcada como PERDIDA:**\n` +
+          `• **Oportunidad:** ${opp?.name || oppId}\n` +
+          `• **ID:** \`${opp?.id || oppId}\`\n` +
+          `• **Motivo:** ${reason || opp?.lost_reason || 'No especificado'}`;
+
+        if (result.cancelledProjects && result.cancelledProjects.length > 0) {
+          msg += `\n\n⚠️ **Proyectos asociados cancelados automáticamente (${result.cancelledProjects.length}):**\n` +
+            result.cancelledProjects.map((p: any) => `• Proyecto: "${p.name}" (ID: \`${p.id}\`) → Estado cambiado a **CANCELADO**`).join('\n');
+        } else if (result.openProjects && result.openProjects.length > 0 && !cancelar_proyectos) {
+          msg += `\n\n⚠️ **ATENCIÓN: Existen proyectos asociados que siguen abiertos (${result.openProjects.length}):**\n` +
+            result.openProjects.map((p: any) => `• Proyecto: "${p.name}" (ID: \`${p.id}\`, Estado actual: ${p.status})`).join('\n') +
+            `\nPuedes cancelarlos usando actualizar_proyecto o ejecutando cerrar_oportunidad_perdida con cancelar_proyectos: true.`;
+        } else {
+          msg += `\n• **Proyectos asociados:** No hay proyectos abiertos pendientes.`;
+        }
+
         return {
-          content: [{ type: 'text' as const, text: `📉 Oportunidad marcada como PERDIDA (ID: ${id}). Motivo: ${reason || 'No especificado'}.` }],
+          content: [{ type: 'text' as const, text: msg }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al cerrar oportunidad perdida: ${err.message}` }] };
@@ -870,17 +908,68 @@ export function registerTools(srv: McpServer) {
         if (!identifier) {
           return { content: [{ type: 'text' as const, text: '❌ Debe indicar el número de factura (ej: 84) o su ID.' }] };
         }
+
+        const prev = await InvoiceService.getById(identifier);
+        if (!prev) {
+          return { content: [{ type: 'text' as const, text: `❌ No se encontró la factura con identificador: ${identifier}` }] };
+        }
+
         const updatePayload: any = { ...data };
         if (estado) updatePayload.status = estado;
         else if (status) updatePayload.status = status;
 
         const invoice = await InvoiceService.update(identifier, updatePayload, 'mcp');
         const folioText = invoice.invoice_number ? `Factura N° ${invoice.invoice_number}` : `Factura ID: ${invoice.id.slice(0, 8)}`;
+
+        // Detectar cambios aplicados
+        const changes: string[] = [];
+        if (updatePayload.subtotal !== undefined && Number(prev.subtotal) !== Number(invoice.subtotal)) {
+          changes.push(`• Neto: $${Number(prev.subtotal).toLocaleString('es-CL')} → $${Number(invoice.subtotal).toLocaleString('es-CL')}`);
+        }
+        if (updatePayload.tax_amount !== undefined && Number(prev.tax_amount) !== Number(invoice.tax_amount)) {
+          changes.push(`• IVA (19%): $${Number(prev.tax_amount).toLocaleString('es-CL')} → $${Number(invoice.tax_amount).toLocaleString('es-CL')}`);
+        }
+        if (updatePayload.total !== undefined && Number(prev.total) !== Number(invoice.total)) {
+          changes.push(`• Total: $${Number(prev.total).toLocaleString('es-CL')} → $${Number(invoice.total).toLocaleString('es-CL')}`);
+        }
+        if (prev.estado !== invoice.estado) {
+          changes.push(`• Estado: [${prev.estado_legible}] → [${invoice.estado_legible}]`);
+        }
+        if (updatePayload.due_date && prev.due_date !== invoice.due_date) {
+          changes.push(`• Vencimiento: ${formatDateCL(prev.due_date)} → ${formatDateCL(invoice.due_date)}`);
+        }
+        if (updatePayload.issue_date && prev.issue_date !== invoice.issue_date) {
+          changes.push(`• Emisión: ${formatDateCL(prev.issue_date)} → ${formatDateCL(invoice.issue_date)}`);
+        }
+        if (updatePayload.notes !== undefined && (prev.notes || '') !== (invoice.notes || '')) {
+          changes.push(`• Concepto: "${prev.notes || 'Sin concepto'}" → "${invoice.notes || 'Sin concepto'}"`);
+        }
+
+        const changesSection = changes.length > 0
+          ? `\n\n📝 **Cambios realizados:**\n${changes.join('\n')}`
+          : '\n\n📝 **Cambios realizados:** Ninguno (valores confirmados sin variación).';
+
+        const totalFormatted = (Number(invoice.total) || 0).toLocaleString('es-CL');
+        const subtotalFormatted = (Number(invoice.subtotal) || 0).toLocaleString('es-CL');
+        const ivaFormatted = (Number(invoice.tax_amount) || 0).toLocaleString('es-CL');
+        const pagadoFormatted = (invoice.paid_amount || 0).toLocaleString('es-CL');
+        const saldoFormatted = (invoice.pending_amount || 0).toLocaleString('es-CL');
+
+        let msg = `✅ **${folioText} actualizada correctamente:**\n` +
+          `• **Empresa:** ${invoice.company_name}\n` +
+          `• **Proyecto:** ${invoice.project_name}\n` +
+          `• **Estado:** [${invoice.estado_legible}]\n` +
+          `• **Monto Total:** $${totalFormatted} (Neto: $${subtotalFormatted} + IVA 19%: $${ivaFormatted})\n` +
+          `• **Monto Pagado:** $${pagadoFormatted} | **Saldo Pendiente:** $${saldoFormatted}\n` +
+          `• **Fecha Emisión:** ${formatDateCL(invoice.issue_date)} | **Vencimiento:** ${formatDateCL(invoice.due_date)}`;
+
+        if (invoice.notes) {
+          msg += `\n• **Concepto / Notas:** ${invoice.notes}`;
+        }
+        msg += changesSection;
+
         return {
-          content: [{
-            type: 'text' as const,
-            text: `✅ ${folioText} actualizada correctamente:\n- Empresa: ${invoice.company_name}\n- Estado: [${invoice.estado_legible}]\n- Total: $${(Number(invoice.total) || 0).toLocaleString('es-CL')} | Pagado: $${(invoice.paid_amount || 0).toLocaleString('es-CL')}\n- Emisión: ${formatDateCL(invoice.issue_date)} | Vencimiento: ${formatDateCL(invoice.due_date)}${invoice.notes ? `\n- Concepto: ${invoice.notes}` : ''}`,
-          }],
+          content: [{ type: 'text' as const, text: msg }],
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar factura: ${err.message}` }] };

@@ -191,6 +191,8 @@ export class ActivityRepository extends BaseRepository<any> {
           st = 'completed';
         } else if (['en proceso', 'in progress', 'en curso'].includes(rLower)) {
           st = 'in_progress';
+        } else if (['cancelada', 'cancelado', 'cancelled', 'descartada'].includes(rLower)) {
+          st = 'cancelled';
         }
       }
       if (!st) st = 'pending';
@@ -198,10 +200,11 @@ export class ActivityRepository extends BaseRepository<any> {
     });
 
     if (filters.status && filters.status !== 'todas') {
-      let targetStatus = filters.status;
-      if (targetStatus === 'pendiente') targetStatus = 'pending';
-      if (targetStatus === 'en_proceso' || targetStatus === 'en_curso') targetStatus = 'in_progress';
-      if (targetStatus === 'completada') targetStatus = 'completed';
+      let targetStatus = filters.status.toLowerCase().trim();
+      if (['pendiente', 'pending'].includes(targetStatus)) targetStatus = 'pending';
+      if (['en_proceso', 'en_curso', 'in_progress'].includes(targetStatus)) targetStatus = 'in_progress';
+      if (['completada', 'completado', 'completed'].includes(targetStatus)) targetStatus = 'completed';
+      if (['cancelada', 'cancelado', 'cancelled', 'descartada'].includes(targetStatus)) targetStatus = 'cancelled';
       list = list.filter((a: any) => a.status === targetStatus);
     }
 

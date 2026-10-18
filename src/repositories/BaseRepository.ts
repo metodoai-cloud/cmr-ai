@@ -12,6 +12,11 @@ const SOFT_DELETE_TABLES = new Set([
   'invoices', 'expenses',
 ]);
 
+// Tables that do not have an updated_at column in PostgreSQL
+const TABLES_WITHOUT_UPDATED_AT = new Set([
+  'payments', 'withdrawals', 'business_events', 'audit_logs',
+]);
+
 export interface QueryFilters {
   id?: string;
   status?: string;
@@ -101,12 +106,30 @@ export class BaseRepository<T extends Record<string, any>> {
   }
 
   async update(id: string, updates: Partial<T>): Promise<T> {
-    const { data, error } = await this.db
+    const payload: any = { ...updates };
+    if (!TABLES_WITHOUT_UPDATED_AT.has(this.tableName)) {
+      payload.updated_at = new Date().toISOString();
+    }
+
+    let { data, error } = await this.db
       .from(this.tableName)
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .select()
       .single();
+
+    // Fallback defensivo: si la tabla o caché aún no cuenta con la columna updated_at
+    if (error && (error.message?.includes('updated_at') || error.code === 'PGRST204')) {
+      delete payload.updated_at;
+      const retry = await this.db
+        .from(this.tableName)
+        .update(payload)
+        .eq('id', id)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
     return data as T;

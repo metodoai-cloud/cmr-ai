@@ -340,8 +340,23 @@ export const OpportunityService = {
     }
 
     if (data.stage === 'lost' && before?.stage !== 'lost') {
-      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      for (const proj of linkedProjects || []) {
+      let linkedProjects: any[] = [];
+      const byOpp = await projectRepo.findAll({ opportunity_id: id } as any);
+      linkedProjects.push(...(byOpp || []));
+
+      if (opp.company_id) {
+        const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
+        for (const cl of clients || []) {
+          const byClient = await projectRepo.findAll({ client_id: cl.id } as any);
+          for (const cp of byClient || []) {
+            if (!linkedProjects.some(p => p.id === cp.id)) {
+              linkedProjects.push(cp);
+            }
+          }
+        }
+      }
+
+      for (const proj of linkedProjects) {
         if (proj.status !== 'cancelled' && proj.status !== 'completed') {
           await projectRepo.update(proj.id, { status: 'cancelled' });
         }
@@ -379,11 +394,11 @@ export const OpportunityService = {
     if (finalValue !== undefined && Number(finalValue) > 0) {
       await oppRepo.update(id, { setup_value: finalValue });
     }
-    return this.closeOpportunity(id, 'won', undefined, source);
+    return this.closeOpportunity(id, 'won', undefined, false, source);
   },
 
-  async closeLost(id: string, reason?: string, source: 'web' | 'mcp' = 'mcp') {
-    return this.closeOpportunity(id, 'lost', reason, source);
+  async closeLost(id: string, reason?: string, cancelProjects: boolean = true, source: 'web' | 'mcp' = 'mcp') {
+    return this.closeOpportunity(id, 'lost', reason, cancelProjects, source);
   },
 
   // ==========================================================================
@@ -394,32 +409,60 @@ export const OpportunityService = {
     id: string,
     outcome: 'won' | 'lost',
     lostReason?: string,
+    cancelProjects: boolean = true,
     source: 'web' | 'mcp' = 'web'
   ) {
     const opp = await oppRepo.findById(id);
     if (!opp) throw new Error(`Opportunity ${id} not found`);
-    if (opp.stage === 'won' || opp.stage === 'lost') {
-      throw new Error(`Opportunity already closed as ${opp.stage}`);
+    if (opp.stage === 'won' && outcome === 'won') {
+      throw new Error(`Opportunity already closed as won`);
     }
 
     const closedAt = new Date().toISOString();
-    const result: any = { opportunity: null, client: null, project: null, subscription: null, invoice: null };
+    const result: any = { opportunity: null, client: null, project: null, subscription: null, invoice: null, cancelledProjects: [], openProjects: [] };
 
     // 1. Update opportunity stage
-    result.opportunity = await oppRepo.update(id, {
-      stage: outcome,
-      probability: outcome === 'won' ? 1.0 : 0,
-      closed_at: closedAt,
-      lost_reason: outcome === 'lost' ? lostReason : null,
-    });
+    if (opp.stage !== outcome) {
+      result.opportunity = await oppRepo.update(id, {
+        stage: outcome,
+        probability: outcome === 'won' ? 1.0 : 0,
+        closed_at: closedAt,
+        lost_reason: outcome === 'lost' ? lostReason : null,
+      });
+    } else {
+      if (outcome === 'lost' && lostReason && lostReason !== opp.lost_reason) {
+        result.opportunity = await oppRepo.update(id, { lost_reason: lostReason });
+      } else {
+        result.opportunity = opp;
+      }
+    }
 
     if (outcome === 'lost') {
-      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      for (const proj of existingProjects || []) {
+      let allProjects: any[] = [];
+      const byOpp = await projectRepo.findAll({ opportunity_id: id } as any);
+      allProjects.push(...(byOpp || []));
+
+      if (opp.company_id) {
+        const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
+        for (const cl of clients || []) {
+          const byClient = await projectRepo.findAll({ client_id: cl.id } as any);
+          for (const cp of byClient || []) {
+            if (!allProjects.some(p => p.id === cp.id)) {
+              allProjects.push(cp);
+            }
+          }
+        }
+      }
+
+      for (const proj of allProjects) {
         if (proj.status !== 'cancelled' && proj.status !== 'completed') {
-          await projectRepo.update(proj.id, {
-            status: 'cancelled',
-          });
+          result.openProjects.push(proj);
+          if (cancelProjects) {
+            const updatedProj = await projectRepo.update(proj.id, {
+              status: 'cancelled',
+            });
+            result.cancelledProjects.push(updatedProj);
+          }
         }
       }
 
@@ -427,7 +470,7 @@ export const OpportunityService = {
         event_type: 'opportunity.lost',
         entity_type: 'opportunity',
         entity_id: id,
-        payload: { reason: lostReason },
+        payload: { reason: lostReason, cancelled_projects_count: result.cancelledProjects.length },
       });
       await auditRepo.logAction({
         actorType: source === 'mcp' ? 'ai' : 'human',
@@ -636,10 +679,11 @@ export const ActivityService = {
   async updateTask(id: string, data: any, source: 'web' | 'mcp' = 'mcp') {
     const payload: any = {};
     if (data.status) {
-      let st = data.status;
-      if (st === 'pendiente') st = 'pending';
-      if (st === 'en_proceso' || st === 'en_curso') st = 'in_progress';
-      if (st === 'completada') st = 'completed';
+      let st = String(data.status).toLowerCase().trim();
+      if (['pendiente', 'pending'].includes(st)) st = 'pending';
+      if (['en_proceso', 'en_curso', 'in_progress'].includes(st)) st = 'in_progress';
+      if (['completada', 'completado', 'completed'].includes(st)) st = 'completed';
+      if (['cancelada', 'cancelado', 'cancelled', 'canceled', 'descartada'].includes(st)) st = 'cancelled';
       payload.status = st;
     }
     if (data.next_action_date !== undefined) payload.next_action_date = data.next_action_date;
@@ -653,7 +697,23 @@ export const ActivityService = {
 
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
     const before = await activityRepo.findById(id);
-    const updated = await activityRepo.update(id, data);
+    let updated;
+    try {
+      updated = await activityRepo.update(id, data);
+    } catch (err: any) {
+      // Fallback defensivo si la columna status no existiera en la BD o caché de esquema
+      if (err.message?.includes('status') && data.status) {
+        const fallbackData = { ...data };
+        delete fallbackData.status;
+        if (!fallbackData.result) {
+          fallbackData.result = data.status === 'completed' ? 'completada' : (data.status === 'cancelled' ? 'cancelada' : data.status);
+        }
+        updated = await activityRepo.update(id, fallbackData);
+      } else {
+        throw err;
+      }
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -923,6 +983,10 @@ export const InvoiceService = {
       await paymentRepo.deleteByInvoice(id);
     }
 
+    // Re-consultar la factura con todas sus relaciones (clients, companies, projects, payments)
+    const fresh = await invoiceRepo.findById(id);
+    const enriched = enrichInvoice(fresh || updated);
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,
@@ -930,9 +994,9 @@ export const InvoiceService = {
       entityId: id,
       action: 'updated',
       beforeData: existing,
-      afterData: updated,
+      afterData: enriched,
     });
-    return enrichInvoice(updated);
+    return enriched;
   },
 
   async issue(id: string, source: 'web' | 'mcp' = 'web') {

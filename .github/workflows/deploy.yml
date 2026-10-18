@@ -122,28 +122,38 @@ jobs:
             npm run build || true
 
             # 4. Auto-recuperación de procesos Backend
-            echo "🔄 Diagnosticando y reiniciando backend..."
+            echo "🔄 Diagnosticando y reiniciando backend y servidor MCP..."
 
             # Manejo de PM2
             if command -v pm2 &> /dev/null; then
               echo "📋 Estado actual de PM2:"
               pm2 list || true
 
-              # Si no hay ningún proceso corriendo o crm no existe en PM2, iniciarlo
+              # Proceso CRM Backend (Port 3005)
               if ! pm2 describe crm &>/dev/null && ! pm2 describe crm-backend &>/dev/null && ! pm2 describe CRM_IA &>/dev/null && ! pm2 describe crm_ia &>/dev/null; then
-                echo "🚀 Iniciando CRM en PM2..."
-                pm2 start "npx tsx src/index.ts" --name "crm" || pm2 start npm --name "crm" -- run dev
+                echo "🚀 Iniciando CRM Backend en PM2..."
+                pm2 start "npx tsx src/index.ts" --name "crm"
               else
-                echo "🔄 Reiniciando CRM en PM2..."
-                pm2 restart all --update-env || pm2 restart crm --update-env || pm2 restart CRM_IA --update-env || pm2 start "npx tsx src/index.ts" --name "crm" || true
+                echo "🔄 Reiniciando CRM Backend en PM2..."
+                pm2 restart crm --update-env || pm2 restart CRM_IA --update-env || pm2 start "npx tsx src/index.ts" --name "crm" || true
               fi
+
+              # Proceso CRM MCP Server (Port 3002)
+              if ! pm2 describe crm-mcp &>/dev/null; then
+                echo "🚀 Iniciando CRM MCP Server en PM2..."
+                pm2 start "npx tsx src/mcp/http-server.ts" --name "crm-mcp"
+              else
+                echo "🔄 Reiniciando CRM MCP Server en PM2..."
+                pm2 restart crm-mcp --update-env || pm2 start "npx tsx src/mcp/http-server.ts" --name "crm-mcp" || true
+              fi
+
               pm2 save || true
               echo "📋 Estado de PM2 tras reinicio:"
               pm2 list || true
             fi
 
-            # Manejo de Systemd (limpiar estado fallido y reiniciar)
-            for svc in crm crm_ia CRM_IA crm-ia crm-backend; do
+            # Manejo de Systemd (limpiar estado fallido y reiniciar si existen)
+            for svc in crm crm_ia CRM_IA crm-ia crm-backend crm-mcp; do
               if systemctl list-unit-files "$svc.service" 2>/dev/null | grep -q "$svc"; then
                 echo "🔄 Servicio systemd $svc detectado. Limpiando estado y reiniciando..."
                 systemctl reset-failed "$svc" 2>/dev/null || true
@@ -152,25 +162,28 @@ jobs:
               fi
             done
 
-            # 5. Comprobar salud del puerto 3005
-            echo "🔍 Verificando respuesta del servidor..."
+            # 5. Comprobar salud de los puertos
+            echo "🔍 Verificando respuesta de los servidores..."
             sleep 4
-            HEALTH_CHECK=0
-            for port in 3005 3000; do
-              if curl -s -f "http://127.0.0.1:$port/api/health" &>/dev/null; then
-                echo "✅ Backend respondiendo OK en http://127.0.0.1:$port/api/health"
-                HEALTH_CHECK=1
-                break
-              fi
-            done
 
-            if [ $HEALTH_CHECK -eq 0 ]; then
-              echo "⚠️ Alerta: El backend no respondió inmediatamente en puerto 3005. Mostrando diagnóstico:"
-              if command -v pm2 &> /dev/null; then
-                pm2 logs --lines 25 --nostream 2>/dev/null || true
-              fi
-              ss -tlpn 2>/dev/null | grep -E "3005|3000|node" || true
+            # Health check puerto 3005 (API + MCP)
+            if curl -s -f "http://127.0.0.1:3005/health" &>/dev/null || curl -s -f "http://127.0.0.1:3005/api/health" &>/dev/null; then
+              echo "✅ Backend & MCP respondiendo OK en http://127.0.0.1:3005"
+            else
+              echo "⚠️ Alerta: El backend no respondió en puerto 3005."
             fi
+
+            # Health check puerto 3002 (MCP dedicado)
+            if curl -s -f "http://127.0.0.1:3002/health" &>/dev/null; then
+              echo "✅ Servidor MCP dedicado respondiendo OK en http://127.0.0.1:3002/health"
+            else
+              echo "⚠️ Alerta: El servidor MCP no respondió en puerto 3002."
+            fi
+
+            if command -v pm2 &> /dev/null; then
+              pm2 logs --lines 15 --nostream 2>/dev/null || true
+            fi
+            ss -tlpn 2>/dev/null | grep -E "3005|3002|3000|node" || true
 
             # 6. Recargar Nginx
             echo "🔄 Verificando y recargando Nginx..."

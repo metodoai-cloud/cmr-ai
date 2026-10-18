@@ -12,12 +12,34 @@ import {
   HookService, ServiceCatalog, SubscriptionService, ProjectService,
   AnalyticsService, VendorService, SurveyService,
 } from '../services/index.js';
+import { handleMcp } from '../mcp/handler.js';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+  allowedHeaders: [
+    'Content-Type', 'Authorization', 'x-session-id',
+    'mcp-session-id', 'Accept', 'mcp-protocol-version'
+  ]
+}));
 app.use(express.json());
 
-// === Health ===
+// === MCP Endpoints for Claude Cowork / Claude Desktop ===
+app.all('/mcp', handleMcp);
+app.all('/sse', handleMcp);
+
+// === Health Checks ===
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'CRM AI API & MCP Server',
+    tools_count: 27,
+    endpoints: ['/mcp', '/sse', '/api', '/health', '/api/health'],
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
@@ -438,7 +460,7 @@ if (distPath) {
     }
   }));
   app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/mcp') && !req.path.startsWith('/sse')) {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/mcp') && !req.path.startsWith('/sse') && req.path !== '/health') {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       return res.sendFile(path.join(distPath!, 'index.html'));
     }

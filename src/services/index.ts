@@ -261,36 +261,103 @@ export const OpportunityService = {
     return opp;
   },
 
-  async moveStage(id: string, newStage: string, source: 'web' | 'mcp' = 'web') {
+  async moveStage(id: string, newStage: string, source: 'web' | 'mcp' = 'web', force: boolean = false) {
     const before = await oppRepo.findById(id);
     if (!before) throw new Error(`Opportunity ${id} not found`);
+
+    const beforeStage = before.stage || 'new';
+
+    if (beforeStage !== newStage) {
+      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+
+      const PRELIMINARY_STAGES = ['new', 'contacted', 'qualified', 'meeting_scheduled', 'meeting_completed', 'proposal_sent', 'negotiation'];
+      const ACTIVE_STAGES = ['pilot', 'won'];
+
+      // RETROCESO: Si se retrocede desde etapa activa (pilot o won) hacia una preliminar
+      if (ACTIVE_STAGES.includes(beforeStage) && PRELIMINARY_STAGES.includes(newStage)) {
+        const activeTech = (linkedProjects || []).filter(
+          (p: any) => p.status === 'in_progress' || p.status === 'completed'
+        );
+        if (activeTech.length > 0 && !force) {
+          const pStatus = activeTech[0].status === 'completed' ? 'Completado' : 'En Progreso';
+          const err: any = new Error(
+            `CONFIRM_REQUIRED: El proyecto técnico ("${activeTech[0].name}") ya está en ejecución activa (${pStatus}). Si retrocedes la oportunidad a "${newStage}", el proyecto técnico se mantendrá intacto para no perder horas ni avances del equipo. ¿Deseas continuar?`
+          );
+          err.code = 'CONFIRM_REQUIRED';
+          throw err;
+        }
+
+        // Si los proyectos están en onboarding, rollback suave a 'review'
+        for (const proj of linkedProjects || []) {
+          if (proj.status === 'onboarding') {
+            await projectRepo.update(proj.id, { status: 'review' });
+          }
+        }
+      }
+
+      // AVANCE a PILOTO
+      if (newStage === 'pilot') {
+        if (!linkedProjects || linkedProjects.length === 0) {
+          let clientId = null;
+          if (before.company_id) {
+            const clients = await clientRepo.findAll({ company_id: before.company_id } as any);
+            if (clients && clients.length > 0) clientId = clients[0].id;
+          }
+          await projectRepo.create({
+            client_id: clientId,
+            opportunity_id: id,
+            service_id: before.service_id,
+            owner_id: before.owner_id,
+            name: before.name,
+            start_date: new Date().toISOString().split('T')[0],
+            status: 'onboarding',
+            sold_price: before.setup_value || 0,
+          });
+        } else {
+          for (const proj of linkedProjects) {
+            if (proj.status === 'review') {
+              await projectRepo.update(proj.id, { status: 'onboarding' });
+            }
+          }
+        }
+      }
+
+      // CANCELACIÓN / PÉRDIDA (lost)
+      if (newStage === 'lost') {
+        for (const proj of linkedProjects || []) {
+          if (proj.status !== 'cancelled' && proj.status !== 'completed') {
+            await projectRepo.update(proj.id, { status: 'cancelled' });
+          }
+        }
+      }
+    }
 
     const updateData: any = { stage: newStage };
     if (newStage === 'pilot' && (!before.probability || before.probability < 0.70)) {
       updateData.probability = 0.75;
     }
+    if (newStage === 'lost') {
+      updateData.probability = 0;
+      updateData.closed_at = new Date().toISOString();
+      if (beforeStage !== 'lost') {
+        updateData.lost_at_stage = beforeStage;
+      }
+    } else if (beforeStage === 'lost' && newStage !== 'lost') {
+      updateData.closed_at = null;
+      updateData.lost_reason = null;
+      updateData.lost_at_stage = null;
+    }
 
-    const opp = await oppRepo.update(id, updateData);
-
-    // If moved to pilot, ensure a project exists to track all implementation activities/milestones
-    if (newStage === 'pilot') {
-      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      if (!existingProjects || existingProjects.length === 0) {
-        let clientId = null;
-        if (opp.company_id) {
-          const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
-          if (clients && clients.length > 0) clientId = clients[0].id;
-        }
-        await projectRepo.create({
-          client_id: clientId,
-          opportunity_id: id,
-          service_id: opp.service_id,
-          owner_id: opp.owner_id,
-          name: opp.name,
-          start_date: new Date().toISOString().split('T')[0],
-          status: 'in_progress',
-          sold_price: opp.setup_value || 0,
-        });
+    let opp: any;
+    try {
+      opp = await oppRepo.update(id, updateData);
+    } catch (err: any) {
+      if (updateData.lost_at_stage && (err.message?.includes('lost_at_stage') || err.code === 'PGRST204')) {
+        const fallback = { ...updateData };
+        delete fallback.lost_at_stage;
+        opp = await oppRepo.update(id, fallback);
+      } else {
+        throw err;
       }
     }
 
@@ -301,50 +368,104 @@ export const OpportunityService = {
       entityId: id,
       action: 'stage_changed',
       beforeData: { stage: before.stage },
-      afterData: { stage: newStage },
+      afterData: { stage: newStage, force },
     });
 
     await eventRepo.create({
       event_type: 'opportunity.stage_changed',
       entity_type: 'opportunity',
       entity_id: id,
-      payload: { from: before.stage, to: newStage },
+      payload: { from: before.stage, to: newStage, force },
     });
 
     return opp;
   },
 
-  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web', force: boolean = false) {
     const before = await oppRepo.findById(id);
-    const opp = await oppRepo.update(id, data);
+    if (!before) throw new Error(`Opportunity ${id} not found`);
 
-    if (data.stage === 'pilot' && before?.stage !== 'pilot') {
-      const existingProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      if (!existingProjects || existingProjects.length === 0) {
-        let clientId = null;
-        if (opp.company_id) {
-          const clients = await clientRepo.findAll({ company_id: opp.company_id } as any);
-          if (clients && clients.length > 0) clientId = clients[0].id;
+    if (data.stage && data.stage !== before.stage) {
+      const beforeStage = before.stage || 'new';
+      const newStage = data.stage;
+      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
+
+      const PRELIMINARY_STAGES = ['new', 'contacted', 'qualified', 'meeting_scheduled', 'meeting_completed', 'proposal_sent', 'negotiation'];
+      const ACTIVE_STAGES = ['pilot', 'won'];
+
+      if (ACTIVE_STAGES.includes(beforeStage) && PRELIMINARY_STAGES.includes(newStage)) {
+        const activeTech = (linkedProjects || []).filter(
+          (p: any) => p.status === 'in_progress' || p.status === 'completed'
+        );
+        if (activeTech.length > 0 && !force) {
+          const pStatus = activeTech[0].status === 'completed' ? 'Completado' : 'En Progreso';
+          const err: any = new Error(
+            `CONFIRM_REQUIRED: El proyecto técnico ("${activeTech[0].name}") ya está en ejecución activa (${pStatus}). Si retrocedes la oportunidad a "${newStage}", el proyecto técnico se mantendrá intacto para no perder horas ni avances del equipo. ¿Deseas continuar?`
+          );
+          err.code = 'CONFIRM_REQUIRED';
+          throw err;
         }
-        await projectRepo.create({
-          client_id: clientId,
-          opportunity_id: id,
-          service_id: opp.service_id,
-          owner_id: opp.owner_id,
-          name: opp.name,
-          start_date: new Date().toISOString().split('T')[0],
-          status: 'in_progress',
-          sold_price: opp.setup_value || 0,
-        });
+
+        for (const proj of linkedProjects || []) {
+          if (proj.status === 'onboarding') {
+            await projectRepo.update(proj.id, { status: 'review' });
+          }
+        }
+      }
+
+      if (newStage === 'pilot') {
+        if (!linkedProjects || linkedProjects.length === 0) {
+          let clientId = null;
+          if (before.company_id) {
+            const clients = await clientRepo.findAll({ company_id: before.company_id } as any);
+            if (clients && clients.length > 0) clientId = clients[0].id;
+          }
+          await projectRepo.create({
+            client_id: clientId,
+            opportunity_id: id,
+            service_id: before.service_id,
+            owner_id: before.owner_id,
+            name: before.name,
+            start_date: new Date().toISOString().split('T')[0],
+            status: 'onboarding',
+            sold_price: before.setup_value || 0,
+          });
+        } else {
+          for (const proj of linkedProjects) {
+            if (proj.status === 'review') {
+              await projectRepo.update(proj.id, { status: 'onboarding' });
+            }
+          }
+        }
+      }
+
+      if (newStage === 'lost') {
+        data.closed_at = new Date().toISOString();
+        if (beforeStage !== 'lost') {
+          data.lost_at_stage = beforeStage;
+        }
+        for (const proj of linkedProjects || []) {
+          if (proj.status !== 'cancelled' && proj.status !== 'completed') {
+            await projectRepo.update(proj.id, { status: 'cancelled' });
+          }
+        }
+      } else if (beforeStage === 'lost' && newStage !== 'lost') {
+        data.closed_at = null;
+        data.lost_reason = null;
+        data.lost_at_stage = null;
       }
     }
 
-    if (data.stage === 'lost' && before?.stage !== 'lost') {
-      const linkedProjects = await projectRepo.findAll({ opportunity_id: id } as any);
-      for (const proj of linkedProjects || []) {
-        if (proj.status !== 'cancelled' && proj.status !== 'completed') {
-          await projectRepo.update(proj.id, { status: 'cancelled' });
-        }
+    let opp: any;
+    try {
+      opp = await oppRepo.update(id, data);
+    } catch (err: any) {
+      if (data.lost_at_stage && (err.message?.includes('lost_at_stage') || err.code === 'PGRST204')) {
+        const fallback = { ...data };
+        delete fallback.lost_at_stage;
+        opp = await oppRepo.update(id, fallback);
+      } else {
+        throw err;
       }
     }
 
@@ -395,7 +516,8 @@ export const OpportunityService = {
     outcome: 'won' | 'lost',
     lostReason?: string,
     cancelProjects: boolean = true,
-    source: 'web' | 'mcp' = 'web'
+    source: 'web' | 'mcp' = 'web',
+    force: boolean = false
   ) {
     const opp = await oppRepo.findById(id);
     if (!opp) throw new Error(`Opportunity ${id} not found`);
@@ -403,17 +525,33 @@ export const OpportunityService = {
       throw new Error(`Opportunity already closed as won`);
     }
 
+    const beforeStage = opp.stage || 'new';
     const closedAt = new Date().toISOString();
     const result: any = { opportunity: null, client: null, project: null, subscription: null, invoice: null, cancelledProjects: [], openProjects: [] };
 
     // 1. Update opportunity stage
     if (opp.stage !== outcome) {
-      result.opportunity = await oppRepo.update(id, {
+      const updateData: any = {
         stage: outcome,
         probability: outcome === 'won' ? 1.0 : 0,
         closed_at: closedAt,
-        lost_reason: outcome === 'lost' ? lostReason : null,
-      });
+        lost_reason: outcome === 'lost' ? (lostReason || null) : null,
+      };
+      if (outcome === 'lost' && beforeStage !== 'lost') {
+        updateData.lost_at_stage = beforeStage;
+      }
+
+      try {
+        result.opportunity = await oppRepo.update(id, updateData);
+      } catch (err: any) {
+        if (updateData.lost_at_stage && (err.message?.includes('lost_at_stage') || err.code === 'PGRST204')) {
+          const fallback = { ...updateData };
+          delete fallback.lost_at_stage;
+          result.opportunity = await oppRepo.update(id, fallback);
+        } else {
+          throw err;
+        }
+      }
     } else {
       if (outcome === 'lost' && lostReason && lostReason !== opp.lost_reason) {
         result.opportunity = await oppRepo.update(id, { lost_reason: lostReason });
@@ -441,7 +579,7 @@ export const OpportunityService = {
         event_type: 'opportunity.lost',
         entity_type: 'opportunity',
         entity_id: id,
-        payload: { reason: lostReason, cancelled_projects_count: result.cancelledProjects.length },
+        payload: { reason: lostReason, lost_at_stage: beforeStage, cancelled_projects_count: result.cancelledProjects.length },
       });
       await auditRepo.logAction({
         actorType: source === 'mcp' ? 'ai' : 'human',
@@ -547,31 +685,9 @@ export const OpportunityService = {
       });
     }
 
-    // 5. Create draft invoice (Net + 19% VAT = Gross Total)
-    const netTotal = (Number(opp.setup_value) || 0) + (Number(opp.recurring_value) || 0);
-    if (netTotal > 0) {
-      const grossTotal = Math.round(netTotal * 1.19);
-      const taxAmount = grossTotal - netTotal;
-      result.invoice = await invoiceRepo.create({
-        invoice_number: null,
-        client_id: result.client.id,
-        project_id: result.project?.id,
-        subscription_id: result.subscription?.id,
-        issue_date: new Date().toISOString().split('T')[0],
-        due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        subtotal: netTotal,
-        tax_amount: taxAmount,
-        total: grossTotal,
-        currency: opp.currency || 'CLP',
-        status: 'draft',
-      });
-      await eventRepo.create({
-        event_type: 'invoice.created',
-        entity_type: 'invoice',
-        entity_id: result.invoice.id,
-        payload: result.invoice,
-      });
-    }
+    // 5. Invoicing policy: Invoices are NOT auto-created on close won.
+    // They are issued manually by the human admin in SII or requested via Claude Cowork with real folio.
+    result.invoice = null;
 
     // 6. Register won event
     await eventRepo.create({
@@ -582,7 +698,7 @@ export const OpportunityService = {
         client_id: result.client?.id,
         project_id: result.project?.id,
         subscription_id: result.subscription?.id,
-        invoice_id: result.invoice?.id,
+        invoice_id: null,
         setup_value: opp.setup_value,
         recurring_value: opp.recurring_value,
       },
@@ -1381,6 +1497,18 @@ export const SubscriptionService = {
 // ============================================================================
 // PROJECT SERVICE
 // ============================================================================
+function normalizeProjectStatus(st?: string): string | undefined {
+  if (!st) return undefined;
+  const s = String(st).toLowerCase().trim();
+  if (['revision', 'en_revision', 'review'].includes(s)) return 'review';
+  if (['onboarding', 'kickoff'].includes(s)) return 'onboarding';
+  if (['en_proceso', 'en_curso', 'in_progress', 'activo', 'active'].includes(s)) return 'in_progress';
+  if (['piloto', 'pilot'].includes(s)) return 'pilot';
+  if (['completado', 'finalizado', 'completed', 'done'].includes(s)) return 'completed';
+  if (['cancelado', 'anulado', 'cancelled', 'canceled'].includes(s)) return 'cancelled';
+  return s;
+}
+
 export const ProjectService = {
   async getAll(filters: any = {}) {
     try {
@@ -1402,7 +1530,7 @@ export const ProjectService = {
               owner_id: opp.owner_id,
               name: opp.name,
               start_date: new Date().toISOString().split('T')[0],
-              status: 'in_progress',
+              status: 'onboarding',
               sold_price: opp.setup_value || 0,
             });
           }
@@ -1426,13 +1554,57 @@ export const ProjectService = {
     });
     return project;
   },
-  async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+  async update(id: string, data: any, source: 'web' | 'mcp' = 'web', force: boolean = false) {
     const before = await projectRepo.findById(id);
     if (!before) throw new Error(`Proyecto no encontrado con ID: ${id}`);
 
+    const beforeStatus = normalizeProjectStatus(before.status) || 'onboarding';
+    let targetStatus = data.status ? normalizeProjectStatus(data.status) : undefined;
+
+    if (targetStatus && targetStatus !== beforeStatus) {
+      // 1. Cancelación: siempre permitida
+      if (targetStatus === 'cancelled') {
+        // Permitido directo
+      }
+      // 2. Saltarse Onboarding directo de review a in_progress o completed
+      else if (beforeStatus === 'review' && (targetStatus === 'in_progress' || targetStatus === 'completed')) {
+        if (!force) {
+          const err: any = new Error(
+            `CONFIRM_REQUIRED: Te estás saltando la etapa de Onboarding. ¿Confirmas que los accesos, kickoff y alcance técnico ya están listos para pasar directo a ${targetStatus === 'completed' ? 'Completado' : 'En Progreso'}?`
+          );
+          err.code = 'CONFIRM_REQUIRED';
+          throw err;
+        }
+      }
+      // 3. Retroceso brusco de in_progress a review
+      else if (beforeStatus === 'in_progress' && targetStatus === 'review') {
+        throw new Error("No es posible devolver un proyecto en ejecución activa a 'En Revisión'. Si el proyecto se pausó o no continuará, cámbialo a 'Cancelado'.");
+      }
+      // 4. Reproceso de in_progress a onboarding
+      else if (beforeStatus === 'in_progress' && targetStatus === 'onboarding') {
+        if (!force) {
+          const err: any = new Error(
+            `CONFIRM_REQUIRED: ¿Deseas devolver el proyecto a Onboarding? Esta acción se registrará como reproceso por falta de accesos o validación técnica.`
+          );
+          err.code = 'CONFIRM_REQUIRED';
+          throw err;
+        }
+      }
+      // 5. Reabrir un proyecto ya completado
+      else if (beforeStatus === 'completed' && targetStatus !== 'completed') {
+        if (!force) {
+          const err: any = new Error(
+            `CONFIRM_REQUIRED: Este proyecto ya figuraba como Completado y cerrado. ¿Confirmas que deseas reabrirlo?`
+          );
+          err.code = 'CONFIRM_REQUIRED';
+          throw err;
+        }
+      }
+    }
+
     const payload: any = {};
     if (data.name !== undefined) payload.name = String(data.name).trim();
-    if (data.status !== undefined) payload.status = data.status;
+    if (targetStatus !== undefined) payload.status = targetStatus;
     if (data.sold_price !== undefined) payload.sold_price = Number(data.sold_price);
     if (data.estimated_cost !== undefined) payload.estimated_cost = Number(data.estimated_cost);
     if (data.start_date !== undefined) payload.start_date = data.start_date || null;
@@ -1493,14 +1665,17 @@ export const AnalyticsService = {
   },
 
   async getFinanceSummary() {
-    const invoices = await invoiceRepo.findAll();
+    const allInvoices = await invoiceRepo.findAll();
+    const validInvoices = (allInvoices || []).filter(
+      (i: any) => i.invoice_number && i.status !== 'draft' && i.status !== 'cancelled' && !i.deleted_at
+    );
     const payments = await paymentRepo.findAll();
     const expenses = await expenseRepo.findAll();
     const taxes = await taxRepo.findAll();
     const withdrawals = await withdrawalRepo.findAll();
     const subs = await subscriptionRepo.findActive();
 
-    const totalInvoiced = invoices.reduce((s: number, i: any) => s + Number(i.total), 0);
+    const totalInvoiced = validInvoices.reduce((s: number, i: any) => s + Number(i.total), 0);
     const totalCollected = payments.reduce((s: number, p: any) => s + Number(p.amount), 0);
     const totalExpenses = expenses.reduce((s: number, e: any) => s + Number(e.total), 0);
     const pendingTaxes = taxes
@@ -1509,14 +1684,14 @@ export const AnalyticsService = {
     const totalWithdrawals = withdrawals.reduce((s: number, w: any) => s + Number(w.amount), 0);
     const mrr = subs.reduce((s: number, sub: any) => s + Number(sub.amount), 0);
 
-    const overdueInvoices = await invoiceRepo.findOverdue();
+    const overdueInvoices = (await invoiceRepo.findOverdue()).filter((i: any) => i.invoice_number && i.status !== 'cancelled');
     const overdueAmount = overdueInvoices.reduce((s: number, i: any) => s + Number(i.total), 0);
     const wonOpps = await oppRepo.findAll();
-    const wonList = wonOpps.filter((o: any) => o.stage === 'won' && !o.deleted_at);
+    const wonList = (wonOpps || []).filter((o: any) => o.stage === 'won' && !o.deleted_at);
     const totalSoldGross = wonList.reduce((s: number, o: any) => {
       const net = Number(o.setup_value || 0) + Number(o.recurring_value || 0);
       return s + Math.round(net * 1.19);
-    }, 0) || 3249100;
+    }, 0);
 
     const porCobrar = Math.max(0, totalInvoiced - totalCollected);
     const porFacturar = Math.max(0, totalSoldGross - totalInvoiced);

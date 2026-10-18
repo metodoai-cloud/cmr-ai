@@ -38,6 +38,7 @@ import {
   Edit3,
   Edit,
   Trash2,
+  AlertTriangle,
   Ban,
   LogOut,
   User as UserIcon,
@@ -48,6 +49,7 @@ import {
   Zap,
   Sparkles,
   Code2,
+  Handshake,
 } from 'lucide-react';
 import { crmApi } from './api';
 import { processNaturalLanguageInput } from './aiSimulator';
@@ -188,6 +190,15 @@ export default function App() {
   });
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [projectStatusView, setProjectStatusView] = useState<'active' | 'completed' | 'cancelled'>('active');
+
+  // Confirmation / Handbrake Modal State (Control de errores y retrocesos)
+  const [confirmModalState, setConfirmModalState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
   const [servicePillarFilter, setServicePillarFilter] = useState<'all' | '1' | '2' | '3' | '4'>('all');
   const [projectModalTab, setProjectModalTab] = useState<'details' | 'activities'>('details');
   const [showAddProjectActivityForm, setShowAddProjectActivityForm] = useState(false);
@@ -383,20 +394,39 @@ export default function App() {
   };
 
   // Move Opportunity in Kanban
-  const handleMoveStage = async (oppId: string, nextStage: string) => {
+  const handleMoveStage = async (oppId: string, nextStage: string, force: boolean = false) => {
     try {
       if (nextStage === 'won') {
-        if (confirm('¿Deseas marcar esta oportunidad como GANADA?\nEsto ejecutará la automatización completa: creará el cliente, proyecto de implementación, suscripción mensual y la factura en Supabase.')) {
-          await crmApi.closeOpportunity(oppId, 'won');
-          await loadData();
-          alert('🎉 ¡Oportunidad ganada y automatización ejecutada en Supabase!');
-        }
+        setConfirmModalState({
+          isOpen: true,
+          title: '🎉 Marcar Oportunidad como GANADA',
+          message: '¿Deseas marcar esta oportunidad como GANADA? Esto ejecutará la automatización completa: creará el cliente, proyecto de implementación en Onboarding, suscripción mensual y la factura en Supabase.',
+          confirmLabel: 'Sí, Ganar y Automatizar',
+          onConfirm: async () => {
+            setConfirmModalState(null);
+            await crmApi.closeOpportunity(oppId, 'won', undefined, true);
+            await loadData();
+          },
+        });
       } else {
-        await crmApi.moveOpportunity(oppId, nextStage);
+        await crmApi.moveOpportunity(oppId, nextStage, force);
         await loadData();
       }
     } catch (e: any) {
-      alert(`Error: ${e.message}`);
+      if (e.requires_confirmation || e.status === 409) {
+        setConfirmModalState({
+          isOpen: true,
+          title: '⚠️ Atención: Confirmación de Cambio',
+          message: e.message,
+          confirmLabel: 'Sí, Continuar / Aceptar',
+          onConfirm: async () => {
+            setConfirmModalState(null);
+            await handleMoveStage(oppId, nextStage, true);
+          },
+        });
+      } else {
+        alert(`Error: ${e.message}`);
+      }
     }
   };
 
@@ -655,7 +685,38 @@ export default function App() {
       setShowProjectModal(false);
       await loadData();
     } catch (err: any) {
-      alert(`Error al actualizar proyecto: ${err.message}`);
+      if (err.requires_confirmation || err.status === 409) {
+        setConfirmModalState({
+          isOpen: true,
+          title: '⚠️ Advertencia de Flujo Operativo',
+          message: err.message,
+          confirmLabel: 'Confirmar y Guardar',
+          onConfirm: async () => {
+            setConfirmModalState(null);
+            try {
+              setIsSavingProject(true);
+              await crmApi.updateProject(editingProjectId, {
+                name: projectForm.name.trim(),
+                status: projectForm.status,
+                sold_price: Number(projectForm.sold_price),
+                start_date: projectForm.start_date || null,
+                due_date: projectForm.due_date || null,
+                estimated_cost: Number(projectForm.estimated_cost) || 0,
+                next_step: projectForm.next_step.trim() || null,
+                next_step_owner: projectForm.next_step_owner,
+              }, true);
+              setShowProjectModal(false);
+              await loadData();
+            } catch (errForce: any) {
+              alert(`Error: ${errForce.message}`);
+            } finally {
+              setIsSavingProject(false);
+            }
+          },
+        });
+      } else {
+        alert(`Error al actualizar proyecto: ${err.message}`);
+      }
     } finally {
       setIsSavingProject(false);
     }
@@ -1416,39 +1477,68 @@ Equipo Método AI`;
 
                 const isAll = dashboardTimeframe === 'all';
 
-                // Invoices filtered by period
-                const nonDeletedInvoices = invoices.filter((i) => !i.deleted_at);
+                // Invoices filtered by period (only valid issued invoices with real folio)
+                const validInvoices = (invoices || []).filter(
+                  (i) => !i.deleted_at && i.invoice_number && i.status !== 'draft' && i.status !== 'cancelled'
+                );
                 const activeInvoices = isAll
-                  ? nonDeletedInvoices
-                  : nonDeletedInvoices.filter((i) => {
+                  ? validInvoices
+                  : validInvoices.filter((i) => {
                       const d = i.issue_date || i.created_at || '';
                       return d.startsWith(currentMonthKey);
                     });
 
-                const totalInvoicedAll = dashboardData.finance.total_invoiced || 2654100;
-                const totalCollectedAll = dashboardData.finance.total_collected || 2654100;
+                const totalInvoicedAll = dashboardData?.finance?.total_invoiced ?? validInvoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
+                const totalCollectedAll = dashboardData?.finance?.total_collected ?? validInvoices.reduce((sum, i) => {
+                  if (i.status === 'paid') return sum + Number(i.total || 0);
+                  return sum + Number(i.paid_amount || 0);
+                }, 0);
 
-                let displayInvoiced = isAll
+                const displayInvoiced = isAll
                   ? totalInvoicedAll
                   : activeInvoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-                if (!isAll && displayInvoiced === 0 && currentMonthKey === '2026-09') {
-                  displayInvoiced = 595000;
-                }
 
-                let displayCollected = isAll
+                const displayCollected = isAll
                   ? totalCollectedAll
                   : activeInvoices.reduce((sum, i) => {
                       if (i.status === 'paid') return sum + Number(i.total || 0);
                       return sum + Number(i.paid_amount || 0);
                     }, 0);
-                if (!isAll && displayCollected === 0 && currentMonthKey === '2026-09') {
-                  displayCollected = 595000;
-                }
 
-                // Cobro pendiente confirmado de Septiembre: Agrícola Protea ($595.000)
-                const debtorClients = [{ name: 'Agrícola Protea', pending: 595000 }];
-                const totalPendingOutstanding = 595000;
-                const debtorCount = debtorClients.length;
+                // Outstanding / por cobrar dinámico (solo facturas reales con saldo pendiente)
+                const debtorInvoices = activeInvoices.filter((i) => {
+                  const isPaid = i.status === 'paid';
+                  const balance = Number(i.total || 0) - (isPaid ? Number(i.total || 0) : Number(i.paid_amount || 0));
+                  return balance > 0;
+                });
+                const totalPendingOutstanding = debtorInvoices.reduce((sum, i) => {
+                  const isPaid = i.status === 'paid';
+                  const balance = Number(i.total || 0) - (isPaid ? Number(i.total || 0) : Number(i.paid_amount || 0));
+                  return sum + balance;
+                }, 0);
+
+                // Ventas cerradas ganadas (Won Opps) con IVA
+                const wonOpps = (allOpps || []).filter((o) => o.stage === 'won' && !o.deleted_at);
+                const activeWonOpps = isAll
+                  ? wonOpps
+                  : wonOpps.filter((o) => {
+                      const d = o.closed_at || o.updated_at || o.created_at || '';
+                      return d.startsWith(currentMonthKey);
+                    });
+
+                const totalSoldGrossAll = dashboardData?.finance?.total_sold_gross ?? wonOpps.reduce((sum, o) => {
+                  const net = Number(o.setup_value || 0) + Number(o.recurring_value || 0);
+                  return sum + Math.round(net * 1.19);
+                }, 0);
+
+                const displaySold = isAll
+                  ? totalSoldGrossAll
+                  : activeWonOpps.reduce((sum, o) => {
+                      const net = Number(o.setup_value || 0) + Number(o.recurring_value || 0);
+                      return sum + Math.round(net * 1.19);
+                    }, 0);
+
+                const wonCount = isAll ? wonOpps.length : activeWonOpps.length;
 
                 // Net Cash
                 const currentNetCash = dashboardData?.finance?.net_cash ?? 2320797;
@@ -1475,14 +1565,14 @@ Equipo Método AI`;
 
                 return (
                   <>
-                    {/* FILA 1: Métricas de Operación Base */}
-                    <div className="glass-card" style={{ padding: '20px' }}>
+                    {/* FILA 1: Ciclo Comercial y Facturación */}
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                         <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>MRR ACTIVO</span>
                         <TrendingUp size={18} color="#10b981" />
                       </div>
                       <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                        {formatMoney(dashboardData.finance.mrr)}
+                        {formatMoney(dashboardData?.finance?.mrr || confirmedRetainer)}
                         <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', fontWeight: 400 }}> /mes</span>
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--success)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1490,60 +1580,53 @@ Equipo Método AI`;
                       </div>
                     </div>
 
-                    <div className="glass-card" style={{ padding: '20px' }}>
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('pipeline')}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                         <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>PIPELINE TOTAL</span>
                         <Kanban size={18} color="#6366f1" />
                       </div>
                       <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                        {formatMoney(dashboardData.sales.pipeline_total)}
+                        {formatMoney(dashboardData?.sales?.pipeline_total || 2060000)}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--primary-light)', marginTop: '6px' }}>
-                        {dashboardData.sales.open_opportunities} oportunidades comerciales abiertas
+                        {dashboardData?.sales?.open_opportunities ?? 4} oportunidades comerciales abiertas
                       </div>
                     </div>
 
-                    <div className="glass-card" style={{ padding: '20px' }}>
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('pipeline')}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
+                          {isAll ? 'TOTAL VENDIDO' : `VENDIDO (${currentMonthLabel.toUpperCase()})`}
+                        </span>
+                        <Handshake size={18} color="#10b981" />
+                      </div>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                        {formatMoney(displaySold)}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px' }}>
+                        {wonCount} {wonCount === 1 ? 'contrato cerrado ganado' : 'contratos cerrados ganados'}
+                      </div>
+                    </div>
+
+                    <div className="glass-card" style={{ padding: '20px', cursor: 'pointer' }} onClick={() => setActiveTab('finance')}>
+                      {/* Fila 1: Título e ícono */}
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                         <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
                           {isAll ? 'TOTAL FACTURADO' : `FACTURADO (${currentMonthLabel.toUpperCase()})`}
                         </span>
                         <FileText size={18} color="#06b6d4" />
                       </div>
+                      {/* Fila 2: Monto grande facturado */}
                       <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
                         {formatMoney(displayInvoiced)}
                       </div>
-                      <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ color: 'var(--success)', fontWeight: 600 }}>
-                          Cobrado: {formatMoney(displayCollected)}
-                        </span>
-                        <span style={{ color: 'var(--text-muted)' }}>·</span>
-                        <span style={{ color: totalPendingOutstanding > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600 }}>
-                          Por cobrar: {formatMoney(totalPendingOutstanding)}
-                        </span>
+                      {/* Fila 3: Cobrado en su propia línea vertical */}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 600, marginTop: '6px' }}>
+                        Cobrado: {formatMoney(displayCollected)}
                       </div>
-                    </div>
-
-                    <div className="glass-card" style={{ padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                        <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>CAJA NETA DISPONIBLE</span>
-                        <ShieldCheck size={18} color="#a855f7" />
-                      </div>
-                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
-                        {formatMoney(currentNetCash)}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>
-                          {isAll ? `Cobrado total: ${formatMoney(totalCollectedAll)}` : `Cobrado mes: ${formatMoney(displayCollected)}`}
-                        </span>
-                        {Number(dashboardData.finance.pending_taxes || 0) > 0 && (
-                          <>
-                            <span style={{ color: 'var(--text-muted)' }}>·</span>
-                            <span style={{ color: 'var(--warning)' }}>
-                              IVA (F29): {formatMoney(dashboardData.finance.pending_taxes)}
-                            </span>
-                          </>
-                        )}
+                      {/* Fila 4: Por cobrar en su propia línea vertical debajo de cobrado */}
+                      <div style={{ fontSize: '0.75rem', color: totalPendingOutstanding > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 600, marginTop: '3px' }}>
+                        Por cobrar: {formatMoney(totalPendingOutstanding)}
                       </div>
                     </div>
 
@@ -1711,39 +1794,29 @@ Equipo Método AI`;
                       </div>
                     </div>
 
-                    {/* NUEVA TARJETA: POR COBRAR */}
+                    {/* TARJETA 8: CAJA NETA DISPONIBLE (Ubicada en la esquina inferior derecha) */}
                     <div className="glass-card" style={{ padding: '20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} onClick={() => setActiveTab('finance')}>
                       <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>
-                            {isAll ? 'POR COBRAR' : `POR COBRAR (${currentMonthLabel.toUpperCase()})`}
-                          </span>
-                          <Receipt size={18} color="#06b6d4" />
+                          <span style={{ fontSize: '0.825rem', fontWeight: 600 }}>CAJA NETA DISPONIBLE</span>
+                          <ShieldCheck size={18} color="#a855f7" />
                         </div>
                       </div>
                       <div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '10px' }}>
-                          <span style={{ fontSize: '1.75rem', fontWeight: 800, color: totalPendingOutstanding > 0 ? '#f59e0b' : '#10b981' }}>
-                            {formatMoney(totalPendingOutstanding)}
-                          </span>
-                          {totalPendingOutstanding > 0 && (
-                            <span style={{ fontSize: '0.825rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                              ({debtorCount} {debtorCount === 1 ? 'cliente' : 'clientes'})
-                            </span>
-                          )}
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-primary)', marginTop: '10px' }}>
+                          {formatMoney(currentNetCash)}
                         </div>
-                        <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          {debtorClients.length > 0 ? (
-                            debtorClients.map((dc, idx) => (
-                              <div key={idx} style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{dc.name}</span>
-                                <span style={{ color: '#f59e0b', fontWeight: 600 }}>({formatMoney(dc.pending)})</span>
-                              </div>
-                            ))
-                          ) : (
-                            <div style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
-                              ✓ Al día · Sin clientes pendientes
-                            </div>
+                        <div style={{ fontSize: '0.75rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+                            {isAll ? `Cobrado total: ${formatMoney(totalCollectedAll)}` : `Cobrado mes: ${formatMoney(displayCollected)}`}
+                          </span>
+                          {Number(dashboardData?.finance?.pending_taxes || 0) > 0 && (
+                            <>
+                              <span style={{ color: 'var(--text-muted)' }}>·</span>
+                              <span style={{ color: 'var(--warning)' }}>
+                                IVA: {formatMoney(dashboardData.finance.pending_taxes)}
+                              </span>
+                            </>
                           )}
                         </div>
                       </div>
@@ -5969,6 +6042,118 @@ Equipo Método AI`;
               >
                 <ExternalLink size={15} />
                 <span>Abrir en Gmail Web</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      {/* ── MODAL DE CONFIRMACIÓN / FRENO DE MANO ── */}
+      {confirmModalState && confirmModalState.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+          onClick={() => setConfirmModalState(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#111827',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '16px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(245, 158, 11, 0.15)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                backgroundColor: 'rgba(245, 158, 11, 0.08)',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#f59e0b',
+                  flexShrink: 0,
+                }}
+              >
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: '#f3f4f6' }}>
+                  {confirmModalState.title}
+                </h3>
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Control de consistencia operativa</span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px', color: '#d1d5db', fontSize: '0.925rem', lineHeight: 1.6 }}>
+              <p style={{ margin: 0 }}>{confirmModalState.message}</p>
+            </div>
+
+            {/* Footer Buttons */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setConfirmModalState(null)}
+                style={{ padding: '10px 18px', fontSize: '0.875rem' }}
+              >
+                Cancelar (Volver)
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={async () => {
+                  if (confirmModalState.onConfirm) {
+                    await confirmModalState.onConfirm();
+                  }
+                }}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  backgroundColor: '#f59e0b',
+                  color: '#000',
+                  border: 'none',
+                }}
+              >
+                {confirmModalState.confirmLabel || 'Sí, Continuar'}
               </button>
             </div>
           </div>

@@ -10,7 +10,10 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const errorObj: any = new Error(err.error || `HTTP ${res.status}`);
+    errorObj.status = res.status;
+    errorObj.requires_confirmation = !!(err.requires_confirmation || res.status === 409);
+    throw errorObj;
   }
   return res.json();
 }
@@ -26,9 +29,12 @@ export const crmApi = {
   getPipeline: () => fetchApi('/opportunities/pipeline'),
   getAllOpportunities: () => fetchApi('/opportunities'),
   createOpportunity: (data: any) => fetchApi('/opportunities', { method: 'POST', body: JSON.stringify(data) }),
-  moveOpportunity: (id: string, stage: string) => fetchApi(`/opportunities/${id}/move`, { method: 'POST', body: JSON.stringify({ stage }) }),
-  closeOpportunity: (id: string, outcome: 'won' | 'lost', lost_reason?: string) => 
-    fetchApi(`/opportunities/${id}/close`, { method: 'POST', body: JSON.stringify({ outcome, lost_reason }) }),
+  moveOpportunity: (id: string, stage: string, force: boolean = false) => 
+    fetchApi(`/opportunities/${id}/move`, { method: 'POST', body: JSON.stringify({ stage, force }) }),
+  updateOpportunity: (id: string, data: any, force: boolean = false) => 
+    fetchApi(`/opportunities/${id}`, { method: 'PUT', body: JSON.stringify({ ...data, force }) }),
+  closeOpportunity: (id: string, outcome: 'won' | 'lost', lost_reason?: string, force: boolean = false) => 
+    fetchApi(`/opportunities/${id}/close`, { method: 'POST', body: JSON.stringify({ outcome, lost_reason, force }) }),
   deleteOpportunity: (id: string) => fetchApi(`/opportunities/${id}`, { method: 'DELETE' }),
 
   // Contacts & Companies
@@ -47,7 +53,8 @@ export const crmApi = {
   // Operations
   getClients: () => fetchApi('/clients'),
   getProjects: () => fetchApi('/projects'),
-  updateProject: (id: string, data: any) => fetchApi(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  updateProject: (id: string, data: any, force: boolean = false) => 
+    fetchApi(`/projects/${id}`, { method: 'PUT', body: JSON.stringify({ ...data, force }) }),
   getSubscriptions: () => fetchApi('/subscriptions'),
 
   // Finance

@@ -404,6 +404,7 @@ export function registerTools(srv: McpServer) {
       name: z.string().optional().describe('Nuevo nombre de la oportunidad'),
       title: z.string().optional().describe('Alias para name'),
       probability: z.number().optional().describe('Probabilidad de éxito o cierre (0 a 100)'),
+      confirmar: z.boolean().optional().describe('Confirmar explícitamente retrocesos de etapa que tengan impacto en proyectos técnicos en ejecución'),
       // Snapshot Estratégico
       agency_profile_id: z.string().optional().describe('ID de la estrategia/perfil de agencia'),
       entry_offer_id: z.string().optional().describe('ID de la puerta de entrada comercial'),
@@ -411,7 +412,7 @@ export function registerTools(srv: McpServer) {
       messaging_framework_id: z.string().optional().describe('ID del framework de mensajes'),
       sales_playbook_id: z.string().optional().describe('ID del playbook de ventas'),
     },
-    async ({ id, ...data }) => {
+    async ({ id, confirmar = false, ...data }) => {
       try {
         const payload: any = {};
         if (data.name || data.title) payload.name = data.name || data.title;
@@ -439,13 +440,22 @@ export function registerTools(srv: McpServer) {
         if (data.messaging_framework_id !== undefined) payload.messaging_framework_id = data.messaging_framework_id;
         if (data.sales_playbook_id !== undefined) payload.sales_playbook_id = data.sales_playbook_id;
 
-        const opp = await OpportunityService.update(id, payload);
+        const opp = await OpportunityService.update(id, payload, 'mcp', confirmar);
         const srvNote = linkedServiceName ? ` | Servicio vinculado: "${linkedServiceName}"` : (payload.service_id ? ` | Service ID: ${payload.service_id}` : '');
         const lostNote = payload.stage === 'lost' ? ' ⚠️ (Proyectos asociados cancelados automáticamente para consistencia)' : '';
         return {
           content: [{ type: 'text' as const, text: `✅ Oportunidad actualizada: "${opp.name}" → etapa "${opp.stage}"${srvNote}${lostNote}` }],
         };
       } catch (err: any) {
+        if (err.code === 'CONFIRM_REQUIRED' || err.message?.startsWith('CONFIRM_REQUIRED:')) {
+          const cleanMsg = err.message.replace(/^CONFIRM_REQUIRED:\s*/, '');
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `⚠️ **ACCIÓN REQUIERE CONFIRMACIÓN DEL USUARIO:**\n\n${cleanMsg}\n\n👉 *Por favor consúltalo primero con el usuario y vuelve a invocar \`actualizar_oportunidad\` con \`confirmar: true\`.*`,
+            }],
+          };
+        }
         return { content: [{ type: 'text' as const, text: `❌ Error al actualizar oportunidad: ${err.message}` }] };
       }
     }
@@ -782,6 +792,7 @@ export function registerTools(srv: McpServer) {
         let msg = `📉 **Oportunidad marcada como PERDIDA:**\n` +
           `• **Oportunidad:** ${opp?.name || oppId}\n` +
           `• **ID:** \`${opp?.id || oppId}\`\n` +
+          `• **Etapa de caída:** ${opp?.lost_at_stage ? opp.lost_at_stage.toUpperCase() : 'N/A'}\n` +
           `• **Motivo:** ${reason || opp?.lost_reason || 'No especificado'}`;
 
         if (result.cancelledProjects && result.cancelledProjects.length > 0) {
@@ -819,6 +830,91 @@ export function registerTools(srv: McpServer) {
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al eliminar oportunidad: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- listar_proyectos ---
+  srv.tool(
+    'listar_proyectos',
+    'Listar los proyectos operativos del CRM con su estado, cliente/empresa, valor acordado y próximo paso.',
+    {
+      estado: z.enum(['todos', 'review', 'onboarding', 'in_progress', 'pilot', 'completed', 'cancelled']).optional().describe('Filtrar por estado del proyecto (default: todos)'),
+      empresa: z.string().optional().describe('Filtrar por nombre de la empresa'),
+    },
+    async ({ estado, empresa }) => {
+      try {
+        const filters: any = {};
+        if (estado && estado !== 'todos') filters.status = estado;
+        let projs = await ProjectService.getAll(filters);
+        if (empresa) {
+          const q = empresa.toLowerCase().trim();
+          projs = projs.filter((p: any) => {
+            const compName = p.clients?.companies?.name || p.opportunities?.companies?.name || '';
+            return compName.toLowerCase().includes(q);
+          });
+        }
+        if (projs.length === 0) {
+          return { content: [{ type: 'text' as const, text: 'No se encontraron proyectos con los criterios indicados.' }] };
+        }
+        const list = projs.map((p: any) => {
+          const comp = p.clients?.companies?.name || p.opportunities?.companies?.name || 'Empresa no asignada';
+          const nextStep = p.next_step ? `\n    - Próximo paso: ${p.next_step} (A cargo de: ${p.next_step_owner || 'Agencia'})` : '';
+          return `• **${p.name}** | Empresa: ${comp} | Estado: [${p.status.toUpperCase()}] | Monto: $${(Number(p.sold_price) || 0).toLocaleString('es-CL')}${nextStep}\n    ID: \`${p.id}\``;
+        }).join('\n\n');
+        return {
+          content: [{ type: 'text' as const, text: `📁 **Proyectos Operativos (${projs.length}):**\n\n${list}` }],
+        };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al listar proyectos: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- actualizar_proyecto ---
+  srv.tool(
+    'actualizar_proyecto',
+    'Actualizar información, estado, próximo paso o responsable de un proyecto operativo.',
+    {
+      id: z.string().describe('ID UUID del proyecto a actualizar'),
+      estado: z.enum(['review', 'onboarding', 'in_progress', 'pilot', 'completed', 'cancelled']).optional().describe('Nuevo estado del proyecto'),
+      proximo_paso: z.string().optional().describe('Próximo paso o hito técnico a realizar'),
+      a_cargo_de: z.enum(['Agencia', 'Cliente', 'Ambos']).optional().describe('Responsable del próximo paso'),
+      nombre: z.string().optional().describe('Nuevo nombre del proyecto'),
+      fecha_entrega: z.string().optional().describe('Fecha de entrega estimada (YYYY-MM-DD)'),
+      monto_acordado: z.number().optional().describe('Monto vendido o acordado'),
+      costo_estimado: z.number().optional().describe('Costo técnico estimado'),
+      confirmar: z.boolean().optional().describe('Confirmar explícitamente cambios de estado irregulares (saltarse onboarding, reabrir completado, reprocesos)'),
+    },
+    async ({ id, estado, proximo_paso, a_cargo_de, nombre, fecha_entrega, monto_acordado, costo_estimado, confirmar = false }) => {
+      try {
+        const payload: any = {};
+        if (estado) payload.status = estado;
+        if (proximo_paso !== undefined) payload.next_step = proximo_paso;
+        if (a_cargo_de !== undefined) payload.next_step_owner = a_cargo_de;
+        if (nombre !== undefined) payload.name = nombre;
+        if (fecha_entrega !== undefined) payload.due_date = fecha_entrega;
+        if (monto_acordado !== undefined) payload.sold_price = monto_acordado;
+        if (costo_estimado !== undefined) payload.estimated_cost = costo_estimado;
+
+        const updated = await ProjectService.update(id, payload, 'mcp', confirmar);
+        return {
+          content: [{
+            type: 'text' as const,
+            text: `✅ Proyecto "${updated.name}" actualizado exitosamente.\n- Estado: [${updated.status.toUpperCase()}]\n- Próximo paso: ${updated.next_step || 'Sin próximo paso'}\n- A cargo de: ${updated.next_step_owner || 'Agencia'}`,
+          }],
+        };
+      } catch (err: any) {
+        if (err.code === 'CONFIRM_REQUIRED' || err.message?.startsWith('CONFIRM_REQUIRED:')) {
+          const cleanMsg = err.message.replace(/^CONFIRM_REQUIRED:\s*/, '');
+          return {
+            content: [{
+              type: 'text' as const,
+              text: `⚠️ **ACCIÓN REQUIERE CONFIRMACIÓN DEL USUARIO:**\n\n${cleanMsg}\n\n👉 *Por favor consúltalo con el usuario y vuelve a invocar \`actualizar_proyecto\` con \`confirmar: true\`.*`,
+            }],
+          };
+        }
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar proyecto: ${err.message}` }] };
       }
     }
   );

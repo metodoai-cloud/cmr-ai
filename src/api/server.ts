@@ -128,21 +128,44 @@ app.post('/api/opportunities', async (req, res) => {
 });
 
 app.put('/api/opportunities/:id', async (req, res) => {
-  try { res.json(await OpportunityService.update(req.params.id, req.body)); }
-  catch (e: any) { res.status(500).json({ error: e.message }); }
+  try {
+    const { force, ...data } = req.body;
+    res.json(await OpportunityService.update(req.params.id, data, 'web', !!force));
+  } catch (e: any) {
+    if (e.code === 'CONFIRM_REQUIRED' || e.message?.startsWith('CONFIRM_REQUIRED:')) {
+      res.status(409).json({ error: e.message.replace(/^CONFIRM_REQUIRED:\s*/, ''), requires_confirmation: true });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
 });
 
 app.post('/api/opportunities/:id/move', async (req, res) => {
-  try { res.json(await OpportunityService.moveStage(req.params.id, req.body.stage)); }
-  catch (e: any) { res.status(500).json({ error: e.message }); }
+  try {
+    const { stage, force } = req.body;
+    res.json(await OpportunityService.moveStage(req.params.id, stage, 'web', !!force));
+  } catch (e: any) {
+    if (e.code === 'CONFIRM_REQUIRED' || e.message?.startsWith('CONFIRM_REQUIRED:')) {
+      res.status(409).json({ error: e.message.replace(/^CONFIRM_REQUIRED:\s*/, ''), requires_confirmation: true });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
 });
 
 app.post('/api/opportunities/:id/close', async (req, res) => {
   try {
+    const { outcome, lost_reason, cancel_projects, force } = req.body;
     res.json(await OpportunityService.closeOpportunity(
-      req.params.id, req.body.outcome, req.body.lost_reason
+      req.params.id, outcome, lost_reason, cancel_projects ?? true, 'web', !!force
     ));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) {
+    if (e.code === 'CONFIRM_REQUIRED' || e.message?.startsWith('CONFIRM_REQUIRED:')) {
+      res.status(409).json({ error: e.message.replace(/^CONFIRM_REQUIRED:\s*/, ''), requires_confirmation: true });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
 });
 
 app.delete('/api/opportunities/:id', async (req, res) => {
@@ -335,8 +358,16 @@ app.get('/api/projects/:id', async (req, res) => {
 });
 
 app.put('/api/projects/:id', async (req, res) => {
-  try { res.json(await ProjectService.update(req.params.id, req.body)); }
-  catch (e: any) { res.status(500).json({ error: e.message }); }
+  try {
+    const { force, ...data } = req.body;
+    res.json(await ProjectService.update(req.params.id, data, 'web', !!force));
+  } catch (e: any) {
+    if (e.code === 'CONFIRM_REQUIRED' || e.message?.startsWith('CONFIRM_REQUIRED:')) {
+      res.status(409).json({ error: e.message.replace(/^CONFIRM_REQUIRED:\s*/, ''), requires_confirmation: true });
+    } else {
+      res.status(500).json({ error: e.message });
+    }
+  }
 });
 
 // === Subscriptions ===

@@ -15,18 +15,18 @@ export const handleMcp = async (req: express.Request, res: express.Response) => 
   // Strip any stale session ID so the transport always starts fresh
   delete req.headers['mcp-session-id'];
 
-  const srv = new McpServer({ name: 'crm-ai', version: '1.0.0' });
-  registerTools(srv);
-
-  // sessionIdGenerator: undefined → stateless (no Mcp-Session-Id returned, no validation)
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-
-  await srv.connect(transport);
-
+  let transport: StreamableHTTPServerTransport | null = null;
   try {
+    const srv = new McpServer({ name: 'crm-ai', version: '1.0.0' });
+    registerTools(srv);
+
+    // sessionIdGenerator: undefined → stateless (no Mcp-Session-Id returned, no validation)
+    transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined,
+      enableJsonResponse: true,
+    });
+
+    await srv.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (err: any) {
     console.error('❌ Error handling MCP request:', err.message);
@@ -35,6 +35,8 @@ export const handleMcp = async (req: express.Request, res: express.Response) => 
     }
   } finally {
     // Cleanup transport after response so there are no memory leaks
-    try { await transport.close(); } catch { /* already closed */ }
+    if (transport) {
+      try { await transport.close(); } catch { /* already closed */ }
+    }
   }
 };

@@ -46,7 +46,7 @@ app.all('/', (req, res) => {
     name: 'crm-ai-mcp',
     transport: 'streamable-http-stateless',
     endpoints: ['/mcp', '/sse'],
-    tools_count: 27,
+    tools_count: 53,
   });
 });
 
@@ -55,7 +55,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'CRM AI MCP Server (Stateless)',
-    tools_count: 27,
+    tools_count: 53,
     timestamp: new Date().toISOString()
   });
 });

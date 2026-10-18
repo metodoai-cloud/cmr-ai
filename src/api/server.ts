@@ -34,7 +34,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
     service: 'CRM AI API & MCP Server',
-    tools_count: 27,
+    tools_count: 53,
     endpoints: ['/mcp', '/sse', '/api', '/health', '/api/health'],
     timestamp: new Date().toISOString()
   });

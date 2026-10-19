@@ -421,6 +421,45 @@ export class PaymentRepository extends BaseRepository<any> {
 // --- Expenses ---
 export class ExpenseRepository extends BaseRepository<any> {
   constructor() { super('expenses'); }
+
+  async findAll(filters: any = {}) {
+    let query = this.db
+      .from('expenses')
+      .select('*, vendors(id, name)')
+      .is('deleted_at', null);
+
+    if (filters.id) query = query.eq('id', filters.id);
+    if (filters.category) query = query.ilike('category', `%${filters.category}%`);
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.vendor_id) query = query.eq('vendor_id', filters.vendor_id);
+    if (filters.project_id) query = query.eq('project_id', filters.project_id);
+    if (filters.client_id) query = query.eq('client_id', filters.client_id);
+    if (filters.date_from) query = query.gte('date', filters.date_from);
+    if (filters.date_to) query = query.lte('date', filters.date_to);
+
+    query = query.order('date', { ascending: false });
+
+    if (filters.limit) query = query.limit(filters.limit);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  async findById(id: string) {
+    const { data, error } = await this.db
+      .from('expenses')
+      .select('*, vendors(id, name)')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null;
+      throw error;
+    }
+    return data;
+  }
 }
 
 // --- Vendors ---

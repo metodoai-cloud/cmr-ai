@@ -1325,13 +1325,38 @@ export const ExpenseService = {
   },
 
   async update(id: string, data: any, source: 'web' | 'mcp' = 'web') {
+    const prev = await expenseRepo.findById(id);
+    if (!prev) {
+      throw new Error(`Gasto con ID ${id} no encontrado`);
+    }
+
     const payload = { ...data };
+
+    // Auto-find or create vendor if vendor_name is provided
+    if (payload.vendor_name && !payload.vendor_id) {
+      const vendors = await vendorRepo.searchByName(payload.vendor_name);
+      if (vendors.length >= 1) {
+        payload.vendor_id = vendors[0].id;
+      } else {
+        const newVendor = await vendorRepo.create({
+          name: payload.vendor_name,
+          type: 'software',
+        });
+        payload.vendor_id = newVendor.id;
+      }
+      delete payload.vendor_name;
+    } else if (payload.vendor_name === '' || payload.vendor_name === null) {
+      payload.vendor_id = null;
+      delete payload.vendor_name;
+    }
+
     if (payload.amount !== undefined) {
       const amt = Number(payload.amount);
+      payload.amount = amt;
       if (payload.total === undefined) payload.total = amt;
       if (payload.subtotal === undefined) payload.subtotal = amt - (Number(payload.tax_amount) || 0);
-      delete payload.amount;
     }
+
     const updated = await expenseRepo.update(id, payload);
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
@@ -1339,6 +1364,7 @@ export const ExpenseService = {
       entityType: 'expense',
       entityId: id,
       action: 'updated',
+      beforeData: prev,
       afterData: updated,
     });
     return updated;

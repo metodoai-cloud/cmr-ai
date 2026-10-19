@@ -72,6 +72,7 @@ export class BaseRepository<T extends Record<string, any>> {
     }
 
     // Apply common filters
+    if (filters.id) query = query.eq('id', filters.id);
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.owner_id) query = query.eq('owner_id', filters.owner_id);
     if (filters.company_id) query = query.eq('company_id', filters.company_id);

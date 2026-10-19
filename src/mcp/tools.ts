@@ -46,6 +46,82 @@ function normalizeContactStatus(status?: string): string | undefined {
   return map[status.toLowerCase()] || status;
 }
 
+// Map expense category aliases/synonyms to standard CRM categories
+const KNOWN_EXPENSE_CATEGORIES: Record<string, string> = {
+  // Impuestos
+  'taxes': 'Impuestos',
+  'tax': 'Impuestos',
+  'impuesto': 'Impuestos',
+  'impuestos': 'Impuestos',
+  'iva': 'Impuestos',
+  'f29': 'Impuestos',
+  'formulario 29': 'Impuestos',
+  'formulario29': 'Impuestos',
+  'tributario': 'Impuestos',
+  'tributos': 'Impuestos',
+  'sii': 'Impuestos',
+  'tesoreria': 'Impuestos',
+  'tgr': 'Impuestos',
+  // Software / SaaS
+  'software': 'Software',
+  'saas': 'Software',
+  'licencias': 'Software',
+  'herramientas': 'Software',
+  'apps': 'Software',
+  // Publicidad / Ads
+  'advertising': 'Publicidad',
+  'publicidad': 'Publicidad',
+  'ads': 'Publicidad',
+  'marketing': 'Publicidad',
+  // Contratistas / Freelancers
+  'contractor': 'Contratistas',
+  'contractors': 'Contratistas',
+  'contratistas': 'Contratistas',
+  'freelance': 'Contratistas',
+  'freelancers': 'Contratistas',
+  'honorarios': 'Contratistas',
+  // Infraestructura / Hosting
+  'infrastructure': 'Infraestructura',
+  'infraestructura': 'Infraestructura',
+  'hosting': 'Infraestructura',
+  'cloud': 'Infraestructura',
+  'servidores': 'Infraestructura',
+  // Oficina / Operaciones
+  'office': 'Oficina',
+  'oficina': 'Oficina',
+  'operaciones': 'Oficina',
+  // Servicios
+  'services': 'Servicios',
+  'servicios': 'Servicios',
+  // Movilidad y combustible
+  'movilizacion': 'Movilización y Combustible',
+  'movilización': 'Movilización y Combustible',
+  'combustible': 'Movilización y Combustible',
+  'transporte': 'Movilización y Combustible',
+  'estacionamiento': 'Movilización y Combustible',
+  // Bancarios y comisiones
+  'banco': 'Gastos bancarios y comisiones',
+  'comision': 'Gastos bancarios y comisiones',
+  'comisión': 'Gastos bancarios y comisiones',
+  'comisiones': 'Gastos bancarios y comisiones',
+};
+
+function normalizeExpenseCategory(rawCategory: string): { category: string; note?: string } {
+  const trimmed = rawCategory.trim();
+  const lower = trimmed.toLowerCase();
+
+  if (KNOWN_EXPENSE_CATEGORIES[lower]) {
+    const standard = KNOWN_EXPENSE_CATEGORIES[lower];
+    const isNormalized = standard.toLowerCase() !== trimmed.toLowerCase() || standard !== trimmed;
+    return {
+      category: standard,
+      note: isNormalized ? `Categoría "${trimmed}" normalizada a "${standard}" para mantener consistencia con los registros del CRM.` : undefined,
+    };
+  }
+
+  return { category: trimmed };
+}
+
 // Format dates as DD-MM-YYYY
 function formatDateCL(dateStr?: string | null): string {
   if (!dateStr) return 'N/A';
@@ -1201,7 +1277,11 @@ export function registerTools(srv: McpServer) {
     },
     async (data) => {
       try {
-        const expense = await ExpenseService.create(data, 'mcp');
+        const payload = { ...data };
+        if (payload.category) {
+          payload.category = normalizeExpenseCategory(payload.category).category;
+        }
+        const expense = await ExpenseService.create(payload, 'mcp');
         const formattedAmount = (Number(expense.total) || Number(data.amount)).toLocaleString('es-CL');
         return {
           content: [{
@@ -1211,6 +1291,122 @@ export function registerTools(srv: McpServer) {
         };
       } catch (err: any) {
         return { content: [{ type: 'text' as const, text: `❌ Error al registrar gasto: ${err.message}` }] };
+      }
+    }
+  );
+
+  // --- actualizar_gasto ---
+  srv.tool(
+    'actualizar_gasto',
+    'Actualizar datos de un gasto registrado en el CRM (categoría, descripción, proveedor, monto, fecha, estado o cuenta de pago). Muestra los valores antes y después de la modificación.',
+    {
+      id: z.string().describe('ID UUID del gasto a actualizar (obligatorio)'),
+      category: z.string().optional().describe('Nueva categoría del gasto (ej: Impuestos, Software, Publicidad, Contratistas, etc.)'),
+      description: z.string().optional().describe('Nueva descripción o detalle del gasto'),
+      vendor_name: z.string().optional().describe('Nombre del proveedor o plataforma (ej: Servicio de Impuestos Internos (SII), Meta Ads, Zapier, AWS)'),
+      amount: z.number().optional().describe('Nuevo monto del gasto en pesos (CLP) o moneda correspondiente'),
+      date: z.string().optional().describe('Nueva fecha del gasto (YYYY-MM-DD)'),
+      status: z.enum(['pending', 'paid', 'cancelled']).optional().describe('Nuevo estado del gasto: pending, paid, cancelled'),
+      payment_account: z.string().optional().describe('Medio o cuenta de pago utilizada (ej: banco_empresa, transferencia, tarjeta_empresa)'),
+    },
+    async ({ id, category, description, vendor_name, amount, date, status, payment_account }) => {
+      try {
+        if (!id || typeof id !== 'string' || !id.trim()) {
+          return { content: [{ type: 'text' as const, text: '❌ Debe indicar el ID UUID del gasto a actualizar.' }] };
+        }
+
+        const cleanId = id.trim();
+
+        // Validar que se envíe al menos un campo para actualizar
+        const hasUpdates = [category, description, vendor_name, amount, date, status, payment_account].some(v => v !== undefined);
+        if (!hasUpdates) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: '❌ Debe especificar al menos un campo para actualizar (category, description, vendor_name, amount, date, status, payment_account).'
+            }]
+          };
+        }
+
+        // 1. Obtener estado previo estricto por ID (falla limpia si no existe)
+        const prev = await ExpenseService.getById(cleanId);
+        if (!prev) {
+          return { content: [{ type: 'text' as const, text: `❌ No se encontró ningún gasto con el ID: ${cleanId}` }] };
+        }
+
+        // 2. Armar payload y normalizar categoría si aplica
+        const payload: any = {};
+        let categoryNote: string | undefined;
+
+        if (category !== undefined) {
+          const norm = normalizeExpenseCategory(category);
+          payload.category = norm.category;
+          if (norm.note) categoryNote = norm.note;
+        }
+
+        if (description !== undefined) payload.description = description;
+        if (vendor_name !== undefined) payload.vendor_name = vendor_name;
+        if (amount !== undefined) payload.amount = amount;
+        if (date !== undefined) payload.date = date;
+        if (status !== undefined) payload.status = status;
+        if (payment_account !== undefined) payload.payment_account = payment_account;
+
+        // 3. Ejecutar actualización segura
+        const updated = await ExpenseService.update(cleanId, payload, 'mcp');
+        const fresh = await ExpenseService.getById(cleanId) || updated;
+
+        // 4. Comparar antes y después
+        const changes: string[] = [];
+        if (payload.category !== undefined && prev.category !== fresh.category) {
+          changes.push(`• **Categoría:** "${prev.category || 'Sin categoría'}" → "${fresh.category}"`);
+        }
+        if (payload.description !== undefined && prev.description !== fresh.description) {
+          changes.push(`• **Descripción:** "${prev.description || 'Sin descripción'}" → "${fresh.description}"`);
+        }
+        const prevVendorName = prev.vendors?.name || 'Sin proveedor';
+        const freshVendorName = fresh.vendors?.name || fresh.vendor_name || 'Sin proveedor';
+        if (vendor_name !== undefined && prevVendorName !== freshVendorName) {
+          changes.push(`• **Proveedor:** "${prevVendorName}" → "${freshVendorName}"`);
+        }
+        const prevAmt = Number(prev.total || prev.amount || 0);
+        const freshAmt = Number(fresh.total || fresh.amount || 0);
+        if (amount !== undefined && prevAmt !== freshAmt) {
+          changes.push(`• **Monto:** $${prevAmt.toLocaleString('es-CL')} → $${freshAmt.toLocaleString('es-CL')}`);
+        }
+        if (payload.date !== undefined && prev.date !== fresh.date) {
+          changes.push(`• **Fecha:** ${formatDateCL(prev.date)} → ${formatDateCL(fresh.date)}`);
+        }
+        if (payload.status !== undefined && prev.status !== fresh.status) {
+          changes.push(`• **Estado:** [${prev.status}] → [${fresh.status}]`);
+        }
+        if (payload.payment_account !== undefined && prev.payment_account !== fresh.payment_account) {
+          changes.push(`• **Cuenta de pago:** "${prev.payment_account || 'No especificada'}" → "${fresh.payment_account}"`);
+        }
+
+        const changesSection = changes.length > 0
+          ? `📝 **Cambios realizados:**\n${changes.join('\n')}`
+          : '📝 **Cambios realizados:** Ninguno (los valores enviados coinciden exactamente con los actuales).';
+
+        const currentAmtFormatted = (Number(fresh.total || fresh.amount || 0)).toLocaleString('es-CL');
+
+        let msg = `✅ **Gasto actualizado exitosamente (ID: \`${fresh.id}\`)**\n\n` +
+          `${changesSection}\n\n` +
+          `📋 **Valores actuales del gasto:**\n` +
+          `• **Categoría:** ${fresh.category || 'General'}\n` +
+          `• **Descripción:** ${fresh.description || 'Sin descripción'}\n` +
+          `• **Proveedor:** ${freshVendorName}\n` +
+          `• **Monto:** $${currentAmtFormatted} ${fresh.currency || 'CLP'}\n` +
+          `• **Fecha:** ${formatDateCL(fresh.date)}\n` +
+          `• **Estado:** [${fresh.status}]\n` +
+          `• **Cuenta de pago:** ${fresh.payment_account || 'No especificada'}`;
+
+        if (categoryNote) {
+          msg += `\n\n💡 *Nota de normalización:* ${categoryNote}`;
+        }
+
+        return { content: [{ type: 'text' as const, text: msg }] };
+      } catch (err: any) {
+        return { content: [{ type: 'text' as const, text: `❌ Error al actualizar gasto: ${err.message}` }] };
       }
     }
   );

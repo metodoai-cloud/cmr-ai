@@ -19,3 +19,25 @@ Este documento registra los incidentes relacionados con migraciones de esquema S
   - [`src/db/migrations/07_add_invoices_notes_and_activities_status.sql`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/src/db/migrations/07_add_invoices_notes_and_activities_status.sql)
   - [`src/db/migrations/08_add_lost_at_stage_and_state_machine.sql`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/src/db/migrations/08_add_lost_at_stage_and_state_machine.sql)
   - [`src/services/index.ts`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/src/services/index.ts)
+
+---
+
+<a id="err-003"></a>
+### [ERR-003] Omisión de Filtro por ID y Categoría en findAll de Repositorios
+- **Fecha:** 2026-10-18
+- **Componentes:** `BaseRepository`, `ExpenseRepository`, `ProjectRepository`.
+- **Síntoma / Mensaje:**
+  Al consultar registros invocando `.findAll({ id: '...' })` o filtrando gastos por categoría (`.findAll({ category: '...' })`), la consulta devolvía la lista completa o ignoraba el filtro por ID, lo que previamente causó afectaciones masivas (ej: cancelación accidental de proyectos de oportunidades al no filtrar por `opportunity_id`).
+- **Causa Raíz:**
+  La interfaz `QueryFilters` definía `id?: string`, pero en la implementación de `BaseRepository.findAll` faltaba la cláusula `if (filters.id) query = query.eq('id', filters.id);`. Asimismo, `ExpenseRepository` no sobrescribía `findAll` para soportar filtros por `category` o `id`, ni asociaba los datos del proveedor (`vendors`).
+- **Archivos Modificados:**
+  - [`src/repositories/BaseRepository.ts`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/src/repositories/BaseRepository.ts)
+  - [`src/repositories/index.ts`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/src/repositories/index.ts)
+- **Solución Aplicada:**
+  - Se incorporó `if (filters.id) query = query.eq('id', filters.id);` en `BaseRepository.findAll`.
+  - Se implementaron métodos dedicados `findAll` y `findById` en `ExpenseRepository` con filtros por `id`, `category` (con `ilike`), `status`, `vendor_id`, fechas y unión relacional a `vendors(id, name)`.
+- **Comando de Verificación:**
+  ```powershell
+  npx tsx src/scripts/test-actualizar-gasto.ts
+  ```
+

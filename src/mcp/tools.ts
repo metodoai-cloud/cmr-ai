@@ -1263,6 +1263,7 @@ export function registerTools(srv: McpServer) {
     'registrar_gasto',
     'Registrar un gasto o egreso operativo del negocio en el CRM.',
     {
+      title: z.string().optional().describe('Título o concepto resumido del gasto (ej: Pago Formulario 29, Licencia Zapier, Hosting AWS)'),
       category: z.string().describe('Categoría del gasto (ej: software, advertising, contractor, infrastructure, office, services, etc.)'),
       amount: z.number().describe('Monto del gasto'),
       description: z.string().optional().describe('Descripción o detalle del gasto'),
@@ -1283,10 +1284,11 @@ export function registerTools(srv: McpServer) {
         }
         const expense = await ExpenseService.create(payload, 'mcp');
         const formattedAmount = (Number(expense.total) || Number(data.amount)).toLocaleString('es-CL');
+        const titleText = expense.title ? `\n- Título: ${expense.title}` : '';
         return {
           content: [{
             type: 'text' as const,
-            text: `✅ Gasto registrado exitosamente:\n- Categoría: ${expense.category || data.category}\n- Monto: $${formattedAmount}\n- Descripción: ${expense.description || data.description || 'Sin descripción'}\n- Fecha: ${formatDateCL(expense.date)}\n- ID: \`${expense.id}\``,
+            text: `✅ Gasto registrado exitosamente:${titleText}\n- Categoría: ${expense.category || data.category}\n- Monto: $${formattedAmount}\n- Descripción: ${expense.description || data.description || 'Sin descripción'}\n- Fecha: ${formatDateCL(expense.date)}\n- ID: \`${expense.id}\``,
           }],
         };
       } catch (err: any) {
@@ -1298,9 +1300,10 @@ export function registerTools(srv: McpServer) {
   // --- actualizar_gasto ---
   srv.tool(
     'actualizar_gasto',
-    'Actualizar datos de un gasto registrado en el CRM (categoría, descripción, proveedor, monto, fecha, estado o cuenta de pago). Muestra los valores antes y después de la modificación.',
+    'Actualizar datos de un gasto registrado en el CRM (título, categoría, descripción, proveedor, monto, fecha, estado o cuenta de pago). Muestra los valores antes y después de la modificación.',
     {
       id: z.string().describe('ID UUID del gasto a actualizar (obligatorio)'),
+      title: z.string().optional().describe('Título o concepto resumido del gasto (ej: Pago Formulario 29, Licencia Zapier, Hosting AWS)'),
       category: z.string().optional().describe('Nueva categoría del gasto (ej: Impuestos, Software, Publicidad, Contratistas, etc.)'),
       description: z.string().optional().describe('Nueva descripción o detalle del gasto'),
       vendor_name: z.string().optional().describe('Nombre del proveedor o plataforma (ej: Servicio de Impuestos Internos (SII), Meta Ads, Zapier, AWS)'),
@@ -1309,7 +1312,7 @@ export function registerTools(srv: McpServer) {
       status: z.enum(['pending', 'paid', 'cancelled']).optional().describe('Nuevo estado del gasto: pending, paid, cancelled'),
       payment_account: z.string().optional().describe('Medio o cuenta de pago utilizada (ej: banco_empresa, transferencia, tarjeta_empresa)'),
     },
-    async ({ id, category, description, vendor_name, amount, date, status, payment_account }) => {
+    async ({ id, title, category, description, vendor_name, amount, date, status, payment_account }) => {
       try {
         if (!id || typeof id !== 'string' || !id.trim()) {
           return { content: [{ type: 'text' as const, text: '❌ Debe indicar el ID UUID del gasto a actualizar.' }] };
@@ -1318,12 +1321,12 @@ export function registerTools(srv: McpServer) {
         const cleanId = id.trim();
 
         // Validar que se envíe al menos un campo para actualizar
-        const hasUpdates = [category, description, vendor_name, amount, date, status, payment_account].some(v => v !== undefined);
+        const hasUpdates = [title, category, description, vendor_name, amount, date, status, payment_account].some(v => v !== undefined);
         if (!hasUpdates) {
           return {
             content: [{
               type: 'text' as const,
-              text: '❌ Debe especificar al menos un campo para actualizar (category, description, vendor_name, amount, date, status, payment_account).'
+              text: '❌ Debe especificar al menos un campo para actualizar (title, category, description, vendor_name, amount, date, status, payment_account).'
             }]
           };
         }
@@ -1337,6 +1340,8 @@ export function registerTools(srv: McpServer) {
         // 2. Armar payload y normalizar categoría si aplica
         const payload: any = {};
         let categoryNote: string | undefined;
+
+        if (title !== undefined) payload.title = title;
 
         if (category !== undefined) {
           const norm = normalizeExpenseCategory(category);
@@ -1357,6 +1362,9 @@ export function registerTools(srv: McpServer) {
 
         // 4. Comparar antes y después
         const changes: string[] = [];
+        if (payload.title !== undefined && prev.title !== fresh.title) {
+          changes.push(`• **Título:** "${prev.title || 'Sin título'}" → "${fresh.title}"`);
+        }
         if (payload.category !== undefined && prev.category !== fresh.category) {
           changes.push(`• **Categoría:** "${prev.category || 'Sin categoría'}" → "${fresh.category}"`);
         }
@@ -1392,6 +1400,7 @@ export function registerTools(srv: McpServer) {
         let msg = `✅ **Gasto actualizado exitosamente (ID: \`${fresh.id}\`)**\n\n` +
           `${changesSection}\n\n` +
           `📋 **Valores actuales del gasto:**\n` +
+          (fresh.title ? `• **Título:** ${fresh.title}\n` : '') +
           `• **Categoría:** ${fresh.category || 'General'}\n` +
           `• **Descripción:** ${fresh.description || 'Sin descripción'}\n` +
           `• **Proveedor:** ${freshVendorName}\n` +
@@ -1682,8 +1691,10 @@ export function registerTools(srv: McpServer) {
         const list = expenses.map((e: any) => {
           const totalFormatted = (Number(e.total) || Number(e.amount) || 0).toLocaleString('es-CL');
           const dateFormatted = formatDateCL(e.date);
+          const titlePart = e.title ? `**${e.title}** | ` : '';
           const desc = e.description ? ` (${e.description})` : '';
-          return `• **${e.category || 'General'}** | $${totalFormatted} | Fecha: ${dateFormatted}${desc} | ID: \`${e.id}\``;
+          const vendorPart = e.vendors?.name ? ` | Proveedor: ${e.vendors.name}` : '';
+          return `• ${titlePart}**${e.category || 'General'}** | $${totalFormatted} | Fecha: ${dateFormatted}${desc}${vendorPart} | ID: \`${e.id}\``;
         }).join('\n');
         return {
           content: [{ type: 'text' as const, text: expenses.length > 0 ? `💸 Gastos (${expenses.length}):\n\n${list}` : 'No hay gastos registrados.' }],

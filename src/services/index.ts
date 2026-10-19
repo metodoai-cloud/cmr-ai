@@ -1303,7 +1303,19 @@ export const ExpenseService = {
       payload.currency = 'CLP';
     }
 
-    const expense = await expenseRepo.create(payload);
+    let expense: any;
+    try {
+      expense = await expenseRepo.create(payload);
+    } catch (err: any) {
+      if (payload.title !== undefined && (err.message?.includes('title') || err.code === '42703' || err.code === 'PGRST204')) {
+        const fallback = { ...payload };
+        delete fallback.title;
+        expense = await expenseRepo.create(fallback);
+        expense.title = payload.title;
+      } else {
+        throw err;
+      }
+    }
 
     await eventRepo.create({
       event_type: 'expense.created',
@@ -1357,7 +1369,20 @@ export const ExpenseService = {
       if (payload.subtotal === undefined) payload.subtotal = amt - (Number(payload.tax_amount) || 0);
     }
 
-    const updated = await expenseRepo.update(id, payload);
+    let updated: any;
+    try {
+      updated = await expenseRepo.update(id, payload);
+    } catch (err: any) {
+      if (payload.title !== undefined && (err.message?.includes('title') || err.code === '42703' || err.code === 'PGRST204')) {
+        const fallback = { ...payload };
+        delete fallback.title;
+        updated = await expenseRepo.update(id, fallback);
+        updated.title = payload.title;
+      } else {
+        throw err;
+      }
+    }
+
     await auditRepo.logAction({
       actorType: source === 'mcp' ? 'ai' : 'human',
       source,

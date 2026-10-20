@@ -7,9 +7,9 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        entryFileNames: 'assets/crm-v2-[name]-[hash].js',
-        chunkFileNames: 'assets/crm-v2-[name]-[hash].js',
-        assetFileNames: 'assets/crm-v2-[name]-[hash].[ext]'
+        entryFileNames: 'assets/crm-v2-1-[name]-[hash].js',
+        chunkFileNames: 'assets/crm-v2-1-[name]-[hash].js',
+        assetFileNames: 'assets/crm-v2-1-[name]-[hash].[ext]'
       }
     }
   },

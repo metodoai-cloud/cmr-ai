@@ -2809,7 +2809,12 @@ Equipo Método AI`;
             <div className="glass-card" style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: showExpensesList ? '16px' : 0 }}>
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>Gastos Operativos</h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', margin: 0 }}>Gastos Operativos</h3>
+                    <span style={{ fontSize: '0.68rem', padding: '1px 6px', borderRadius: '4px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 600, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                      v2.1
+                    </span>
+                  </div>
                   <span style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
                     {expenses.length} {expenses.length === 1 ? 'gasto registrado' : 'gastos registrados'}
                   </span>
@@ -2859,41 +2864,60 @@ Equipo Método AI`;
                       <div
                         key={exp.id}
                         style={{
-                          padding: '12px 16px',
+                          padding: '14px 18px',
                           backgroundColor: 'var(--bg-glass)',
                           border: '1px solid var(--border-glass)',
                           borderRadius: 'var(--radius-sm)',
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
+                          gap: '16px',
                         }}
                       >
                         {(() => {
                           const vendorObj = Array.isArray(exp.vendors) ? exp.vendors[0] : exp.vendors;
                           const vendorName = vendorObj?.name;
+                          const title = exp.title || exp.description || 'Gasto Operativo';
+                          const description = exp.description || 'Sin descripción';
+
                           return (
-                            <div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                              {/* Línea 1: Título + Proveedor */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.title || exp.description}</div>
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
+                                  {title}
+                                </span>
                                 {vendorName && (
-                                  <span style={{ fontSize: '0.72rem', padding: '1px 7px', borderRadius: '4px', backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary-light)', fontWeight: 500 }}>
+                                  <span
+                                    style={{
+                                      fontSize: '0.72rem',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                                      color: 'var(--primary-light)',
+                                      fontWeight: 500,
+                                      border: '1px solid rgba(99, 102, 241, 0.25)',
+                                    }}
+                                  >
                                     {vendorName}
                                   </span>
                                 )}
                               </div>
-                              {exp.title && exp.description && exp.description !== exp.title && (
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                                  {exp.description}
-                                </div>
-                              )}
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
+
+                              {/* Línea 2: Descripción (Renglón dedicado siempre visible) */}
+                              <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                                {description}
+                              </div>
+
+                              {/* Línea 3: Metadatos (Categoría | Cuenta | Fecha) */}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                Categoría: {exp.category || 'General'} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
                               </div>
                             </div>
                           );
                         })()}
-                        <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
-                          -{formatMoney(exp.total)}
+                        <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                          -{formatMoney(exp.total || exp.amount)}
                         </div>
                       </div>
                     ))

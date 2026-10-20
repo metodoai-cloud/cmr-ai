@@ -111,9 +111,22 @@ jobs:
               npm run build
               cd ..
 
-              # Sincronizar frontend a Nginx webroot
-              if [ -d "/var/www/html" ]; then
-                cp -rf frontend/dist/* /var/www/html/ 2>/dev/null || true
+              # Sincronizar frontend a todas las posibles carpetas webroot de Nginx (incluyendo crm.metodoai.tech y crm-ia.metodoai.tech)
+              for webroot in /var/www/html /var/www/crm /var/www/crm-ia /var/www/crm.metodoai.tech /var/www/crm-ia.metodoai.tech /var/www/cmr/dist /var/www/crm/dist; do
+                if [ -d "$webroot" ]; then
+                  echo "📋 Sincronizando frontend a $webroot..."
+                  cp -rf frontend/dist/* "$webroot/" 2>/dev/null || true
+                fi
+              done
+
+              # Detectar automáticamente rutas root desde la configuración de Nginx
+              if [ -d "/etc/nginx" ]; then
+                for conf_root in $(grep -rhs "root " /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | awk '{print $2}' | tr -d ';'); do
+                  if [ -d "$conf_root" ] && [[ "$conf_root" != *"node_modules"* ]]; then
+                    echo "📋 Sincronizando frontend a root de Nginx: $conf_root..."
+                    cp -rf frontend/dist/* "$conf_root/" 2>/dev/null || true
+                  fi
+                done
               fi
             fi
 

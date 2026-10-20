@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "build:frontend": "npm --prefix frontend run build",
+    "dev:frontend": "npm --prefix frontend run dev",
     "start": "tsx src/index.ts",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",

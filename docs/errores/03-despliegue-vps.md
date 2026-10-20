@@ -41,3 +41,28 @@ Este documento registra incidentes ocurridos en el pipeline de CI/CD (GitHub Act
   - Se sanitizaron las variables `VPS_HOST` y `VPS_USER` extrayendo el host si viene como `root@ip`.
 - **Archivo Modificado:**
   [`/.github/workflows/deploy.yml`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/.github/workflows/deploy.yml)
+
+---
+
+### [ERR-005] Colisión de Webroot en Nginx VPS y Desacople a Hosting Web Hostinger vía FTP
+- **Fecha:** 2026-10-20
+- **Componente:** CI/CD (GitHub Actions) / Nginx VPS / Hosting Web Hostinger
+- **Síntoma / Mensaje:**
+  Al acceder a `https://goplanbe.metodoai.tech/`, el servidor Nginx entregaba la interfaz de usuario del CRM en lugar de la red GoPlanBe.
+- **Causa Raíz:**
+  1. Tanto `goplanbe.metodoai.tech` como `crm.metodoai.tech` apuntaban a la misma IP del VPS (2.25.164.77).
+  2. El script `scripts/deploy_vps.sh` ejecutado por el workflow de GitHub Actions copiaba el frontend compilado del CRM (`frontend/dist/*`) a todos los webroots encontrados en `/etc/nginx/sites-enabled/`, sobreescribiendo el webroot de GoPlanBe.
+- **Archivos Modificados:**
+  - [`.github/workflows/deploy.yml`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/.github/workflows/deploy.yml)
+  - [`frontend/public/.htaccess`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/frontend/public/.htaccess)
+  - [`frontend/src/api.ts`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/frontend/src/api.ts)
+  - [`package.json`](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/package.json)
+- **Solución Aplicada:**
+  1. Se desacopló `crm.metodoai.tech` del VPS, migrándolo a un Hosting Web independiente en Hostinger (`public_html/`). El VPS (2.25.164.77) queda exclusivo para GoPlanBe y sus microservicios.
+  2. Se sustituyó el workflow de despliegue SSH al VPS por un pipeline de CI/CD por FTP con `SamKirkland/FTP-Deploy-Action@v4.3.5`.
+  3. Se configuró la compilación del frontend SPA Vite (`frontend/dist/`) copiándolo a `dist/` para el envío FTP automático a `./public_html/`.
+  4. Se añadió `.htaccess` en `frontend/public/` para el enrutamiento correcto de la SPA y optimización de caché en el hosting web.
+  5. Se añadió validación temprana de secretos (`HOSTINGER_FTP_HOST`, `HOSTINGER_FTP_USER`, `HOSTINGER_FTP_PASSWORD`) en el workflow.
+- **Comando de Verificación:**
+  Ejecutar el workflow en GitHub Actions tras registrar los 3 secrets de FTP en GitHub y comprobar carga de `https://crm.metodoai.tech`.
+

@@ -1,7 +1,9 @@
 // API Client for the CRM Backend
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
-  const res = await fetch(`/api${endpoint}`, {
+  const url = `${API_BASE_URL}/api${endpoint}`;
+  const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,

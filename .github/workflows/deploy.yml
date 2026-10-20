@@ -1,4 +1,4 @@
-name: Auto Deploy to VPS
+name: Deploy CRM to Hostinger Web Hosting
 
 on:
   push:
@@ -7,108 +7,67 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to Production VPS
+  build-and-deploy:
+    name: Build & FTP Deploy to Hostinger
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repositorio
         uses: actions/checkout@v4
 
-      - name: Diagnóstico de Secretos y Variables
-        env:
-          HAS_SEC_HOST: ${{ secrets.VPS_HOST != '' }}
-          HAS_VAR_HOST: ${{ vars.VPS_HOST != '' }}
-          HAS_SEC_USER: ${{ secrets.VPS_USER != '' }}
-          HAS_VAR_USER: ${{ vars.VPS_USER != '' }}
-          HAS_SEC_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
-          HAS_VAR_KEY: ${{ vars.VPS_SSH_KEY != '' }}
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Validar Secretos de FTP
         run: |
-          echo "🔍 Comprobación de configuración:"
-          echo "• secrets.VPS_HOST: $HAS_SEC_HOST"
-          echo "• vars.VPS_HOST: $HAS_VAR_HOST"
-          echo "• secrets.VPS_USER: $HAS_SEC_USER"
-          echo "• vars.VPS_USER: $HAS_VAR_USER"
-          echo "• secrets.VPS_SSH_KEY: $HAS_SEC_KEY"
-          echo "• vars.VPS_SSH_KEY: $HAS_VAR_KEY"
+          MISSING=0
+          if [ -z "${{ secrets.HOSTINGER_FTP_HOST }}" ]; then
+            echo "❌ Falta el secreto: HOSTINGER_FTP_HOST"
+            MISSING=1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_FTP_USER }}" ]; then
+            echo "❌ Falta el secreto: HOSTINGER_FTP_USER"
+            MISSING=1
+          fi
+          if [ -z "${{ secrets.HOSTINGER_FTP_PASSWORD }}" ]; then
+            echo "❌ Falta el secreto: HOSTINGER_FTP_PASSWORD"
+            MISSING=1
+          fi
+          if [ $MISSING -eq 1 ]; then
+            echo "👉 Configura estos secretos en GitHub: Settings -> Secrets and variables -> Actions"
+            exit 1
+          fi
+          echo "✅ Secretos de FTP validados correctamente."
 
-      - name: Desplegar en VPS via SSH
+      - name: Instalar dependencias del Frontend
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Compilar Frontend (Vite)
+        working-directory: ./frontend
         env:
-          VPS_HOST: ${{ vars.VPS_HOST }}
-          VPS_USER: ${{ vars.VPS_USER }}
-          SEC_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VAR_KEY: ${{ vars.VPS_SSH_KEY }}
-          SEC_PASS: ${{ secrets.VPS_PASSWORD }}
-          VAR_PASS: ${{ vars.VPS_PASSWORD }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://excocryhfsfzmxozxcwz.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_JSii8wiUoZMee9VLxi0HQw_eX8_r7K8' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || '' }}
+        run: npm run build
+
+      - name: Preparar carpeta de distribución para Hostinger
         run: |
-          VPS_SSH_KEY="${SEC_KEY:-$VAR_KEY}"
-          VPS_PASSWORD="${SEC_PASS:-$VAR_PASS}"
-          
-          # Limpiar y separar si VPS_HOST incluye usuario (ej: root@2.25.164.77)
-          RAW_HOST="${VPS_HOST:-$SEC_HOST}"
-          if [[ "$RAW_HOST" == *"@"* ]]; then
-            VPS_USER="${RAW_HOST%%@*}"
-            VPS_HOST="${RAW_HOST##*@}"
-          else
-            VPS_HOST="$RAW_HOST"
-          fi
-          
-          VPS_HOST=$(echo "$VPS_HOST" | tr -d '[:space:]')
-          VPS_USER=$(echo "${VPS_USER:-root}" | tr -d '[:space:]')
-          
-          if [ -z "$VPS_HOST" ]; then
-            echo "❌ ERROR: VPS_HOST no está definido."
-            exit 1
-          fi
-          
-          if [ -z "$VPS_SSH_KEY" ] && [ -z "$VPS_PASSWORD" ]; then
-            echo "❌ ERROR: No se encontró VPS_SSH_KEY ni VPS_PASSWORD."
-            echo "👉 Agrega VPS_SSH_KEY (clave privada SSH) o VPS_PASSWORD (contraseña) en Settings -> Secrets."
-            exit 1
-          fi
-          
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          
-          echo "🚀 Conectando a $VPS_USER@$VPS_HOST..."
-          
-          if [ -n "$VPS_SSH_KEY" ]; then
-            # Validar si pegaron la clave pública por error
-            if [[ "$VPS_SSH_KEY" == ssh-* ]] || [[ "$VPS_SSH_KEY" == ecdsa-* ]]; then
-              echo "❌ ERROR: Has pegado la clave PÚBLICA en VPS_SSH_KEY."
-              echo "👉 Debes pegar la clave PRIVADA (la que empieza con '-----BEGIN OPENSSH PRIVATE KEY-----')."
-              exit 1
-            fi
-            
-            # Formatear y asegurar saltos de línea limpios
-            printf "%s\n" "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-            echo "" >> ~/.ssh/deploy_key
-            chmod 600 ~/.ssh/deploy_key
-            SSH_CMD="ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15"
-          else
-            sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-            SSH_CMD="sshpass -p $VPS_PASSWORD ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 -o ServerAliveInterval=15"
-          fi
+          rm -rf dist
+          mkdir -p dist
+          cp -r frontend/dist/. dist/
+          echo "📁 Contenido de dist/ preparado:"
+          ls -la dist/
 
-          if [ ! -f "scripts/deploy_vps.sh" ]; then
-            echo "❌ ERROR: scripts/deploy_vps.sh no existe."
-            exit 1
-          fi
-          chmod +x scripts/deploy_vps.sh
-
-          SUCCESS=0
-          for attempt in 1 2 3; do
-            echo "🚀 [Intento $attempt/3] Conectando a $VPS_USER@$VPS_HOST..."
-            if $SSH_CMD "$VPS_USER@$VPS_HOST" "bash -se" < scripts/deploy_vps.sh; then
-              SUCCESS=1
-              break
-            else
-              echo "⚠️ Intento $attempt falló. Esperando 10 segundos antes de reintentar..."
-              sleep 10
-            fi
-          done
-
-          if [ $SUCCESS -ne 1 ]; then
-            echo "❌ No se pudo completar la conexión SSH tras 3 intentos."
-            exit 1
-          fi
+      - name: Desplegar archivos a Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.HOSTINGER_FTP_HOST }}
+          username: ${{ secrets.HOSTINGER_FTP_USER }}
+          password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ./public_html/

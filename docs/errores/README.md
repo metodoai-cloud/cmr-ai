@@ -27,6 +27,7 @@
 | `502 Bad Gateway` al consultar `/mcp` o `/sse` | Nginx & PM2 (Puertos 3005 / 3002) | [Ver [ERR-001] en 01-conector-mcp.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/01-conector-mcp.md#err-001) |
 | Error en script de PowerShell: token `&&` | Terminal local Windows PowerShell | [Ver [ERR-002] en 03-despliegue-vps.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/03-despliegue-vps.md) |
 | Omisión de filtro `id` o `category` en `findAll` | Repositorios (`BaseRepository`, `ExpenseRepository`) | [Ver [ERR-003] en 02-base-de-datos.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/02-base-de-datos.md#err-003) |
+| Colisión de Webroot en Nginx VPS (GoPlanBe vs CRM) | CI/CD, Nginx VPS & Hosting Web | [Ver [ERR-005] en 03-despliegue-vps.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/03-despliegue-vps.md#err-005) |
 
 ---
 

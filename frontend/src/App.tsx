@@ -2868,24 +2868,30 @@ Equipo Método AI`;
                           alignItems: 'center',
                         }}
                       >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.title || exp.description}</div>
-                            {exp.vendors?.name && (
-                              <span style={{ fontSize: '0.72rem', padding: '1px 7px', borderRadius: '4px', backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary-light)', fontWeight: 500 }}>
-                                {exp.vendors.name}
-                              </span>
-                            )}
-                          </div>
-                          {exp.title && exp.description && exp.description !== exp.title && (
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                              {exp.description}
+                        {(() => {
+                          const vendorObj = Array.isArray(exp.vendors) ? exp.vendors[0] : exp.vendors;
+                          const vendorName = vendorObj?.name;
+                          return (
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.title || exp.description}</div>
+                                {vendorName && (
+                                  <span style={{ fontSize: '0.72rem', padding: '1px 7px', borderRadius: '4px', backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--primary-light)', fontWeight: 500 }}>
+                                    {vendorName}
+                                  </span>
+                                )}
+                              </div>
+                              {exp.title && exp.description && exp.description !== exp.title && (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  {exp.description}
+                                </div>
+                              )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
+                              </div>
                             </div>
-                          )}
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            Categoría: {exp.category} | Cuenta: {exp.payment_account || 'Tarjeta'} | {formatDate(exp.date)}
-                          </div>
-                        </div>
+                          );
+                        })()}
                         <div style={{ textAlign: 'right', fontWeight: 700, color: 'var(--danger)' }}>
                           -{formatMoney(exp.total)}
                         </div>

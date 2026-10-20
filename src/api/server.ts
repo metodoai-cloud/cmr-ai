@@ -452,10 +452,12 @@ for (const p of candidatePaths) {
 if (distPath) {
   console.log(`🌐 Serving frontend SPA from: ${distPath}`);
   app.use(express.static(distPath, {
-    maxAge: '1h',
+    maxAge: 0,
     setHeaders: (res, filePath) => {
       if (filePath.endsWith('.html')) {
         res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      } else {
+        res.setHeader('Cache-Control', 'no-cache, must-revalidate');
       }
     }
   }));

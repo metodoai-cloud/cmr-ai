@@ -79,7 +79,8 @@ jobs:
           server: ${{ steps.ftp-config.outputs.host }}
           username: ${{ secrets.HOSTINGER_FTP_USER }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
+          protocol: ftps
           local-dir: ./dist/
-          server-dir: /
-          log-level: verbose
+          server-dir: ./
+
 

@@ -63,11 +63,22 @@ jobs:
           echo "📁 Contenido de dist/ preparado:"
           ls -la dist/
 
+      - name: Sanitizar y Preparar Conexión FTP
+        id: ftp-config
+        env:
+          RAW_HOST: ${{ secrets.HOSTINGER_FTP_HOST }}
+        run: |
+          # Eliminar prefijos de protocolo (ftp://, ftps://, http://, https://), barras y puertos
+          CLEAN_HOST=$(echo "$RAW_HOST" | sed -E 's|^[a-zA-Z]+://||' | sed -E 's|/.*$||' | sed -E 's|:[0-9]+$||' | tr -d '[:space:]')
+          echo "host=$CLEAN_HOST" >> "$GITHUB_OUTPUT"
+          echo "🌐 Host FTP sanitizado: $CLEAN_HOST"
+
       - name: Desplegar archivos a Hostinger via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.HOSTINGER_FTP_HOST }}
+          server: ${{ steps.ftp-config.outputs.host }}
           username: ${{ secrets.HOSTINGER_FTP_USER }}
           password: ${{ secrets.HOSTINGER_FTP_PASSWORD }}
           local-dir: ./dist/
           server-dir: ./public_html/
+

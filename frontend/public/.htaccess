@@ -1,3 +1,6 @@
+# Set DirectoryIndex to prioritize index.html over default.php
+DirectoryIndex index.html index.php default.php
+
 # Enable URL rewriting for Vite React SPA
 <IfModule mod_rewrite.c>
   RewriteEngine On

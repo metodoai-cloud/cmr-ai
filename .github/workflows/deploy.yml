@@ -119,6 +119,17 @@ jobs:
                 fi
               done
 
+              # Localizar la carpeta exacta donde Nginx sirve el sitio antiguo (crm.metodoai.tech) y sobreescribirla
+              echo "🔍 Buscando carpetas de Nginx con archivos estáticos antiguos..."
+              for old_bundle in $(find /var/www /usr/share/nginx /root /home -name "*DrHkMuzz*" -o -name "*index-*.js" 2>/dev/null); do
+                bundle_assets_dir=$(dirname "$old_bundle")
+                bundle_root_dir=$(dirname "$bundle_assets_dir")
+                if [ -d "$bundle_root_dir" ] && [[ "$bundle_root_dir" != *"node_modules"* ]]; then
+                  echo "🎯 Actualizando webroot antiguo en $bundle_root_dir..."
+                  cp -rf frontend/dist/* "$bundle_root_dir/" 2>/dev/null || true
+                fi
+              done
+
               # Detectar automáticamente rutas root desde la configuración de Nginx
               if [ -d "/etc/nginx" ]; then
                 for conf_root in $(grep -rhs "root " /etc/nginx/sites-enabled/ /etc/nginx/conf.d/ 2>/dev/null | awk '{print $2}' | tr -d ';'); do

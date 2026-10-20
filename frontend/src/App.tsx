@@ -161,7 +161,7 @@ export default function App() {
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [editingInvoiceId, setEditingInvoiceId] = useState<string | null>(null);
   const [showInvoicesTable, setShowInvoicesTable] = useState(false);
-  const [showExpensesList, setShowExpensesList] = useState(false);
+  const [showExpensesList, setShowExpensesList] = useState(true);
   const [invoiceForm, setInvoiceForm] = useState({
     invoice_number: '',
     status: 'draft',

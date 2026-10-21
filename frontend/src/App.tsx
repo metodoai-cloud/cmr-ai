@@ -297,7 +297,9 @@ export default function App() {
       setProjects(projs || []);
       setSubscriptions(subs || []);
       setServices(servs || []);
-      setServerOnline(true);
+
+      const isOnline = !!dash || (Array.isArray(pipe) && pipe.length > 0) || (Array.isArray(opps) && opps.length > 0);
+      setServerOnline(isOnline);
 
       // Keep selected opp fresh if open
       if (selectedOpp) {
@@ -1925,7 +1927,7 @@ Equipo Método AI`;
               <div className="glass-card" style={{ padding: '24px' }}>
                 <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '16px' }}>Atribución de Campañas (ROAS)</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {dashboardData.marketing.campaigns.map((c: any) => (
+                  {(dashboardData?.marketing?.campaigns || []).map((c: any) => (
                     <div
                       key={c.campaign_id}
                       style={{
@@ -1948,9 +1950,39 @@ Equipo Método AI`;
                       </div>
                     </div>
                   ))}
+                  {(!dashboardData?.marketing?.campaigns || dashboardData.marketing.campaigns.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '16px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      No hay campañas de marketing registradas en este período.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB 1: EXECUTIVE DASHBOARD FALLBACK / LOADING */}
+        {activeTab === 'dashboard' && !dashboardData && (
+          <div className="glass-card animate-fade-in" style={{ padding: '60px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', margin: '40px auto', maxWidth: '520px' }}>
+            <RefreshCw size={36} color="var(--primary)" className={loading ? "animate-spin" : ""} />
+            <h3 style={{ fontSize: '1.25rem', color: 'var(--text-primary)', margin: 0 }}>
+              {loading ? 'Cargando métricas del Dashboard...' : 'Conectando con el servidor del CRM'}
+            </h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+              {loading 
+                ? 'Sincronizando información ejecutiva, financiera y comercial en tiempo real.' 
+                : 'No se pudieron recibir métricas desde https://crm-ia.metodoai.tech. Puedes pulsar el botón inferior para reintentar.'}
+            </p>
+            {!loading && (
+              <button 
+                type="button" 
+                onClick={() => loadData()} 
+                className="btn btn-primary"
+                style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <RefreshCw size={16} /> Reintentar Carga
+              </button>
+            )}
           </div>
         )}
 
@@ -2436,7 +2468,7 @@ Equipo Método AI`;
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboardData.marketing.campaigns.map((c: any) => (
+                  {(dashboardData?.marketing?.campaigns || []).map((c: any) => (
                     <tr key={c.campaign_id} style={{ borderBottom: '1px solid var(--border-glass)' }}>
                       <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>{c.campaign_name}</td>
                       <td style={{ padding: '14px 16px' }}>

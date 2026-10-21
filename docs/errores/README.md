@@ -28,6 +28,7 @@
 | Error en script de PowerShell: token `&&` | Terminal local Windows PowerShell | [Ver [ERR-002] en 03-despliegue-vps.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/03-despliegue-vps.md) |
 | Omisión de filtro `id` o `category` en `findAll` | Repositorios (`BaseRepository`, `ExpenseRepository`) | [Ver [ERR-003] en 02-base-de-datos.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/02-base-de-datos.md#err-003) |
 | Colisión de Webroot en Nginx VPS (GoPlanBe vs CRM) | CI/CD, Nginx VPS & Hosting Web | [Ver [ERR-005] en 03-despliegue-vps.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/03-despliegue-vps.md#err-005) |
+| Dashboard Ejecutivo en blanco tras desacople Hostinger | Frontend & API Base URL | [Ver [ERR-006] en 04-frontend-dashboard.md](file:///c:/Users/casa/Documents/_TRABAJO/_D300/GESTION%20AG/CMR/docs/errores/04-frontend-dashboard.md#err-006) |
 
 ---
 

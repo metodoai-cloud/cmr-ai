@@ -52,7 +52,7 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://excocryhfsfzmxozxcwz.supabase.co' }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'sb_publishable_JSii8wiUoZMee9VLxi0HQw_eX8_r7K8' }}
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || '' }}
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL || 'https://crm-ia.metodoai.tech' }}
         run: npm run build
 
       - name: Preparar carpeta de distribución para Hostinger

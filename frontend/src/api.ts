@@ -1,5 +1,9 @@
 // API Client for the CRM Backend
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const DEFAULT_API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? ''
+  : 'https://crm-ia.metodoai.tech';
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL).replace(/\/$/, '');
 
 export async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}/api${endpoint}`;
@@ -16,6 +20,10 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
     errorObj.status = res.status;
     errorObj.requires_confirmation = !!(err.requires_confirmation || res.status === 409);
     throw errorObj;
+  }
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new Error(`Respuesta no válida del servidor (esperado JSON, recibido ${contentType || 'HTML/Texto'}). Revisa la URL del API.`);
   }
   return res.json();
 }

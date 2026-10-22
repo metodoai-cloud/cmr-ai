@@ -18,6 +18,7 @@ import {
   ArrowDown,
   ArrowUp,
 } from 'lucide-react';
+import { crmApi } from '../api';
 
 export interface AgencyTask {
   id: number | string;
@@ -343,10 +344,10 @@ export const AgencyTasksSection: React.FC = () => {
     const loadDbTasks = async () => {
       try {
         const [resAct, resCo, resContact, resOpp] = await Promise.all([
-          fetch('/api/activities').then((r) => (r.ok ? r.json() : [])),
-          fetch('/api/companies').then((r) => (r.ok ? r.json() : [])),
-          fetch('/api/contacts').then((r) => (r.ok ? r.json() : [])),
-          fetch('/api/opportunities').then((r) => (r.ok ? r.json() : [])),
+          crmApi.getActivities().catch(() => []),
+          crmApi.getCompanies().catch(() => []),
+          crmApi.getContacts().catch(() => []),
+          crmApi.getAllOpportunities().catch(() => []),
         ]);
 
         const coMap: Record<string, string> = {};
@@ -529,17 +530,13 @@ export const AgencyTasksSection: React.FC = () => {
 
           // Sync to backend if it's a DB record (UUID)
           if (typeof taskId === 'string' && taskId.length > 10 && !taskId.startsWith('custom-')) {
-            fetch(`/api/activities/${taskId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                result:
-                  nextStatus === 'completed'
-                    ? 'completada'
-                    : nextStatus === 'in_progress'
-                    ? 'en proceso'
-                    : 'pendiente',
-              }),
+            crmApi.updateActivity(taskId, {
+              result:
+                nextStatus === 'completed'
+                  ? 'completada'
+                  : nextStatus === 'in_progress'
+                  ? 'en proceso'
+                  : 'pendiente',
             }).catch(console.warn);
           }
 
@@ -606,23 +603,19 @@ export const AgencyTasksSection: React.FC = () => {
         ([_, name]) => name.toLowerCase() === taskToSave.entity.toLowerCase()
       )?.[0] || null;
 
-      fetch('/api/activities', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'task',
-          notes: taskToSave.title,
-          desired_outcome: taskToSave.expectedOutcome || null,
-          next_action: taskToSave.nextAction || null,
-          next_action_date: taskToSave.dueDate || null,
-          company_id: matchedCompanyId,
-          result:
-            taskToSave.status === 'completed'
-              ? 'completada'
-              : taskToSave.status === 'in_progress'
-              ? 'en proceso'
-              : 'pendiente',
-        }),
+      crmApi.createActivity({
+        type: 'task',
+        notes: taskToSave.title,
+        desired_outcome: taskToSave.expectedOutcome || null,
+        next_action: taskToSave.nextAction || null,
+        next_action_date: taskToSave.dueDate || null,
+        company_id: matchedCompanyId,
+        result:
+          taskToSave.status === 'completed'
+            ? 'completada'
+            : taskToSave.status === 'in_progress'
+            ? 'en proceso'
+            : 'pendiente',
       }).catch(console.warn);
     } else {
       setTasks((prev) =>
@@ -635,22 +628,18 @@ export const AgencyTasksSection: React.FC = () => {
           ([_, name]) => name.toLowerCase() === taskToSave.entity.toLowerCase()
         )?.[0] || null;
 
-        fetch(`/api/activities/${taskToSave.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notes: taskToSave.title,
-            desired_outcome: taskToSave.expectedOutcome || null,
-            next_action: taskToSave.nextAction || null,
-            next_action_date: taskToSave.dueDate || null,
-            company_id: matchedCompanyId,
-            result:
-              taskToSave.status === 'completed'
-                ? 'completada'
-                : taskToSave.status === 'in_progress'
-                ? 'en proceso'
-                : 'pendiente',
-          }),
+        crmApi.updateActivity(taskToSave.id, {
+          notes: taskToSave.title,
+          desired_outcome: taskToSave.expectedOutcome || null,
+          next_action: taskToSave.nextAction || null,
+          next_action_date: taskToSave.dueDate || null,
+          company_id: matchedCompanyId,
+          result:
+            taskToSave.status === 'completed'
+              ? 'completada'
+              : taskToSave.status === 'in_progress'
+              ? 'en proceso'
+              : 'pendiente',
         }).catch(console.warn);
       }
     }

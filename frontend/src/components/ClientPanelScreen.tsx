@@ -15,6 +15,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+import { crmApi } from '../api';
+
 interface ClientPanelItem {
   id: string;
   company_id: string;
@@ -128,9 +130,7 @@ export const ClientPanelScreen: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/client-panel');
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Error al cargar el panel de clientes`);
-      const json = await res.json();
+      const json = await crmApi.getClientPanel();
       setData(json);
     } catch (err: any) {
       setError(err.message || 'Error de conexión con el servidor');

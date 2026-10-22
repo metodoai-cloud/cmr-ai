@@ -31,6 +31,7 @@ export async function fetchApi(endpoint: string, options: RequestInit = {}) {
 export const crmApi = {
   // Dashboard & Analytics
   getDashboard: () => fetchApi('/dashboard'),
+  getClientPanel: () => fetchApi('/client-panel'),
   getSalesSummary: () => fetchApi('/analytics/sales'),
   getFinanceSummary: () => fetchApi('/analytics/finance'),
   getMarketingSummary: () => fetchApi('/analytics/marketing'),

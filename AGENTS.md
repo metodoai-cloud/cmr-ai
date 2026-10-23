@@ -16,3 +16,7 @@ Este repositorio cuenta con una **Base de Conocimiento de Errores e Incidentes**
 
 4. **Entorno Windows PowerShell:**
    Recuerda que la terminal local ejecuta Windows PowerShell 5.1; no uses `&&` para encadenar comandos, usa `;`.
+
+5. **Paso obligatorio tras implementar planes de trabajo:**
+   Cada vez que el usuario apruebe un plan de implementación y se concluyan los cambios en código, el paso siguiente **obligatorio** es realizar `git commit` y `git push origin main` para disparar el flujo de CI/CD en GitHub Actions y ver los cambios reflejados en producción (`https://crm.metodoai.tech`).
+

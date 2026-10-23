@@ -465,19 +465,6 @@ export default function App() {
     }
   };
 
-  // Delete Opportunity
-  const handleDeleteOpportunity = async (oppId: string, oppName?: string) => {
-    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente la oportunidad "${oppName || oppId}"? Esta acción borrará el trato del pipeline y no se puede deshacer.`)) {
-      return;
-    }
-    try {
-      await crmApi.deleteOpportunity(oppId);
-      setSelectedOpp(null);
-      await loadData();
-    } catch (e: any) {
-      alert(`Error al eliminar oportunidad: ${e?.message || 'Error desconocido'}`);
-    }
-  };
 
   // Add Activity to Opportunity
   const handleAddActivity = async (e: React.FormEvent) => {

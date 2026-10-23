@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Check,
   X,
+  XCircle,
   Sun,
   Moon,
   PanelLeftClose,
@@ -198,6 +199,18 @@ export default function App() {
     confirmLabel?: string;
     onConfirm: () => Promise<void> | void;
   } | null>(null);
+
+  // Lost Reason Modal State (Trazabilidad y motivo de pérdida comercial)
+  const [lostReasonModalState, setLostReasonModalState] = useState<{
+    isOpen: boolean;
+    opportunityId: string;
+    opportunityName: string;
+    stageAtLoss?: string;
+  } | null>(null);
+  const [lostReasonText, setLostReasonText] = useState('');
+  const [isSubmittingLoss, setIsSubmittingLoss] = useState(false);
+  const [kanbanViewMode, setKanbanViewMode] = useState<'active' | 'lost'>('active');
+
   const [servicePillarFilter, setServicePillarFilter] = useState<'all' | '1' | '2' | '3' | '4'>('all');
   const [projectModalTab, setProjectModalTab] = useState<'details' | 'activities'>('details');
   const [showAddProjectActivityForm, setShowAddProjectActivityForm] = useState(false);
@@ -428,6 +441,27 @@ export default function App() {
       } else {
         alert(`Error: ${e.message}`);
       }
+    }
+  };
+
+  // Confirm Opportunity Loss with Lost Reason
+  const handleConfirmLost = async () => {
+    if (!lostReasonModalState) return;
+    const reason = lostReasonText.trim();
+    if (!reason) {
+      alert('Por favor especifica o selecciona una razón/motivo por el cual se perdió la propuesta.');
+      return;
+    }
+    try {
+      setIsSubmittingLoss(true);
+      await crmApi.closeOpportunity(lostReasonModalState.opportunityId, 'lost', reason, true);
+      setLostReasonModalState(null);
+      setSelectedOpp(null);
+      await loadData();
+    } catch (e: any) {
+      alert(`Error al marcar la oportunidad como perdida: ${e?.message || 'Error desconocido'}`);
+    } finally {
+      setIsSubmittingLoss(false);
     }
   };
 
@@ -1994,12 +2028,47 @@ Equipo Método AI`;
         {/* TAB 2: PIPELINE KANBAN (SINGLE ROW HORIZONTAL SCROLL) */}
         {activeTab === 'pipeline' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)' }}>Pipeline de Ventas (Kanban)</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                  Haz clic en cualquier tarjeta para ver su <b>historial cronológico de reuniones y negociaciones</b>.
+                <h2 style={{ fontSize: '1.75rem', color: 'var(--text-primary)', margin: 0 }}>
+                  {kanbanViewMode === 'active' ? 'Pipeline de Ventas (Kanban)' : 'Oportunidades Perdidas'}
+                </h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginTop: '4px' }}>
+                  {kanbanViewMode === 'active'
+                    ? 'Haz clic en cualquier tarjeta para ver su historial cronológico de reuniones y negociaciones.'
+                    : 'Registro histórico y trazabilidad de tratos descartados con su motivo comercial (Lost Reason).'}
                 </p>
+              </div>
+
+              {/* View Switcher: Active Pipeline vs Lost Deals */}
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center', backgroundColor: 'var(--bg-glass)', padding: '4px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+                <button
+                  type="button"
+                  onClick={() => setKanbanViewMode('active')}
+                  className={`btn btn-sm ${kanbanViewMode === 'active' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                >
+                  <Kanban size={14} />
+                  Pipeline Activo ({allOpps.filter((o) => o.stage !== 'lost' && !o.deleted_at).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKanbanViewMode('lost')}
+                  className="btn btn-sm"
+                  style={{
+                    fontSize: '0.8rem',
+                    padding: '6px 14px',
+                    color: kanbanViewMode === 'lost' ? '#fff' : '#ef4444',
+                    backgroundColor: kanbanViewMode === 'lost' ? '#ef4444' : 'transparent',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: kanbanViewMode === 'lost' ? 700 : 500,
+                  }}
+                >
+                  <XCircle size={14} />
+                  Ver Perdidas ({allOpps.filter((o) => o.stage === 'lost' && !o.deleted_at).length})
+                </button>
               </div>
             </div>
 
@@ -2177,6 +2246,86 @@ Equipo Método AI`;
                 );
               })}
             </div>
+            )}
+
+            {/* TAB 2 - SUB-VIEW 2: LOST OPPORTUNITIES ARCHIVE */}
+            {kanbanViewMode === 'lost' && (() => {
+              const lostOpps = allOpps.filter((o) => o.stage === 'lost' && !o.deleted_at);
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {lostOpps.length === 0 ? (
+                    <div className="glass-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <XCircle size={38} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+                      <h3 style={{ fontSize: '1.1rem', color: 'var(--text-primary)', marginBottom: '6px' }}>No hay oportunidades perdidas registradas</h3>
+                      <p style={{ fontSize: '0.85rem', margin: 0 }}>Cuando marques una propuesta como perdida desde su tarjeta, aparecerá aquí con su motivo para análisis comercial.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                      {lostOpps.map((opp) => {
+                        const companyObj = opp.companies ? (Array.isArray(opp.companies) ? opp.companies[0] : opp.companies) : null;
+                        const compName = companyObj?.name || opp.companies?.name || companies.find((c) => c.id === opp.company_id)?.name || 'Empresa no especificada';
+                        const closedDate = opp.closed_at ? new Date(opp.closed_at).toLocaleDateString() : 'Fecha no registrada';
+                        const oppActs = activities.filter((a) => a.opportunity_id === opp.id);
+
+                        return (
+                          <div
+                            key={opp.id}
+                            className="glass-card"
+                            onClick={() => setSelectedOpp(opp)}
+                            style={{
+                              padding: '18px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '12px',
+                              cursor: 'pointer',
+                              borderTop: '3px solid #ef4444',
+                              backgroundColor: 'var(--bg-card-solid)',
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                              <div>
+                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                                  {compName}
+                                </span>
+                                <h4 style={{ margin: '2px 0 0 0', fontSize: '1rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                                  {opp.name}
+                                </h4>
+                              </div>
+                              <span className="badge" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', fontSize: '0.68rem', fontWeight: 700 }}>
+                                PERDIDA
+                              </span>
+                            </div>
+
+                            {/* Lost Reason Highlight */}
+                            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', padding: '10px 12px' }}>
+                              <div style={{ fontSize: '0.68rem', color: '#ef4444', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>
+                                Motivo de Pérdida (Lost Reason)
+                              </div>
+                              <div style={{ fontSize: '0.825rem', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: 1.4 }}>
+                                "{opp.lost_reason || 'Sin motivo detallado especificado'}"
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid var(--border-glass)', paddingTop: '10px' }}>
+                              <span>Cerrada: <b>{closedDate}</b></span>
+                              <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                Setup: {formatMoney(opp.setup_value)}
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                              <span>{oppActs.length} actividades registradas</span>
+                              <span style={{ color: 'var(--primary-light)', fontWeight: 600 }}>Ver historial completo →</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -4156,34 +4305,124 @@ Equipo Método AI`;
                 <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
                   <b>Próxima acción:</b> {selectedOpp.next_action || 'Sin programar'} {selectedOpp.next_action_date && `(${selectedOpp.next_action_date})`}
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {selectedOpp.stage !== 'won' && (
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  {selectedOpp.stage !== 'won' && selectedOpp.stage !== 'lost' && (
                     <button
+                      type="button"
                       onClick={() => handleMoveStage(selectedOpp.id, 'won')}
                       className="btn btn-success btn-sm"
                     >
                       🏆 Marcar Ganada
                     </button>
                   )}
-                  <button
-                    onClick={() => setShowAddActivityForm(!showAddActivityForm)}
-                    className="btn btn-primary btn-sm"
-                  >
-                    <PlusCircle size={14} />
-                    {showAddActivityForm ? 'Cancelar' : '+ Registrar Reunión / Nota'}
-                  </button>
+                  {selectedOpp.stage !== 'lost' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddActivityForm(!showAddActivityForm)}
+                      className="btn btn-primary btn-sm"
+                    >
+                      <PlusCircle size={14} />
+                      {showAddActivityForm ? 'Cancelar' : '+ Registrar Reunión / Nota'}
+                    </button>
+                  )}
 
-                  <button
-                    onClick={() => handleDeleteOpportunity(selectedOpp.id, selectedOpp.name)}
-                    className="btn btn-ghost btn-sm"
-                    style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)', padding: '6px 10px' }}
-                    title="Eliminar Oportunidad"
-                  >
-                    <Trash2 size={14} />
-                    Eliminar
-                  </button>
+                  {selectedOpp.stage !== 'lost' && selectedOpp.stage !== 'won' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLostReasonModalState({
+                          isOpen: true,
+                          opportunityId: selectedOpp.id,
+                          opportunityName: selectedOpp.name,
+                          stageAtLoss: selectedOpp.stage,
+                        });
+                        setLostReasonText('');
+                      }}
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        color: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        padding: '6px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: 600,
+                      }}
+                      title="Marcar Oportunidad como Perdida con Motivo Comercial"
+                    >
+                      <XCircle size={14} />
+                      Perdida
+                    </button>
+                  )}
+
+                  {selectedOpp.stage === 'lost' && (
+                    <span
+                      className="badge"
+                      style={{
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        color: '#ef4444',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        padding: '6px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <XCircle size={14} />
+                      Venta Perdida
+                    </span>
+                  )}
+
+                  {selectedOpp.stage === 'won' && (
+                    <span
+                      className="badge badge-success"
+                      style={{
+                        padding: '6px 12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      ✓ Venta Ganada
+                    </span>
+                  )}
                 </div>
               </div>
+
+              {/* Lost Reason Banner if Opportunity is Lost */}
+              {selectedOpp.stage === 'lost' && (
+                <div
+                  style={{
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <XCircle size={16} color="#ef4444" />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Razón de Pérdida Comercial (Lost Reason):
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: 1.5, paddingLeft: '24px' }}>
+                    "{selectedOpp.lost_reason || 'Sin motivo detallado registrado'}"
+                  </div>
+                  {selectedOpp.closed_at && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', paddingLeft: '24px' }}>
+                      Fecha de cierre: {new Date(selectedOpp.closed_at).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Linked Invoices & Split Billing Section */}
               {(() => {
@@ -6243,6 +6482,211 @@ Equipo Método AI`;
                 }}
               >
                 {confirmModalState.confirmLabel || 'Sí, Continuar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lost Reason Capture Modal (Pop-up con motivo comercial) */}
+      {lostReasonModalState && lostReasonModalState.isOpen && (
+        <div
+          className="modal-overlay animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1100,
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSubmittingLoss) {
+              setLostReasonModalState(null);
+            }
+          }}
+        >
+          <div
+            className="glass-card animate-scale-up"
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              backgroundColor: 'var(--bg-card-solid)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid var(--border-glass)',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+              }}
+            >
+              <div
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ef4444',
+                  flexShrink: 0,
+                }}
+              >
+                <XCircle size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  Marcar Oportunidad como Perdida
+                </h3>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Registra la razón comercial para trazabilidad y cálculo de conversión
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmittingLoss && setLostReasonModalState(null)}
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '6px' }}
+                disabled={isSubmittingLoss}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Content Body */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ padding: '10px 14px', backgroundColor: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-glass)' }}>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>
+                  Oportunidad seleccionada
+                </span>
+                <b style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block', marginTop: '2px' }}>
+                  {lostReasonModalState.opportunityName}
+                </b>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
+                  Motivos frecuentes (haz clic para auto-completar):
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {[
+                    'Presupuesto insuficiente / Fuera de rango',
+                    'Eligieron a la competencia',
+                    'Proyecto postergado para más adelante',
+                    'Sin respuesta tras seguimiento (Ghosting)',
+                    'Fuera de alcance técnico / Falta de fit',
+                    'Decisión interna / Cambio de prioridades',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setLostReasonText(preset)}
+                      className="btn btn-ghost btn-sm"
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '4px 10px',
+                        backgroundColor: lostReasonText === preset ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                        borderColor: lostReasonText === preset ? '#ef4444' : 'var(--border-glass)',
+                        color: lostReasonText === preset ? '#ef4444' : 'var(--text-secondary)',
+                      }}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  Detalle del motivo (Lost Reason) <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={lostReasonText}
+                  onChange={(e) => setLostReasonText(e.target.value)}
+                  placeholder="Explica detalladamente por qué el cliente no cerró la propuesta o qué objeción manifestó..."
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--input-bg)',
+                    border: '1px solid var(--border-glass)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5, backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '10px 12px', borderRadius: 'var(--radius-sm)' }}>
+                ℹ️ La propuesta quedará registrada como <b>Perdida</b> en Supabase con probabilidad 0% y los proyectos técnicos en borrador/onboarding asociados se cancelarán ordenadamente.
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border-glass)',
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setLostReasonModalState(null)}
+                disabled={isSubmittingLoss}
+                style={{ padding: '8px 16px', fontSize: '0.85rem' }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleConfirmLost}
+                disabled={isSubmittingLoss || !lostReasonText.trim()}
+                style={{
+                  padding: '8px 20px',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: isSubmittingLoss || !lostReasonText.trim() ? 0.6 : 1,
+                  cursor: isSubmittingLoss || !lostReasonText.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <XCircle size={16} />
+                {isSubmittingLoss ? 'Guardando...' : 'Aceptar (Confirmar Pérdida)'}
               </button>
             </div>
           </div>

@@ -40,3 +40,28 @@ Este documento registra los incidentes relacionados con la interfaz web SPA (Rea
   # Verificar endpoint de dashboard en el backend
   Invoke-RestMethod -Uri "https://crm-ia.metodoai.tech/api/dashboard"
   ```
+
+---
+
+<a id="err-007"></a>
+### [ERR-007] Fallo en Compilación Vite/TypeScript en GitHub Actions por Función No Utilizada (`TS6133`)
+
+- **Fecha:** 2026-10-23
+- **Componentes:** CI/CD GitHub Actions (`.github/workflows/deploy.yml`), TypeScript (`tsc -b`), Frontend React (`frontend/src/App.tsx`).
+- **Síntoma / Mensaje:**
+  El flujo de despliegue en GitHub Actions fallaba en el paso *Compilar Frontend (Vite)* con el error:
+  `src/App.tsx: error TS6133: 'handleDeleteOpportunity' is declared but its value is never read.`
+  El despliegue vía FTP no se ejecutaba y Hostinger continuaba sirviendo el bundle anterior en caché.
+- **Causa Raíz:**
+  Al reemplazar el botón "Eliminar" de la oportunidad por el nuevo flujo de "Marcar como Perdida", la función `handleDeleteOpportunity` quedó sin referencias en el código. Con la configuración estricta de TypeScript (`noUnusedLocals`), esto detiene `tsc -b`.
+- **Archivos Modificados:**
+  - [`frontend/src/App.tsx`](frontend/src/App.tsx)
+- **Solución Aplicada:**
+  1. Se removió la función no utilizada `handleDeleteOpportunity`.
+  2. Se validó la compilación local con `npm.cmd --prefix frontend run build`.
+  3. Se subió el cambio a `main`, logrando que la ejecución #153 de GitHub Actions concluyera en `success` y desplegara el nuevo bundle a Hostinger.
+- **Comando de Verificación:**
+  ```powershell
+  npm.cmd --prefix frontend run build
+  ```
+

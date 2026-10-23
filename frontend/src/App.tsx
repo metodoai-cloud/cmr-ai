@@ -2072,10 +2072,11 @@ Equipo Método AI`;
               </div>
             </div>
 
-            {/* Kanban Columns (Single Row Flex Container) */}
-            <div
-              style={{
-                display: 'flex',
+            {/* View 1: Active Kanban Pipeline */}
+            {kanbanViewMode === 'active' && (
+              <div
+                style={{
+                  display: 'flex',
                 flexDirection: 'row',
                 flexWrap: 'nowrap',
                 gap: '16px',
